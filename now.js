@@ -2,7 +2,7 @@
   'use strict';
 
   /* =========================================================
-     TaskChute NOW
+     NOW
      iOS Edition v3.7.3-iOS2
   ========================================================= */
 
@@ -2418,7 +2418,7 @@
       <header id="tc-header">
 
         <div id="tc-brand">
-          TaskChute NOW
+          NOW
         </div>
 
 
