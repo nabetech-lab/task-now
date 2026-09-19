@@ -3,10 +3,10 @@
 
   /* =========================================================
      NOW
-     iOS Edition v3.7.3-iOS3
+     iOS Edition v3.7.3-iOS4
   ========================================================= */
 
-  const VERSION = '3.7.3-iOS3';
+  const VERSION = '3.7.3-iOS4';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -122,6 +122,11 @@
     );
   }
 
+
+  /*
+    PLANNED表示専用
+    秒は表示しない
+  */
 
   function secondsToHM(seconds) {
 
@@ -548,6 +553,10 @@
       null;
 
 
+    /*
+      START
+    */
+
     if (
       leaves[1] &&
       isHM(
@@ -559,6 +568,10 @@
         leaves[1].value;
     }
 
+
+    /*
+      FINISH
+    */
 
     if (
       leaves[2]
@@ -579,6 +592,10 @@
     }
 
 
+    /*
+      PLANNED
+    */
+
     if (
       leaves[6] &&
       isHM(
@@ -590,6 +607,10 @@
         leaves[6].value;
     }
 
+
+    /*
+      fallback
+    */
 
     if (!planned) {
 
@@ -723,6 +744,10 @@
         null;
 
 
+      /*
+        START
+      */
+
       if (
         leaves[1] &&
         isHM(
@@ -734,6 +759,10 @@
           leaves[1].value;
       }
 
+
+      /*
+        FINISH
+      */
 
       if (
         leaves[2] &&
@@ -752,6 +781,10 @@
       }
 
 
+      /*
+        ACTUAL
+      */
+
       if (
         leaves[5] &&
         isHM(
@@ -764,6 +797,10 @@
       }
 
 
+      /*
+        PLANNED
+      */
+
       if (
         leaves[6] &&
         isHM(
@@ -775,6 +812,10 @@
           leaves[6].value;
       }
 
+
+      /*
+        SCHEDULE TIME
+      */
 
       const HMvalues =
         leaves
@@ -968,6 +1009,11 @@
         player.task;
 
 
+      /*
+        タスク変更時に
+        前タスク固有値を破棄
+      */
+
       if (
         taskChanged
       ) {
@@ -1004,15 +1050,19 @@
     }
 
 
+    /*
+      現在タスク固有情報
+    */
+
     if (
       state.currentTask
     ) {
 
       /*
-        現在タスク固有値を毎回クリア。
+        毎回リセットしてから取得。
 
-        PLANNED未入力の場合に
-        前タスクの値を残さない。
+        PLANNED未入力タスクで
+        前タスクのPLANNEDが残るのを防止。
       */
 
       state.currentStart =
@@ -1052,6 +1102,10 @@
       }
     }
 
+
+    /*
+      SCHEDULE
+    */
 
     const rows =
       getScheduleRows();
@@ -1398,7 +1452,7 @@
     }
 
 
-    /* NOW */
+    /* CURRENT TASK */
 
     #tc-now {
 
@@ -1456,7 +1510,7 @@
 
       font-weight:900;
 
-      letter-spacing:.18em;
+      letter-spacing:.14em;
 
       border-radius:18px;
 
@@ -1465,6 +1519,8 @@
 
       margin-bottom:
         clamp(12px,3vh,30px);
+
+      white-space:nowrap;
     }
 
 
@@ -2091,6 +2147,13 @@
       }
 
 
+      /*
+        Portrait:
+        CURRENT TASK
+        NEXT
+        PREVIOUS
+      */
+
       #tc-side {
 
         display:flex;
@@ -2138,7 +2201,7 @@
 
       #tc-now-badge {
 
-        font-size:13px;
+        font-size:12px;
 
         padding:
           6px 13px;
@@ -2146,6 +2209,8 @@
         margin-bottom:9px;
 
         border-radius:12px;
+
+        letter-spacing:.11em;
       }
 
 
@@ -2385,7 +2450,7 @@
         <section id="tc-now">
 
           <div id="tc-now-badge">
-            NOW
+            CURRENT TASK
           </div>
 
 
@@ -2656,7 +2721,7 @@
         );
 
 
-    /* TASK */
+    /* CURRENT TASK */
 
     $('tc-task')
       .textContent =
