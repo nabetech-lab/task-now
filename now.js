@@ -3,31 +3,27 @@
   const STYLE_ID = 'tc-now-style';
 
   /* =========================================================
-     既存NOWを閉じる
+     再実行時：既存NOWを破棄して即再生成
   ========================================================= */
 
-  const old = document.getElementById(ROOT_ID);
+  const oldRoot = document.getElementById(ROOT_ID);
+  if (oldRoot) oldRoot.remove();
 
-  if (old) {
-    old.remove();
+  const oldStyle = document.getElementById(STYLE_ID);
+  if (oldStyle) oldStyle.remove();
 
-    if (window.tcNowTimer) {
-      clearInterval(window.tcNowTimer);
-      window.tcNowTimer = null;
-    }
-
-    const oldStyle = document.getElementById(STYLE_ID);
-    if (oldStyle) oldStyle.remove();
-
-    return;
+  if (window.tcNowTimer) {
+    clearInterval(window.tcNowTimer);
+    window.tcNowTimer = null;
   }
 
 
   /* =========================================================
-     iPhone横画面の白帯対策
+     viewport / 背景
   ========================================================= */
 
-  let viewport = document.querySelector('meta[name="viewport"]');
+  let viewport =
+    document.querySelector('meta[name="viewport"]');
 
   if (!viewport) {
     viewport = document.createElement('meta');
@@ -35,18 +31,18 @@
     document.head.appendChild(viewport);
   }
 
-  let viewportContent =
-    viewport.getAttribute('content') || 'width=device-width,initial-scale=1';
+  let vp =
+    viewport.getAttribute('content') ||
+    'width=device-width, initial-scale=1';
 
-  if (!viewportContent.includes('viewport-fit=cover')) {
-    viewportContent += ',viewport-fit=cover';
+  if (!vp.includes('viewport-fit=cover')) {
+    vp += ', viewport-fit=cover';
   }
 
-  viewport.setAttribute('content', viewportContent);
+  viewport.setAttribute('content', vp);
 
   document.documentElement.style.background = '#07090d';
   document.body.style.background = '#07090d';
-  document.body.style.margin = '0';
 
 
   /* =========================================================
@@ -57,7 +53,6 @@
   style.id = STYLE_ID;
 
   style.textContent = `
-
     html,
     body {
       background: #07090d !important;
@@ -74,16 +69,12 @@
       --panel2: #0d1016;
       --text: #f7f7f8;
       --muted: #9a9da7;
-      --dim: #50545e;
+      --dim: #4f535d;
 
       position: fixed;
+      inset: 0;
 
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-
-      width: 100%;
+      width: 100vw;
       height: 100dvh;
 
       z-index: 2147483647;
@@ -108,39 +99,29 @@
         max(16px, env(safe-area-inset-left));
     }
 
-
-    /* =====================================================
-       全体
-    ===================================================== */
-
     #tc-layout {
       width: 100%;
       height: 100%;
 
       display: grid;
-
       grid-template-rows:
         auto
         minmax(0, 1fr);
 
-      gap: clamp(14px, 2.5vh, 28px);
+      gap: clamp(14px, 2.4vh, 28px);
     }
 
-
-    /* =====================================================
-       HEADER
-    ===================================================== */
+    /* ================= HEADER ================= */
 
     #tc-header {
       display: grid;
 
       grid-template-columns:
-        minmax(150px, .8fr)
+        minmax(150px, .85fr)
         minmax(220px, 1fr)
-        minmax(140px, .7fr);
+        minmax(130px, .7fr);
 
-      gap: clamp(15px, 3vw, 40px);
-
+      gap: clamp(14px, 3vw, 38px);
       align-items: center;
 
       min-width: 0;
@@ -149,26 +130,22 @@
     #tc-brand {
       color: var(--muted);
 
-      font-size: clamp(16px, 2.4vw, 30px);
-
+      font-size: clamp(16px, 2.3vw, 30px);
       font-weight: 800;
 
       letter-spacing: .22em;
-
-      line-height: 1.45;
+      line-height: 1.4;
 
       white-space: nowrap;
     }
 
     #tc-leave {
       font-size: clamp(19px, 2.8vw, 32px);
-
       font-weight: 800;
 
       line-height: 1.35;
 
       font-variant-numeric: tabular-nums;
-
       white-space: nowrap;
     }
 
@@ -179,29 +156,23 @@
         max-content
         max-content;
 
-      gap: .4em;
+      gap: .42em;
     }
 
     #tc-clock {
       justify-self: end;
 
       font-size: clamp(40px, 7vw, 82px);
-
       font-weight: 800;
 
-      line-height: 1;
-
+      line-height: .95;
       letter-spacing: -.04em;
 
       font-variant-numeric: tabular-nums;
-
       white-space: nowrap;
     }
 
-
-    /* =====================================================
-       MAIN
-    ===================================================== */
+    /* ================= MAIN ================= */
 
     #tc-main {
       min-width: 0;
@@ -213,13 +184,10 @@
         minmax(0, 1.6fr)
         minmax(220px, .9fr);
 
-      gap: clamp(14px, 2.7vw, 32px);
+      gap: clamp(14px, 2.6vw, 30px);
     }
 
-
-    /* =====================================================
-       NOW
-    ===================================================== */
+    /* ================= NOW ================= */
 
     #tc-now {
       position: relative;
@@ -239,7 +207,6 @@
         clamp(30px, 5vw, 68px);
 
       display: flex;
-
       flex-direction: column;
 
       justify-content: center;
@@ -257,32 +224,30 @@
       width:
         clamp(8px, 1vw, 16px);
 
-      background: white;
+      background: #fff;
     }
 
     #tc-now-badge {
       align-self: flex-start;
 
-      background: white;
-
+      background: #fff;
       color: #101116;
 
       border-radius:
-        clamp(13px, 2vw, 23px);
+        clamp(13px, 2vw, 22px);
 
       padding:
-        clamp(9px, 1.8vh, 17px)
-        clamp(18px, 2.8vw, 32px);
+        clamp(9px, 1.8vh, 16px)
+        clamp(18px, 2.7vw, 31px);
 
       font-size:
-        clamp(16px, 2.3vw, 28px);
+        clamp(16px, 2.2vw, 28px);
 
       font-weight: 900;
-
       letter-spacing: .18em;
 
       margin-bottom:
-        clamp(20px, 6vh, 60px);
+        clamp(18px, 5vh, 54px);
     }
 
     #tc-start {
@@ -296,7 +261,7 @@
       font-variant-numeric: tabular-nums;
 
       margin-bottom:
-        clamp(10px, 2.5vh, 22px);
+        clamp(10px, 2.4vh, 20px);
     }
 
     #tc-task {
@@ -305,14 +270,14 @@
 
       font-weight: 900;
 
-      line-height: 1.1;
+      line-height: 1.08;
 
       overflow-wrap: anywhere;
     }
 
     #tc-elapsed {
       margin-top:
-        clamp(12px, 3vh, 30px);
+        clamp(10px, 2.6vh, 26px);
 
       color: #aeb2bb;
 
@@ -324,10 +289,7 @@
       font-variant-numeric: tabular-nums;
     }
 
-
-    /* =====================================================
-       SIDE
-    ===================================================== */
+    /* ================= SIDE ================= */
 
     #tc-side {
       min-width: 0;
@@ -339,12 +301,15 @@
         minmax(0, 1fr)
         minmax(0, 1fr);
 
-      gap: clamp(12px, 2.3vh, 22px);
+      gap:
+        clamp(12px, 2.1vh, 22px);
     }
 
     .tc-card {
       min-width: 0;
       min-height: 0;
+
+      overflow: hidden;
 
       background: var(--panel2);
 
@@ -352,13 +317,10 @@
         clamp(18px, 3vw, 34px);
 
       padding:
-        clamp(18px, 3.5vh, 34px)
-        clamp(20px, 2.8vw, 36px);
-
-      overflow: hidden;
+        clamp(18px, 3.2vh, 32px)
+        clamp(20px, 2.7vw, 35px);
 
       display: flex;
-
       flex-direction: column;
 
       justify-content: center;
@@ -375,7 +337,7 @@
       letter-spacing: .18em;
 
       margin-bottom:
-        clamp(12px, 3vh, 28px);
+        clamp(10px, 2.6vh, 24px);
     }
 
     .tc-card-row {
@@ -400,7 +362,6 @@
         clamp(20px, 3.2vw, 40px);
 
       font-variant-numeric: tabular-nums;
-
       white-space: nowrap;
     }
 
@@ -414,18 +375,12 @@
 
       font-weight: 700;
 
-      white-space: nowrap;
-
       overflow: hidden;
-
+      white-space: nowrap;
       text-overflow: ellipsis;
     }
 
-
-    /* =====================================================
-       iPHONE 横画面
-       縦方向はdvhを基準に縮小
-    ===================================================== */
+    /* =============== SMALL LANDSCAPE =============== */
 
     @media
       (orientation: landscape)
@@ -444,52 +399,52 @@
           18dvh
           minmax(0, 1fr);
 
-        gap: 2dvh;
+        gap: 1.8dvh;
       }
 
       #tc-header {
         grid-template-columns:
           minmax(100px, .8fr)
-          minmax(170px, 1fr)
-          minmax(110px, .6fr);
-
-        gap: 2vw;
-      }
-
-      #tc-brand {
-        font-size:
-          clamp(11px, 3.5dvh, 18px);
-
-        line-height: 1.3;
-      }
-
-      #tc-leave {
-        font-size:
-          clamp(13px, 4.3dvh, 21px);
-
-        line-height: 1.25;
-      }
-
-      #tc-clock {
-        font-size:
-          clamp(30px, 12dvh, 58px);
-      }
-
-      #tc-main {
-        grid-template-columns:
-          minmax(0, 1.6fr)
-          minmax(170px, .92fr);
+          minmax(165px, 1fr)
+          minmax(105px, .6fr);
 
         gap: 1.8vw;
       }
 
+      #tc-brand {
+        font-size:
+          clamp(11px, 3.4dvh, 18px);
+
+        line-height: 1.25;
+      }
+
+      #tc-leave {
+        font-size:
+          clamp(13px, 4.2dvh, 21px);
+
+        line-height: 1.22;
+      }
+
+      #tc-clock {
+        font-size:
+          clamp(30px, 11.5dvh, 56px);
+      }
+
+      #tc-main {
+        grid-template-columns:
+          minmax(0, 1.62fr)
+          minmax(165px, .9fr);
+
+        gap: 1.6vw;
+      }
+
       #tc-now {
         border-radius:
-          clamp(14px, 5.5dvh, 28px);
+          clamp(14px, 5dvh, 27px);
 
         padding:
-          clamp(9px, 2.5dvh, 17px)
-          clamp(20px, 3.3vw, 34px);
+          clamp(8px, 2.3dvh, 16px)
+          clamp(18px, 3.1vw, 32px);
       }
 
       #tc-now::before {
@@ -499,74 +454,71 @@
 
       #tc-now-badge {
         border-radius:
-          clamp(8px, 3dvh, 14px);
+          clamp(8px, 2.8dvh, 14px);
 
         padding:
-          clamp(5px, 1.6dvh, 8px)
-          clamp(12px, 1.6vw, 18px);
+          clamp(5px, 1.4dvh, 8px)
+          clamp(12px, 1.5vw, 18px);
 
         font-size:
-          clamp(11px, 3.6dvh, 18px);
+          clamp(11px, 3.5dvh, 17px);
 
         margin-bottom:
-          clamp(7px, 2.5dvh, 13px);
+          clamp(6px, 2dvh, 11px);
       }
 
       #tc-start {
         font-size:
-          clamp(17px, 5.5dvh, 28px);
+          clamp(17px, 5.3dvh, 27px);
 
         margin-bottom:
-          clamp(4px, 1.6dvh, 8px);
+          clamp(3px, 1.3dvh, 7px);
       }
 
       #tc-task {
         font-size:
-          clamp(24px, 8dvh, 42px);
+          clamp(24px, 7.8dvh, 40px);
 
-        line-height: 1.03;
+        line-height: 1.02;
       }
 
       #tc-elapsed {
         margin-top:
-          clamp(5px, 1.6dvh, 9px);
+          clamp(4px, 1.4dvh, 8px);
 
         font-size:
-          clamp(12px, 3.8dvh, 19px);
+          clamp(12px, 3.6dvh, 18px);
       }
 
       #tc-side {
-        gap: 2dvh;
+        gap: 1.8dvh;
       }
 
       .tc-card {
         border-radius:
-          clamp(12px, 4.5dvh, 23px);
+          clamp(12px, 4.2dvh, 22px);
 
         padding:
-          clamp(7px, 1.8dvh, 13px)
-          clamp(12px, 1.6vw, 19px);
+          clamp(7px, 1.6dvh, 12px)
+          clamp(12px, 1.5vw, 18px);
       }
 
       .tc-card-label {
         font-size:
-          clamp(10px, 3.2dvh, 16px);
+          clamp(10px, 3dvh, 15px);
 
         margin-bottom:
-          clamp(4px, 1.5dvh, 8px);
+          clamp(4px, 1.3dvh, 7px);
       }
 
       .tc-card-time,
       .tc-card-task {
         font-size:
-          clamp(15px, 4.7dvh, 23px);
+          clamp(15px, 4.4dvh, 22px);
       }
     }
 
-
-    /* =====================================================
-       縦画面
-    ===================================================== */
+    /* ================= PORTRAIT ================= */
 
     @media (orientation: portrait) {
 
@@ -628,7 +580,6 @@
       }
     }
 
-
     @media
       (orientation: portrait)
       and (max-width: 430px) {
@@ -667,11 +618,9 @@
   ========================================================= */
 
   const root = document.createElement('div');
-
   root.id = ROOT_ID;
 
   root.innerHTML = `
-
     <div id="tc-layout">
 
       <header id="tc-header">
@@ -701,7 +650,6 @@
 
       </header>
 
-
       <main id="tc-main">
 
         <section id="tc-now">
@@ -723,7 +671,6 @@
           </div>
 
         </section>
-
 
         <aside id="tc-side">
 
@@ -750,7 +697,6 @@
             </div>
 
           </section>
-
 
           <section class="tc-card">
 
@@ -790,177 +736,53 @@
      UTIL
   ========================================================= */
 
-  const $ = id =>
-    document.getElementById(id);
+  const $ =
+    id => document.getElementById(id);
 
-  const pad = n =>
-    String(n).padStart(2, '0');
+  const pad =
+    n => String(n).padStart(2, '0');
 
   function inNow(el) {
     return !!el.closest('#' + ROOT_ID);
   }
 
-  function visible(el) {
-
-    if (!el || inNow(el))
-      return false;
-
-    const r =
-      el.getBoundingClientRect();
-
-    return (
-      r.width > 0 &&
-      r.height > 0 &&
-      r.bottom > 0 &&
-      r.top < innerHeight
-    );
-  }
-
 
   /* =========================================================
-     CURRENT ELAPSED
+     現在タスク名
+     Safariのタイトルを優先
   ========================================================= */
 
-  function getElapsedElement() {
+  function getCurrentTask() {
 
-    const candidates =
-      [...document.querySelectorAll(
-        'p,div,span'
-      )]
-        .filter(el =>
-          visible(el) &&
-          /^\d{2}:\d{2}:\d{2}$/
-            .test(
-              (el.textContent || '')
-                .trim()
-            )
-        );
-
-    if (!candidates.length)
-      return null;
-
-    candidates.sort(
-      (a, b) =>
-        b.getBoundingClientRect().top -
-        a.getBoundingClientRect().top
-    );
-
-    return candidates[0];
-  }
-
-
-  /* =========================================================
-     CURRENT TASK
-     経過時間の近くから探す
-  ========================================================= */
-
-  function validTaskText(text) {
-
-    const t =
-      (text || '').trim();
-
-    if (!t)
-      return false;
-
-    if (t.length < 2 || t.length > 100)
-      return false;
-
-    if (
-      /^\d{1,2}:\d{2}(:\d{2})?$/
-        .test(t)
-    )
-      return false;
-
-    if (
-      /^-?\d{1,2}:\d{2}(:\d{2})?$/
-        .test(t)
-    )
-      return false;
-
-    if (
-      /^[-\d\s:./]+$/
-        .test(t)
-    )
-      return false;
-
-    const blacklist = [
-      'Main',
-      'NOW',
-      '退勤',
-      'プロジェクトモード',
-      'PREVIOUS',
-      'NEXT'
-    ];
-
-    if (blacklist.includes(t))
-      return false;
-
-    return true;
-  }
-
-
-  function getCurrentTask(elapsedEl) {
-
-    if (!elapsedEl)
-      return null;
+    const title =
+      document.title || '';
 
     /*
-      画面位置で判定しない。
-      経過時間を起点として
-      小さい親DOMから順に探す。
+      例:
+      [30m] 晩ご飯 - TaskChute Cloud 2
     */
 
-    let parent =
-      elapsedEl.parentElement;
+    let m =
+      title.match(
+        /^\[[^\]]+\]\s*(.+?)\s*-\s*TaskChute/i
+      );
 
-    for (
-      let level = 0;
-      level < 9 && parent;
-      level++,
-      parent = parent.parentElement
-    ) {
+    if (m && m[1]) {
+      return m[1].trim();
+    }
 
-      const leaves =
-        [...parent.querySelectorAll('*')]
-          .filter(el => {
+    /*
+      念のため
+      晩ご飯 - TaskChute Cloud 2
+    */
 
-            if (inNow(el))
-              return false;
+    m =
+      title.match(
+        /^(.+?)\s*-\s*TaskChute/i
+      );
 
-            if (el.children.length)
-              return false;
-
-            return validTaskText(
-              el.textContent
-            );
-          });
-
-      if (leaves.length) {
-
-        const texts =
-          [...new Set(
-            leaves.map(el =>
-              (el.textContent || '')
-                .trim()
-            )
-          )];
-
-        if (texts.length) {
-
-          /*
-            現在タスク名は、
-            プレイヤー内では比較的長い
-            通常文字列になるケースが多い。
-          */
-
-          texts.sort(
-            (a, b) =>
-              b.length - a.length
-          );
-
-          return texts[0];
-        }
-      }
+    if (m && m[1]) {
+      return m[1].trim();
     }
 
     return null;
@@ -968,48 +790,121 @@
 
 
   /* =========================================================
-     LEAVE TIME
+     経過時間
+  ========================================================= */
+
+  function getElapsed(taskName) {
+
+    if (taskName) {
+
+      const taskEls =
+        [...document.querySelectorAll('body *')]
+          .filter(el =>
+            !inNow(el) &&
+            (el.textContent || '').trim()
+              === taskName
+          );
+
+      for (const taskEl of taskEls) {
+
+        let parent = taskEl;
+
+        for (
+          let level = 0;
+          level < 10 && parent;
+          level++,
+          parent = parent.parentElement
+        ) {
+
+          const times =
+            [...parent.querySelectorAll('*')]
+              .map(el =>
+                (el.textContent || '')
+                  .trim()
+              )
+              .filter(text =>
+                /^\d{2}:\d{2}:\d{2}$/
+                  .test(text)
+              );
+
+          if (times.length) {
+            return [
+              ...new Set(times)
+            ][0];
+          }
+        }
+      }
+    }
+
+    /*
+      フォールバック：
+      ページ内のHH:MM:SS
+    */
+
+    const allTimes =
+      [...document.querySelectorAll('body *')]
+        .filter(el =>
+          !inNow(el)
+        )
+        .map(el =>
+          (el.textContent || '')
+            .trim()
+        )
+        .filter(text =>
+          /^\d{2}:\d{2}:\d{2}$/
+            .test(text)
+        );
+
+    return [
+      ...new Set(allTimes)
+    ][0] || null;
+  }
+
+
+  /* =========================================================
+     退勤時刻
   ========================================================= */
 
   function getLeaveTime() {
 
-    const targets =
-      [...document.querySelectorAll(
-        'body *'
-      )]
+    const leaveEls =
+      [...document.querySelectorAll('body *')]
         .filter(el =>
           !inNow(el) &&
           (el.textContent || '')
             .trim() === '退勤'
         );
 
-    for (const el of targets) {
+    for (const leaveEl of leaveEls) {
 
-      let parent = el;
+      let parent = leaveEl;
 
       for (
         let level = 0;
-        level < 8 && parent;
+        level < 10 && parent;
         level++,
         parent = parent.parentElement
       ) {
 
         const times =
           [...parent.querySelectorAll('*')]
-            .map(x =>
-              (x.textContent || '')
+            .map(el =>
+              (el.textContent || '')
                 .trim()
             )
-            .filter(t =>
+            .filter(text =>
               /^\d{1,2}:\d{2}$/
-                .test(t)
+                .test(text)
             );
 
         if (times.length) {
 
-          return [
-            ...new Set(times)
-          ].pop();
+          const unique =
+            [...new Set(times)];
+
+          return unique[
+            unique.length - 1
+          ];
         }
       }
     }
@@ -1019,26 +914,30 @@
 
 
   /* =========================================================
-     START TIME
+     経過時間 → 秒
   ========================================================= */
 
   function elapsedToSeconds(text) {
 
-    const match =
+    const m =
       (text || '').match(
         /^(\d{2}):(\d{2}):(\d{2})$/
       );
 
-    if (!match)
+    if (!m)
       return null;
 
     return (
-      Number(match[1]) * 3600 +
-      Number(match[2]) * 60 +
-      Number(match[3])
+      Number(m[1]) * 3600 +
+      Number(m[2]) * 60 +
+      Number(m[3])
     );
   }
 
+
+  /* =========================================================
+     開始時刻
+  ========================================================= */
 
   function getStartTime(elapsed) {
 
@@ -1048,16 +947,16 @@
     if (sec == null)
       return '--:--';
 
-    const date =
+    const d =
       new Date(
         Date.now() -
         sec * 1000
       );
 
     return (
-      pad(date.getHours()) +
+      pad(d.getHours()) +
       ':' +
-      pad(date.getMinutes())
+      pad(d.getMinutes())
     );
   }
 
@@ -1071,8 +970,7 @@
     const now =
       new Date();
 
-
-    /* CLOCK */
+    /* ---------- 時計 ---------- */
 
     $('tc-clock')
       .textContent =
@@ -1081,20 +979,18 @@
         pad(now.getMinutes());
 
 
-    /* CURRENT */
-
-    const elapsedEl =
-      getElapsedElement();
-
-    const elapsed =
-      elapsedEl
-        ? elapsedEl.textContent.trim()
-        : null;
+    /* ---------- 現在タスク ---------- */
 
     const task =
-      getCurrentTask(
-        elapsedEl
-      );
+      getCurrentTask();
+
+    const elapsed =
+      getElapsed(task);
+
+    $('tc-task')
+      .textContent =
+        task ||
+        'タスクを取得できません';
 
     $('tc-elapsed')
       .textContent =
@@ -1103,17 +999,10 @@
 
     $('tc-start')
       .textContent =
-        getStartTime(
-          elapsed
-        );
-
-    $('tc-task')
-      .textContent =
-        task ||
-        'タスクを取得できません';
+        getStartTime(elapsed);
 
 
-    /* LEAVE */
+    /* ---------- 退勤 ---------- */
 
     const leaveTime =
       getLeaveTime();
@@ -1136,7 +1025,6 @@
       return;
     }
 
-
     const [h, m] =
       leaveTime
         .split(':')
@@ -1156,7 +1044,6 @@
       Math.floor(
         (leave - now) / 1000
       );
-
 
     if (diff >= 0) {
 
