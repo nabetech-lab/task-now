@@ -3,10 +3,10 @@
 
   /* =========================================================
      NOW
-     iOS Edition v3.7.3-iOS4
+     iOS Edition v3.7.3-iOS5
   ========================================================= */
 
-  const VERSION = '3.7.3-iOS4';
+  const VERSION = '3.7.3-iOS5';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -122,11 +122,6 @@
     );
   }
 
-
-  /*
-    PLANNED表示専用
-    秒は表示しない
-  */
 
   function secondsToHM(seconds) {
 
@@ -553,10 +548,6 @@
       null;
 
 
-    /*
-      START
-    */
-
     if (
       leaves[1] &&
       isHM(
@@ -568,10 +559,6 @@
         leaves[1].value;
     }
 
-
-    /*
-      FINISH
-    */
 
     if (
       leaves[2]
@@ -592,10 +579,6 @@
     }
 
 
-    /*
-      PLANNED
-    */
-
     if (
       leaves[6] &&
       isHM(
@@ -607,10 +590,6 @@
         leaves[6].value;
     }
 
-
-    /*
-      fallback
-    */
 
     if (!planned) {
 
@@ -744,10 +723,6 @@
         null;
 
 
-      /*
-        START
-      */
-
       if (
         leaves[1] &&
         isHM(
@@ -759,10 +734,6 @@
           leaves[1].value;
       }
 
-
-      /*
-        FINISH
-      */
 
       if (
         leaves[2] &&
@@ -781,10 +752,6 @@
       }
 
 
-      /*
-        ACTUAL
-      */
-
       if (
         leaves[5] &&
         isHM(
@@ -797,10 +764,6 @@
       }
 
 
-      /*
-        PLANNED
-      */
-
       if (
         leaves[6] &&
         isHM(
@@ -812,10 +775,6 @@
           leaves[6].value;
       }
 
-
-      /*
-        SCHEDULE TIME
-      */
 
       const HMvalues =
         leaves
@@ -1009,11 +968,6 @@
         player.task;
 
 
-      /*
-        タスク変更時に
-        前タスク固有値を破棄
-      */
-
       if (
         taskChanged
       ) {
@@ -1050,19 +1004,15 @@
     }
 
 
-    /*
-      現在タスク固有情報
-    */
-
     if (
       state.currentTask
     ) {
 
       /*
-        毎回リセットしてから取得。
+        現在タスク固有値を毎回クリア。
 
-        PLANNED未入力タスクで
-        前タスクのPLANNEDが残るのを防止。
+        PLANNED未入力の場合に
+        前タスクの値を引き継がない。
       */
 
       state.currentStart =
@@ -1102,10 +1052,6 @@
       }
     }
 
-
-    /*
-      SCHEDULE
-    */
 
     const rows =
       getScheduleRows();
@@ -1605,10 +1551,15 @@
     }
 
 
+    /*
+      OVER
+      PC版と同じ赤系
+    */
+
     #tc-status-label.tc-over,
     #tc-status-value.tc-over {
 
-      color:white;
+      color:#ff6363;
     }
 
 
@@ -2146,13 +2097,6 @@
         min-height:0;
       }
 
-
-      /*
-        Portrait:
-        CURRENT TASK
-        NEXT
-        PREVIOUS
-      */
 
       #tc-side {
 
