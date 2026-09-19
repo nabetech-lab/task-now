@@ -2,10 +2,10 @@
   'use strict';
 
   /* =========================================================
-     TaskChute NOW v3.3.0
+     TaskChute NOW v3.4.0
   ========================================================= */
 
-  const VERSION = '3.3.0';
+  const VERSION = '3.4.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -18,18 +18,18 @@
      UTIL
   ========================================================= */
 
-  const pad = n =>
-    String(n).padStart(2, '0');
-
-
   const clean = value =>
     String(value || '')
       .replace(/\s+/g, ' ')
       .trim();
 
 
-  const text = el =>
+  const txt = el =>
     clean(el?.textContent);
+
+
+  const pad = n =>
+    String(n).padStart(2, '0');
 
 
   const isInsideNow = el =>
@@ -37,20 +37,18 @@
 
 
   const isHMS = value =>
-    /^\d{2}:\d{2}:\d{2}$/
-      .test(clean(value));
+    /^\d{2}:\d{2}:\d{2}$/.test(clean(value));
 
 
   const isHM = value =>
-    /^\d{1,2}:\d{2}$/
-      .test(clean(value));
+    /^\d{1,2}:\d{2}$/.test(clean(value));
 
 
   function hmsToSeconds(value) {
 
     const m =
       clean(value).match(
-        /^(\d{2}):(\d{2}):(\d{2})$/
+        /^(\d{1,2}):(\d{2}):(\d{2})$/
       );
 
     if (!m)
@@ -60,6 +58,23 @@
       Number(m[1]) * 3600 +
       Number(m[2]) * 60 +
       Number(m[3])
+    );
+  }
+
+
+  function hmDurationToSeconds(value) {
+
+    const m =
+      clean(value).match(
+        /^(\d{1,2}):(\d{2})$/
+      );
+
+    if (!m)
+      return null;
+
+    return (
+      Number(m[1]) * 3600 +
+      Number(m[2]) * 60
     );
   }
 
@@ -101,6 +116,91 @@
   }
 
 
+  function hmToMinutes(value) {
+
+    const m =
+      clean(value).match(
+        /^(\d{1,2}):(\d{2})$/
+      );
+
+    if (!m)
+      return null;
+
+    return (
+      Number(m[1]) * 60 +
+      Number(m[2])
+    );
+  }
+
+
+  function minutesToHM(minutes) {
+
+    let value =
+      Math.round(minutes);
+
+    value =
+      ((value % 1440) + 1440) % 1440;
+
+    return (
+      pad(
+        Math.floor(value / 60)
+      ) +
+      ':' +
+      pad(value % 60)
+    );
+  }
+
+
+  function addDurationToClock(
+    clock,
+    seconds
+  ) {
+
+    const startMinutes =
+      hmToMinutes(clock);
+
+    if (
+      startMinutes === null ||
+      seconds === null
+    ) {
+      return null;
+    }
+
+    return minutesToHM(
+      startMinutes +
+      seconds / 60
+    );
+  }
+
+
+  function clockDifferenceSeconds(
+    start,
+    finish
+  ) {
+
+    const a =
+      hmToMinutes(start);
+
+    const b =
+      hmToMinutes(finish);
+
+    if (
+      a === null ||
+      b === null
+    ) {
+      return null;
+    }
+
+    let diff =
+      b - a;
+
+    if (diff < 0)
+      diff += 1440;
+
+    return diff * 60;
+  }
+
+
   function validTaskName(value) {
 
     const t =
@@ -110,36 +210,28 @@
       return false;
 
     if (
-      t.length < 1 ||
-      t.length > 120
-    )
-      return false;
-
-    if (
+      t.length > 140 ||
       isHM(t) ||
       isHMS(t)
-    )
+    ) {
       return false;
+    }
 
     if (
-      /^[-\d\s:./]+$/
-        .test(t)
-    )
+      /^[-\d\s:./]+$/.test(t)
+    ) {
       return false;
+    }
 
-    const blacklist =
-      new Set([
-        'Main',
-        'NOW',
-        'PREVIOUS',
-        'NEXT',
-        'プロジェクトモード',
-        'プロジェクト',
-        'TaskChute Cloud 2',
-        'タスクを取得できません'
-      ]);
-
-    return !blacklist.has(t);
+    return ![
+      'NOW',
+      'PREVIOUS',
+      'NEXT',
+      'Main',
+      'プロジェクト',
+      'プロジェクトモード',
+      'TaskChute Cloud 2'
+    ].includes(t);
   }
 
 
@@ -147,20 +239,21 @@
      STATE
   ========================================================= */
 
-  if (!window.tcNowStateV33) {
+  if (!window.tcNowStateV34) {
 
-    window.tcNowStateV33 = {
+    window.tcNowStateV34 = {
 
       currentTask: null,
 
       elapsedBase: null,
       elapsedCapturedAt: null,
 
-      leaveTime: null,
+      currentRow: null,
 
       previous: null,
-
       next: [],
+
+      leaveTime: null,
 
       lastSync: null
     };
@@ -168,25 +261,18 @@
 
 
   const state =
-    window.tcNowStateV33;
+    window.tcNowStateV34;
 
 
   /* =========================================================
      CURRENT PLAYER
-     実機で確認したDOM構造：
-
-     経過時間
-       ↓ parent
-       ↓ parent
-       ↓ previousElementSibling
-     現在タスク名
   ========================================================= */
 
   function findCurrentPlayer() {
 
-    const timeElements =
+    const elapsedElements =
       [...document.querySelectorAll(
-        'p, div, span'
+        'p,div,span'
       )]
         .filter(el => {
 
@@ -194,7 +280,7 @@
             return false;
 
           return isHMS(
-            text(el)
+            txt(el)
           );
         });
 
@@ -204,8 +290,18 @@
 
     for (
       const elapsedEl
-      of timeElements
+      of elapsedElements
     ) {
+
+      /*
+        実DOMで確認済み。
+
+        elapsed
+          parent
+          parent
+          previousElementSibling
+        = current task
+      */
 
       const taskEl =
         elapsedEl
@@ -218,17 +314,13 @@
         continue;
 
 
-      const taskName =
+      const task =
         clean(
           taskEl.textContent
         );
 
 
-      if (
-        !validTaskName(
-          taskName
-        )
-      )
+      if (!validTaskName(task))
         continue;
 
 
@@ -239,15 +331,10 @@
 
       candidates.push({
 
-        elapsedEl,
-
-        taskEl,
-
-        task:
-          taskName,
+        task,
 
         elapsed:
-          text(elapsedEl),
+          txt(elapsedEl),
 
         top:
           rect.top,
@@ -265,10 +352,6 @@
       return null;
 
 
-    /*
-      下部プレイヤーを優先。
-    */
-
     candidates.sort(
       (a, b) => {
 
@@ -284,10 +367,12 @@
         )
           return 1;
 
-        return (
-          b.top -
-          a.top
-        );
+        /*
+          下部プレイヤーなので
+          一番下にあるものを優先。
+        */
+
+        return b.top - a.top;
       }
     );
 
@@ -297,103 +382,233 @@
 
 
   /* =========================================================
-     SCHEDULE ROWS
-     実機調査で確定：
-
-     TAG   : DIV
-     CLASS : MuiBox-root my-0
-     高さ  : 約32px
-
-     親要素に
-     タスク詳細・予定時刻等が入っている。
+     TASK ROW PARSER
   ========================================================= */
 
-  function extractTimes(
-    value
-  ) {
-
-    /*
-      HH:MM:SSの一部を誤検出しないように
-      先にHH:MM:SSを消す。
-    */
-
-    const stripped =
-      clean(value)
-        .replace(
-          /\d{1,2}:\d{2}:\d{2}/g,
-          ' '
-        )
-        .replace(
-          /--:--:--/g,
-          ' '
-        );
-
-
-    return (
-      stripped.match(
-        /\d{1,2}:\d{2}/g
-      ) || []
-    );
-  }
-
-
-  function getScheduleTime(
+  function parseTaskRow(
     task,
     parentText
   ) {
 
-    const times =
-      extractTimes(
-        parentText
-      );
+    const s =
+      clean(parentText);
 
 
-    if (!times.length)
-      return null;
+    const afterTask =
+      s.startsWith(task)
+        ? s.slice(task.length)
+        : s;
 
 
     /*
-      現在・完了済みタスク
+      実績開始・終了時刻。
 
-      DailyReview
-      16:07 16:13 ...
+      完了済み：
+        DailyReview16:0716:13...
 
-      → 最初の時刻 = 開始時刻
+      実行中：
+        晩ご飯17:29...
     */
 
-    const hasActualExecution =
-      (
-        !parentText.includes(
-          '--:--:--'
-        ) &&
-        times.length >= 1
+    let actualStart = null;
+    let actualFinish = null;
+
+
+    const startMatch =
+      afterTask.match(
+        /^(\d{1,2}:\d{2})/
       );
 
 
-    if (
-      task === state.currentTask ||
-      hasActualExecution
-    ) {
-      return times[0];
+    if (startMatch) {
+
+      actualStart =
+        startMatch[1];
+
+
+      const rest =
+        afterTask.slice(
+          startMatch[0].length
+        );
+
+
+      const finishMatch =
+        rest.match(
+          /^(\d{1,2}:\d{2})/
+        );
+
+
+      if (finishMatch) {
+
+        actualFinish =
+          finishMatch[1];
+      }
     }
 
 
     /*
-      未実行タスク：
+      全ての数値 HH:MM を取得。
 
-      夜の薬...
-      --:--:--
-      ...
-      19:19
+      例：
+      DailyReview
+      16:07,16:13,00:06,00:05
 
-      → 最後の時刻が予定開始時刻
+      WeeklyReview
+      00:30,19:19
     */
 
-    return times[
-      times.length - 1
-    ];
+    const allTimes =
+      [
+        ...s.matchAll(
+          /(?<!\d)(\d{1,2}:\d{2})(?!:\d{2})(?!\d)/g
+        )
+      ]
+        .map(m => m[1]);
+
+
+    /*
+      行末がHH:MMなら
+      TaskChuteの予定開始時刻とみなす。
+    */
+
+    const scheduledMatch =
+      s.match(
+        /(\d{1,2}:\d{2})$/
+      );
+
+
+    const scheduledStart =
+      scheduledMatch
+        ? scheduledMatch[1]
+        : null;
+
+
+    /*
+      実績開始・終了・予定開始を取り除き、
+      残った値を経過・見積として解釈する。
+    */
+
+    const remaining =
+      [...allTimes];
+
+
+    if (
+      actualStart &&
+      remaining[0] === actualStart
+    ) {
+      remaining.shift();
+    }
+
+
+    if (
+      actualFinish &&
+      remaining[0] === actualFinish
+    ) {
+      remaining.shift();
+    }
+
+
+    if (
+      scheduledStart &&
+      remaining[
+        remaining.length - 1
+      ] === scheduledStart
+    ) {
+      remaining.pop();
+    }
+
+
+    let actualElapsed = null;
+    let planned = null;
+
+
+    if (actualStart) {
+
+      /*
+        完了済み・実行中タスク。
+
+        通常：
+        [経過時間, 見積時間]
+      */
+
+      if (
+        remaining.length >= 1
+      ) {
+        actualElapsed =
+          remaining[0];
+      }
+
+
+      if (
+        remaining.length >= 2
+      ) {
+        planned =
+          remaining[1];
+      }
+
+    } else {
+
+      /*
+        未実行タスク。
+
+        通常：
+        [見積時間]
+      */
+
+      if (
+        remaining.length >= 1
+      ) {
+        planned =
+          remaining[0];
+      }
+    }
+
+
+    /*
+      00:00:00形式の実経過時間が
+      DOMに存在するケースも拾う。
+    */
+
+    const hmsMatches =
+      [
+        ...s.matchAll(
+          /(?<!\d)(\d{1,2}:\d{2}:\d{2})(?!\d)/g
+        )
+      ]
+        .map(m => m[1])
+        .filter(
+          x =>
+            !x.includes('--')
+        );
+
+
+    if (
+      !actualElapsed &&
+      hmsMatches.length
+    ) {
+      actualElapsed =
+        hmsMatches[0];
+    }
+
+
+    return {
+
+      actualStart,
+
+      actualFinish,
+
+      actualElapsed,
+
+      planned,
+
+      scheduledStart
+    };
   }
 
+
+  /* =========================================================
+     SCHEDULE ROWS
+  ========================================================= */
 
   function getScheduleRows() {
 
@@ -413,9 +628,7 @@
       of elements
     ) {
 
-      if (
-        isInsideNow(el)
-      )
+      if (isInsideNow(el))
         continue;
 
 
@@ -425,9 +638,7 @@
         );
 
 
-      if (
-        !validTaskName(task)
-      )
+      if (!validTaskName(task))
         continue;
 
 
@@ -436,8 +647,8 @@
 
 
       /*
-        実機の予定タスク名行を
-        十分広めの条件で識別。
+        実機調査で確認した
+        タスク名行。
       */
 
       if (
@@ -467,34 +678,20 @@
 
 
       /*
-        タスク名だけのnested要素を除外。
+        nestedされたタスク名単体を排除。
       */
 
       if (
-        !parentText ||
-        parentText === task
-      ) {
-        continue;
-      }
-
-
-      /*
-        本物のタスク行では、
-        親テキストがタスク名より明確に長い。
-      */
-
-      if (
+        parentText === task ||
         parentText.length <
-        task.length + 5
+          task.length + 5
       ) {
         continue;
       }
 
 
       /*
-        TaskChute予定行には、
-        プロジェクトモード / 時刻 / --:-- 等
-        のいずれかが存在する。
+        TaskChute行らしさ。
       */
 
       if (
@@ -511,8 +708,8 @@
       }
 
 
-      const scheduledTime =
-        getScheduleTime(
+      const parsed =
+        parseTaskRow(
           task,
           parentText
         );
@@ -522,31 +719,25 @@
 
         task,
 
-        time:
-          scheduledTime,
-
         top:
           rect.top,
 
-        element:
-          el,
+        parentText,
 
-        parentText
+        ...parsed
       });
     }
 
 
-    /*
-      同一位置・同一タスクの
-      nested重複を削除。
-    */
-
     rows.sort(
       (a, b) =>
-        a.top -
-        b.top
+        a.top - b.top
     );
 
+
+    /*
+      nested重複排除。
+    */
 
     const unique = [];
 
@@ -559,11 +750,9 @@
       const duplicate =
         unique.some(
           x =>
-            x.task ===
-              row.task &&
+            x.task === row.task &&
             Math.abs(
-              x.top -
-              row.top
+              x.top - row.top
             ) < 3
         );
 
@@ -582,27 +771,13 @@
 
 
   /* =========================================================
-     PREVIOUS + NEXT 3
+     PREVIOUS / NEXT
   ========================================================= */
 
   function getNeighbours(
+    rows,
     currentTask
   ) {
-
-    if (!currentTask) {
-
-      return {
-
-        previous: null,
-
-        next: []
-      };
-    }
-
-
-    const rows =
-      getScheduleRows();
-
 
     const index =
       rows.findIndex(
@@ -616,6 +791,8 @@
 
       return {
 
+        current: null,
+
         previous: null,
 
         next: []
@@ -623,111 +800,68 @@
     }
 
 
-    const previous =
-      index > 0
-        ? rows[
-            index - 1
-          ]
-        : null;
-
-
-    /*
-      退勤も普通にNEXTへ含める。
-    */
-
-    const next =
-      rows.slice(
-        index + 1,
-        index + 4
-      );
-
-
     return {
 
-      previous,
+      current:
+        rows[index],
 
-      next
+      previous:
+        index > 0
+          ? rows[index - 1]
+          : null,
+
+      /*
+        退勤も除外しない。
+      */
+
+      next:
+        rows.slice(
+          index + 1,
+          index + 4
+        )
     };
   }
 
 
   /* =========================================================
-     LEAVE TIME
+     LEAVE
   ========================================================= */
 
   function findLeaveTime(
-    scheduleRows
+    rows
   ) {
 
-    /*
-      まず予定一覧から退勤を取得。
-    */
-
-    const row =
-      scheduleRows.find(
-        item =>
-          item.task === '退勤'
+    const leaveRow =
+      rows.find(
+        row =>
+          row.task === '退勤'
       );
 
 
     if (
-      row &&
-      row.time
+      leaveRow?.scheduledStart
     ) {
-      return row.time;
+
+      return (
+        leaveRow
+          .scheduledStart
+      );
     }
 
 
     /*
-      フォールバック：
-      「退勤」の親DOMを直接検索。
+      実行済みの場合などは
+      実開始時刻をフォールバック。
     */
 
-    const leaveNodes =
-      [
-        ...document.querySelectorAll(
-          'body *'
-        )
-      ]
-        .filter(
-          el =>
-            !isInsideNow(el) &&
-            text(el) === '退勤'
-        );
-
-
-    for (
-      const node
-      of leaveNodes
+    if (
+      leaveRow?.actualStart
     ) {
 
-      let parent =
-        node;
-
-
-      for (
-        let level = 0;
-        level < 8 &&
-        parent;
-        level++,
-        parent =
-          parent.parentElement
-      ) {
-
-        const times =
-          extractTimes(
-            parent.textContent
-          );
-
-
-        if (
-          times.length
-        ) {
-          return times[
-            times.length - 1
-          ];
-        }
-      }
+      return (
+        leaveRow
+          .actualStart
+      );
     }
 
 
@@ -736,7 +870,7 @@
 
 
   /* =========================================================
-     DOM SYNC - 5 sec
+     SYNC
   ========================================================= */
 
   function syncFromTaskChute() {
@@ -751,19 +885,18 @@
         player.task;
 
 
-      const elapsedSeconds =
+      const sec =
         hmsToSeconds(
           player.elapsed
         );
 
 
       if (
-        elapsedSeconds !== null
+        sec !== null
       ) {
 
         state.elapsedBase =
-          elapsedSeconds;
-
+          sec;
 
         state.elapsedCapturedAt =
           Date.now();
@@ -777,8 +910,13 @@
 
     const neighbours =
       getNeighbours(
+        rows,
         state.currentTask
       );
+
+
+    state.currentRow =
+      neighbours.current;
 
 
     state.previous =
@@ -789,17 +927,14 @@
       neighbours.next;
 
 
-    const leaveTime =
+    const leave =
       findLeaveTime(
         rows
       );
 
 
-    if (leaveTime) {
-
-      state.leaveTime =
-        leaveTime;
-    }
+    if (leave)
+      state.leaveTime = leave;
 
 
     state.lastSync =
@@ -808,7 +943,7 @@
 
 
   /* =========================================================
-     LIVE ELAPSED
+     CURRENT CALCULATIONS
   ========================================================= */
 
   function getElapsedSeconds() {
@@ -821,23 +956,40 @@
     }
 
 
-    const passed =
+    return (
+      state.elapsedBase +
       Math.floor(
         (
           Date.now() -
           state.elapsedCapturedAt
         ) / 1000
-      );
-
-
-    return (
-      state.elapsedBase +
-      passed
+      )
     );
   }
 
 
-  function getStartTime() {
+  function getCurrentStartTime() {
+
+    /*
+      TaskChute行の実開始時刻を優先。
+    */
+
+    if (
+      state.currentRow
+        ?.actualStart
+    ) {
+
+      return (
+        state.currentRow
+          .actualStart
+      );
+    }
+
+
+    /*
+      DOMから取れなければ
+      elapsedから逆算。
+    */
 
     const elapsed =
       getElapsedSeconds();
@@ -846,10 +998,10 @@
     if (
       elapsed === null
     )
-      return '--:--';
+      return null;
 
 
-    const start =
+    const d =
       new Date(
         Date.now() -
         elapsed * 1000
@@ -858,20 +1010,191 @@
 
     return (
       pad(
-        start.getHours()
+        d.getHours()
       ) +
       ':' +
       pad(
-        start.getMinutes()
+        d.getMinutes()
       )
     );
   }
 
 
+  function getCurrentPlannedSeconds() {
+
+    const planned =
+      state.currentRow
+        ?.planned;
+
+
+    if (planned) {
+
+      const sec =
+        hmDurationToSeconds(
+          planned
+        );
+
+
+      if (
+        sec !== null
+      )
+        return sec;
+    }
+
+
+    /*
+      見積時間をDOMから直接取れなかった場合、
+      現在開始 → NEXT予定開始
+      をフォールバックとして使用。
+    */
+
+    const start =
+      getCurrentStartTime();
+
+
+    const nextStart =
+      state.next?.[0]
+        ?.scheduledStart;
+
+
+    if (
+      start &&
+      nextStart
+    ) {
+
+      return (
+        clockDifferenceSeconds(
+          start,
+          nextStart
+        )
+      );
+    }
+
+
+    return null;
+  }
+
+
+  function getPlannedEnd() {
+
+    const start =
+      getCurrentStartTime();
+
+
+    const planned =
+      getCurrentPlannedSeconds();
+
+
+    if (
+      start &&
+      planned !== null
+    ) {
+
+      return (
+        addDurationToClock(
+          start,
+          planned
+        )
+      );
+    }
+
+
+    /*
+      最終フォールバック。
+    */
+
+    return (
+      state.next?.[0]
+        ?.scheduledStart ||
+      null
+    );
+  }
+
+
   /* =========================================================
-     RE-RUN
-     再実行しても閉じない。
-     UIだけ再生成する。
+     CLEAN PREVIOUS ELAPSED
+  ========================================================= */
+
+  function previousElapsed(
+    row
+  ) {
+
+    if (!row)
+      return null;
+
+
+    /*
+      HH:MM:SSならそのまま。
+    */
+
+    if (
+      row.actualElapsed &&
+      isHMS(
+        row.actualElapsed
+      )
+    ) {
+
+      return (
+        row.actualElapsed
+      );
+    }
+
+
+    /*
+      HH:MMなら経過時間として
+      HH:MM:00へ。
+    */
+
+    if (
+      row.actualElapsed &&
+      isHM(
+        row.actualElapsed
+      )
+    ) {
+
+      return (
+        row.actualElapsed +
+        ':00'
+      );
+    }
+
+
+    /*
+      START / FINISHが取れた場合、
+      その差から計算。
+    */
+
+    if (
+      row.actualStart &&
+      row.actualFinish
+    ) {
+
+      const sec =
+        clockDifferenceSeconds(
+          row.actualStart,
+          row.actualFinish
+        );
+
+
+      if (
+        sec !== null
+      ) {
+
+        return (
+          secondsToHMS(
+            sec
+          )
+        );
+      }
+    }
+
+
+    return null;
+  }
+
+
+  /* =========================================================
+     RESET OLD INSTANCE
   ========================================================= */
 
   if (
@@ -894,28 +1217,22 @@
   }
 
 
-  const oldRoot =
-    document.getElementById(
+  document
+    .getElementById(
       ROOT_ID
-    );
+    )
+    ?.remove();
 
 
-  if (oldRoot)
-    oldRoot.remove();
-
-
-  const oldStyle =
-    document.getElementById(
+  document
+    .getElementById(
       STYLE_ID
-    );
-
-
-  if (oldStyle)
-    oldStyle.remove();
+    )
+    ?.remove();
 
 
   /* =========================================================
-     VIEWPORT / SAFE AREA
+     VIEWPORT
   ========================================================= */
 
   let viewport =
@@ -931,14 +1248,11 @@
         'meta'
       );
 
-
     viewport.name =
       'viewport';
 
-
     viewport.content =
       'width=device-width,initial-scale=1,viewport-fit=cover';
-
 
     document.head.appendChild(
       viewport
@@ -946,47 +1260,24 @@
 
   } else {
 
-    let content =
+    let c =
       viewport.getAttribute(
         'content'
-      ) ||
-      'width=device-width,initial-scale=1';
-
+      ) || '';
 
     if (
-      !content.includes(
+      !c.includes(
         'viewport-fit=cover'
       )
     ) {
 
-      content +=
-        ',viewport-fit=cover';
-
-
       viewport.setAttribute(
         'content',
-        content
+        c +
+        ',viewport-fit=cover'
       );
     }
   }
-
-
-  document.documentElement
-    .style
-    .setProperty(
-      'background',
-      '#07090d',
-      'important'
-    );
-
-
-  document.body
-    .style
-    .setProperty(
-      'background',
-      '#07090d',
-      'important'
-    );
 
 
   /* =========================================================
@@ -1037,7 +1328,7 @@
         #979ba5;
 
       --dim:
-        #4b4f59;
+        #555a64;
 
 
       position:
@@ -1109,19 +1400,18 @@
 
       gap:
         clamp(
-          10px,
-          2.5vh,
-          26px
+          9px,
+          2.3vh,
+          23px
         );
     }
 
 
-    /* HEADER */
+    /* ===========================================
+       HEADER
+    =========================================== */
 
     #tc-header {
-
-      min-width:
-        0;
 
       display:
         grid;
@@ -1179,7 +1469,7 @@
         800;
 
       line-height:
-        1.32;
+        1.3;
 
       font-variant-numeric:
         tabular-nums;
@@ -1199,7 +1489,7 @@
         max-content;
 
       gap:
-        .4em;
+        .42em;
     }
 
 
@@ -1232,7 +1522,9 @@
     }
 
 
-    /* MAIN */
+    /* ===========================================
+       MAIN
+    =========================================== */
 
     #tc-main {
 
@@ -1258,7 +1550,9 @@
     }
 
 
-    /* NOW */
+    /* ===========================================
+       NOW
+    =========================================== */
 
     #tc-now {
 
@@ -1286,9 +1580,9 @@
 
       padding:
         clamp(
-          18px,
-          4.5vh,
-          46px
+          15px,
+          3.5vh,
+          38px
         )
         clamp(
           26px,
@@ -1349,9 +1643,9 @@
 
       font-size:
         clamp(
-          15px,
-          2.1vw,
-          26px
+          14px,
+          2vw,
+          24px
         );
 
       font-weight:
@@ -1361,86 +1655,86 @@
         .18em;
 
       border-radius:
-        clamp(
-          11px,
-          1.8vw,
-          20px
-        );
+        15px;
 
       padding:
         clamp(
-          7px,
-          1.5vh,
-          14px
+          6px,
+          1.2vh,
+          11px
         )
         clamp(
-          16px,
-          2.4vw,
-          28px
+          15px,
+          2.2vw,
+          26px
         );
 
       margin-bottom:
         clamp(
-          18px,
-          5vh,
-          54px
+          13px,
+          3vh,
+          30px
         );
     }
 
 
-    .tc-metric {
+    .tc-now-line {
 
       display:
-        flex;
+        grid;
+
+      grid-template-columns:
+        max-content
+        max-content;
 
       align-items:
         baseline;
 
-      gap:
+      column-gap:
         clamp(
           12px,
           1.8vw,
           24px
         );
 
-      min-width:
-        0;
+      min-height:
+        1.5em;
     }
 
 
-    .tc-metric-label {
+    .tc-now-label {
 
       color:
-        #747985;
+        #777c86;
 
       font-size:
         clamp(
-          12px,
-          1.65vw,
-          21px
+          11px,
+          1.45vw,
+          18px
         );
 
       font-weight:
         900;
 
       letter-spacing:
-        .22em;
+        .15em;
 
       white-space:
         nowrap;
     }
 
 
-    .tc-metric-value {
+    .tc-now-value {
 
       color:
-        #c6cad2;
+        #c9cdd4;
 
       font-size:
         clamp(
-          22px,
-          3.5vw,
-          44px
+          19px,
+          3vw,
+          37px
         );
 
       font-weight:
@@ -1454,49 +1748,66 @@
     }
 
 
-    #tc-start-row {
+    #tc-task {
 
-      margin-bottom:
+      margin:
         clamp(
           9px,
-          2vh,
-          18px
-        );
-    }
-
-
-    #tc-task {
+          1.7vh,
+          17px
+        )
+        0;
 
       font-size:
         clamp(
           30px,
-          5.3vw,
-          68px
+          5.1vw,
+          66px
         );
 
       font-weight:
         900;
 
       line-height:
-        1.07;
+        1.06;
 
       overflow-wrap:
         anywhere;
     }
 
 
-    #tc-elapsed-row {
+    #tc-now-metrics {
 
       margin-top:
         clamp(
-          10px,
-          2.5vh,
-          25px
+          8px,
+          1.7vh,
+          15px
+        );
+
+      display:
+        grid;
+
+      gap:
+        clamp(
+          2px,
+          .55vh,
+          6px
         );
     }
 
 
-    /* SIDE */
+    #tc-progress-label.tc-over,
+    #tc-progress-value.tc-over {
+
+      color:
+        #ffffff;
+    }
+
+
+    /* ===========================================
+       SIDE
+    =========================================== */
 
     #tc-side {
 
@@ -1510,8 +1821,8 @@
         grid;
 
       grid-template-rows:
-        minmax(0, .78fr)
-        minmax(0, 1.22fr);
+        minmax(0, .9fr)
+        minmax(0, 1.1fr);
 
       gap:
         clamp(
@@ -1545,9 +1856,9 @@
 
       padding:
         clamp(
-          14px,
-          3vh,
-          30px
+          13px,
+          2.5vh,
+          26px
         )
         clamp(
           17px,
@@ -1573,9 +1884,9 @@
 
       font-size:
         clamp(
-          12px,
-          1.7vw,
-          20px
+          11px,
+          1.55vw,
+          19px
         );
 
       font-weight:
@@ -1583,20 +1894,149 @@
 
       letter-spacing:
         .18em;
+    }
 
-      margin-bottom:
+
+    #tc-prev-task {
+
+      margin:
         clamp(
-          8px,
-          2vh,
-          20px
+          7px,
+          1.3vh,
+          13px
+        )
+        0
+        clamp(
+          7px,
+          1.3vh,
+          13px
+        );
+
+      color:
+        #757a84;
+
+      font-size:
+        clamp(
+          19px,
+          3vw,
+          35px
+        );
+
+      font-weight:
+        800;
+
+      white-space:
+        nowrap;
+
+      overflow:
+        hidden;
+
+      text-overflow:
+        ellipsis;
+    }
+
+
+    #tc-prev-info {
+
+      display:
+        grid;
+
+      gap:
+        clamp(
+          1px,
+          .4vh,
+          5px
         );
     }
 
 
-    .tc-task-row {
+    .tc-prev-line {
 
-      min-width:
-        0;
+      display:
+        grid;
+
+      grid-template-columns:
+        minmax(
+          65px,
+          max-content
+        )
+        max-content;
+
+      align-items:
+        baseline;
+
+      column-gap:
+        clamp(
+          10px,
+          1.5vw,
+          18px
+        );
+    }
+
+
+    .tc-prev-label {
+
+      color:
+        #555a64;
+
+      font-size:
+        clamp(
+          10px,
+          1.3vw,
+          16px
+        );
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .12em;
+    }
+
+
+    .tc-prev-value {
+
+      color:
+        #737883;
+
+      font-size:
+        clamp(
+          15px,
+          2.25vw,
+          27px
+        );
+
+      font-variant-numeric:
+        tabular-nums;
+    }
+
+
+    #tc-next-title {
+
+      margin-bottom:
+        clamp(
+          8px,
+          1.8vh,
+          17px
+        );
+    }
+
+
+    #tc-next-list {
+
+      display:
+        grid;
+
+      gap:
+        clamp(
+          4px,
+          .9vh,
+          10px
+        );
+    }
+
+
+    .tc-next-row {
 
       display:
         grid;
@@ -1614,38 +2054,35 @@
           1.5vw,
           20px
         );
-
-      min-height:
-        1.65em;
     }
 
 
-    .tc-task-row-time,
-    .tc-task-row-name {
+    .tc-next-time,
+    .tc-next-name {
 
       color:
-        #707580;
+        #737883;
 
       font-size:
         clamp(
-          17px,
-          2.8vw,
-          34px
+          16px,
+          2.7vw,
+          32px
         );
     }
 
 
-    .tc-task-row-time {
-
-      white-space:
-        nowrap;
+    .tc-next-time {
 
       font-variant-numeric:
         tabular-nums;
+
+      white-space:
+        nowrap;
     }
 
 
-    .tc-task-row-name {
+    .tc-next-name {
 
       min-width:
         0;
@@ -1661,20 +2098,6 @@
 
       text-overflow:
         ellipsis;
-    }
-
-
-    #tc-next-list {
-
-      display:
-        grid;
-
-      gap:
-        clamp(
-          3px,
-          .7vh,
-          8px
-        );
     }
 
 
@@ -1703,15 +2126,12 @@
 
       font-weight:
         700;
-
-      letter-spacing:
-        .08em;
     }
 
 
-    /* =====================================================
+    /* ===========================================
        iPHONE LANDSCAPE
-    ===================================================== */
+    =========================================== */
 
     @media
       (orientation: landscape)
@@ -1746,7 +2166,7 @@
           minmax(0, 1fr);
 
         gap:
-          1.8dvh;
+          1.7dvh;
       }
 
 
@@ -1783,7 +2203,7 @@
           );
 
         line-height:
-          1.22;
+          1.2;
       }
 
 
@@ -1802,7 +2222,7 @@
 
         grid-template-columns:
           minmax(0, 1.67fr)
-          minmax(185px, .88fr);
+          minmax(190px, .9fr);
 
         gap:
           1.6vw;
@@ -1819,11 +2239,7 @@
           );
 
         padding:
-          clamp(
-            8px,
-            2.2dvh,
-            15px
-          )
+          2dvh
           clamp(
             18px,
             3vw,
@@ -1832,138 +2248,98 @@
       }
 
 
-      #tc-now::before {
-
-        width:
-          clamp(
-            5px,
-            .7vw,
-            9px
-          );
-      }
-
-
       #tc-now-badge {
 
         font-size:
           clamp(
-            10px,
-            3.4dvh,
-            17px
-          );
-
-        border-radius:
-          clamp(
-            7px,
-            2.7dvh,
-            13px
+            9px,
+            3.1dvh,
+            15px
           );
 
         padding:
-          clamp(
-            4px,
-            1.3dvh,
-            7px
-          )
-          clamp(
-            10px,
-            1.4vw,
-            16px
-          );
+          1.1dvh
+          1.3vw;
 
         margin-bottom:
-          clamp(
-            6px,
-            2dvh,
-            11px
-          );
+          1.4dvh;
       }
 
 
-      .tc-metric {
+      .tc-now-line {
 
-        gap:
+        column-gap:
+          1.1vw;
+
+        min-height:
+          1.35em;
+      }
+
+
+      .tc-now-label {
+
+        font-size:
           clamp(
             8px,
-            1.3vw,
-            15px
+            2.7dvh,
+            14px
           );
       }
 
 
-      .tc-metric-label {
+      .tc-now-value {
 
         font-size:
           clamp(
-            9px,
-            3dvh,
-            15px
-          );
-      }
-
-
-      .tc-metric-value {
-
-        font-size:
-          clamp(
-            16px,
-            5dvh,
-            25px
+            14px,
+            4.6dvh,
+            23px
           );
       }
 
 
       #tc-task {
 
+        margin:
+          1.1dvh 0;
+
         font-size:
           clamp(
-            22px,
-            7.5dvh,
-            39px
+            21px,
+            7dvh,
+            37px
           );
-
-        line-height:
-          1.02;
       }
 
 
-      #tc-elapsed-row {
+      #tc-now-metrics {
 
         margin-top:
-          clamp(
-            4px,
-            1.4dvh,
-            8px
-          );
+          1dvh;
+
+        gap:
+          .2dvh;
       }
 
 
       #tc-side {
 
         gap:
-          1.8dvh;
+          1.7dvh;
       }
 
 
       .tc-card {
+
+        padding:
+          1.5dvh
+          1.3vw;
 
         border-radius:
           clamp(
             11px,
             4dvh,
             21px
-          );
-
-        padding:
-          clamp(
-            6px,
-            1.5dvh,
-            11px
-          )
-          clamp(
-            10px,
-            1.4vw,
-            17px
           );
       }
 
@@ -1972,43 +2348,79 @@
 
         font-size:
           clamp(
-            9px,
-            3dvh,
-            15px
-          );
-
-        margin-bottom:
-          clamp(
-            3px,
-            1.2dvh,
-            6px
+            8px,
+            2.7dvh,
+            14px
           );
       }
 
 
-      .tc-task-row-time,
-      .tc-task-row-name {
+      #tc-prev-task {
+
+        margin:
+          .8dvh 0;
 
         font-size:
           clamp(
-            13px,
-            4.1dvh,
-            21px
+            14px,
+            4.5dvh,
+            23px
           );
+      }
+
+
+      .tc-prev-label {
+
+        font-size:
+          clamp(
+            8px,
+            2.5dvh,
+            13px
+          );
+      }
+
+
+      .tc-prev-value {
+
+        font-size:
+          clamp(
+            12px,
+            3.7dvh,
+            19px
+          );
+      }
+
+
+      #tc-next-title {
+
+        margin-bottom:
+          .8dvh;
       }
 
 
       #tc-next-list {
 
         gap:
-          1dvh;
+          .65dvh;
+      }
+
+
+      .tc-next-time,
+      .tc-next-name {
+
+        font-size:
+          clamp(
+            13px,
+            4dvh,
+            21px
+          );
       }
     }
 
 
-    /* =====================================================
+    /* ===========================================
        PORTRAIT
-    ===================================================== */
+    =========================================== */
 
     @media
       (orientation: portrait) {
@@ -2016,15 +2428,14 @@
       #tc-header {
 
         grid-template-columns:
-          1fr
-          auto;
+          1fr auto;
 
         grid-template-areas:
           "brand clock"
           "leave leave";
 
         gap:
-          9px;
+          8px;
       }
 
 
@@ -2063,9 +2474,6 @@
         grid-template-rows:
           minmax(0, 1fr)
           auto;
-
-        gap:
-          12px;
       }
 
 
@@ -2076,16 +2484,6 @@
 
         grid-template-rows:
           auto;
-
-        gap:
-          9px;
-      }
-
-
-      .tc-card {
-
-        padding:
-          14px;
       }
     }
 
@@ -2204,6 +2602,8 @@
 
       <main id="tc-main">
 
+        <!-- ================= NOW ================= -->
+
         <section id="tc-now">
 
           <div id="tc-now-badge">
@@ -2211,18 +2611,15 @@
           </div>
 
 
-          <div
-            id="tc-start-row"
-            class="tc-metric">
+          <div class="tc-now-line">
 
-            <span
-              class="tc-metric-label">
+            <span class="tc-now-label">
               START
             </span>
 
             <span
               id="tc-start"
-              class="tc-metric-value">
+              class="tc-now-value">
               --:--
             </span>
 
@@ -2234,27 +2631,80 @@
           </div>
 
 
-          <div
-            id="tc-elapsed-row"
-            class="tc-metric">
+          <div class="tc-now-line">
 
-            <span
-              class="tc-metric-label">
-              ELAPSED
+            <span class="tc-now-label">
+              PLANNED END
             </span>
 
             <span
-              id="tc-elapsed"
-              class="tc-metric-value">
-              --:--:--
+              id="tc-planned-end"
+              class="tc-now-value">
+              --:--
             </span>
+
+          </div>
+
+
+          <div id="tc-now-metrics">
+
+            <div class="tc-now-line">
+
+              <span class="tc-now-label">
+                ELAPSED
+              </span>
+
+              <span
+                id="tc-elapsed"
+                class="tc-now-value">
+                --:--:--
+              </span>
+
+            </div>
+
+
+            <div class="tc-now-line">
+
+              <span class="tc-now-label">
+                PLANNED
+              </span>
+
+              <span
+                id="tc-planned"
+                class="tc-now-value">
+                --:--:--
+              </span>
+
+            </div>
+
+
+            <div class="tc-now-line">
+
+              <span
+                id="tc-progress-label"
+                class="tc-now-label">
+                REMAINING
+              </span>
+
+              <span
+                id="tc-progress-value"
+                class="tc-now-value">
+                --:--:--
+              </span>
+
+            </div>
 
           </div>
 
         </section>
 
 
+        <!-- ================= SIDE ================= -->
+
         <aside id="tc-side">
+
+
+          <!-- PREVIOUS -->
 
           <section class="tc-card">
 
@@ -2263,79 +2713,120 @@
             </div>
 
 
-            <div class="tc-task-row">
+            <div id="tc-prev-task">
+              —
+            </div>
 
-              <span
-                id="tc-prev-time"
-                class="tc-task-row-time">
-                —
-              </span>
 
-              <span
-                id="tc-prev-task"
-                class="tc-task-row-name">
-                —
-              </span>
+            <div id="tc-prev-info">
+
+              <div class="tc-prev-line">
+
+                <span class="tc-prev-label">
+                  START
+                </span>
+
+                <span
+                  id="tc-prev-start"
+                  class="tc-prev-value">
+                  --:--
+                </span>
+
+              </div>
+
+
+              <div class="tc-prev-line">
+
+                <span class="tc-prev-label">
+                  FINISH
+                </span>
+
+                <span
+                  id="tc-prev-finish"
+                  class="tc-prev-value">
+                  --:--
+                </span>
+
+              </div>
+
+
+              <div class="tc-prev-line">
+
+                <span class="tc-prev-label">
+                  ELAPSED
+                </span>
+
+                <span
+                  id="tc-prev-elapsed"
+                  class="tc-prev-value">
+                  --:--:--
+                </span>
+
+              </div>
 
             </div>
 
           </section>
 
 
+          <!-- NEXT -->
+
           <section class="tc-card">
 
-            <div class="tc-card-label">
+            <div
+              id="tc-next-title"
+              class="tc-card-label">
               NEXT
             </div>
 
 
             <div id="tc-next-list">
 
-              <div class="tc-task-row">
+              <div class="tc-next-row">
 
                 <span
                   id="tc-next-time-0"
-                  class="tc-task-row-time">
+                  class="tc-next-time">
                   —
                 </span>
 
                 <span
                   id="tc-next-task-0"
-                  class="tc-task-row-name">
+                  class="tc-next-name">
                   —
                 </span>
 
               </div>
 
 
-              <div class="tc-task-row">
+              <div class="tc-next-row">
 
                 <span
                   id="tc-next-time-1"
-                  class="tc-task-row-time">
+                  class="tc-next-time">
                   —
                 </span>
 
                 <span
                   id="tc-next-task-1"
-                  class="tc-task-row-name">
+                  class="tc-next-name">
                   —
                 </span>
 
               </div>
 
 
-              <div class="tc-task-row">
+              <div class="tc-next-row">
 
                 <span
                   id="tc-next-time-2"
-                  class="tc-task-row-time">
+                  class="tc-next-time">
                   —
                 </span>
 
                 <span
                   id="tc-next-task-2"
-                  class="tc-task-row-name">
+                  class="tc-next-name">
                   —
                 </span>
 
@@ -2363,10 +2854,6 @@
   );
 
 
-  /* =========================================================
-     RENDER
-  ========================================================= */
-
   const $ =
     id =>
       document.getElementById(
@@ -2374,13 +2861,17 @@
       );
 
 
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   function render() {
 
     const now =
       new Date();
 
 
-    /* ---------- CLOCK ---------- */
+    /* ================= CLOCK ================= */
 
     $('tc-clock')
       .textContent =
@@ -2393,7 +2884,23 @@
         );
 
 
-    /* ---------- CURRENT ---------- */
+    /* ================= CURRENT ================= */
+
+    const elapsed =
+      getElapsedSeconds();
+
+
+    const start =
+      getCurrentStartTime();
+
+
+    const planned =
+      getCurrentPlannedSeconds();
+
+
+    const plannedEnd =
+      getPlannedEnd();
+
 
     $('tc-task')
       .textContent =
@@ -2403,11 +2910,14 @@
 
     $('tc-start')
       .textContent =
-        getStartTime();
+        start ||
+        '--:--';
 
 
-    const elapsed =
-      getElapsedSeconds();
+    $('tc-planned-end')
+      .textContent =
+        plannedEnd ||
+        '--:--';
 
 
     $('tc-elapsed')
@@ -2417,21 +2927,128 @@
         );
 
 
-    /* ---------- PREVIOUS ---------- */
-
-    $('tc-prev-time')
+    $('tc-planned')
       .textContent =
-        state.previous?.time ||
-        '—';
+        planned !== null
+          ? secondsToHMS(
+              planned
+            )
+          : '--:--:--';
+
+
+    /* ================= REMAINING / OVER ================= */
+
+    const progressLabel =
+      $('tc-progress-label');
+
+
+    const progressValue =
+      $('tc-progress-value');
+
+
+    progressLabel
+      .classList
+      .remove('tc-over');
+
+
+    progressValue
+      .classList
+      .remove('tc-over');
+
+
+    if (
+      elapsed !== null &&
+      planned !== null
+    ) {
+
+      const diff =
+        planned -
+        elapsed;
+
+
+      if (diff >= 0) {
+
+        progressLabel
+          .textContent =
+            'REMAINING';
+
+
+        progressValue
+          .textContent =
+            secondsToHMS(
+              diff
+            );
+
+      } else {
+
+        progressLabel
+          .textContent =
+            'OVER';
+
+
+        progressValue
+          .textContent =
+            secondsToHMS(
+              Math.abs(diff)
+            );
+
+
+        progressLabel
+          .classList
+          .add('tc-over');
+
+
+        progressValue
+          .classList
+          .add('tc-over');
+      }
+
+    } else {
+
+      progressLabel
+        .textContent =
+          'REMAINING';
+
+
+      progressValue
+        .textContent =
+          '--:--:--';
+    }
+
+
+    /* ================= PREVIOUS ================= */
+
+    const prev =
+      state.previous;
 
 
     $('tc-prev-task')
       .textContent =
-        state.previous?.task ||
+        prev?.task ||
         '—';
 
 
-    /* ---------- NEXT 3 ---------- */
+    $('tc-prev-start')
+      .textContent =
+        prev?.actualStart ||
+        '--:--';
+
+
+    $('tc-prev-finish')
+      .textContent =
+        prev?.actualFinish ||
+        '--:--';
+
+
+    $('tc-prev-elapsed')
+      .textContent =
+        previousElapsed(
+          prev
+        ) ||
+        '--:--:--';
+
+
+    /* ================= NEXT ================= */
 
     for (
       let i = 0;
@@ -2447,7 +3064,8 @@
         `tc-next-time-${i}`
       )
         .textContent =
-          row?.time ||
+          row?.scheduledStart ||
+          row?.actualStart ||
           '—';
 
 
@@ -2460,7 +3078,7 @@
     }
 
 
-    /* ---------- LEAVE ---------- */
+    /* ================= LEAVE ================= */
 
     $('tc-leave-time')
       .textContent =
@@ -2468,9 +3086,7 @@
         '--:--';
 
 
-    if (
-      !state.leaveTime
-    ) {
+    if (!state.leaveTime) {
 
       $('tc-leave-label')
         .textContent =
@@ -2485,10 +3101,7 @@
     }
 
 
-    const [
-      leaveHour,
-      leaveMinute
-    ] =
+    const parts =
       state.leaveTime
         .split(':')
         .map(Number);
@@ -2499,8 +3112,8 @@
         now.getFullYear(),
         now.getMonth(),
         now.getDate(),
-        leaveHour,
-        leaveMinute,
+        parts[0],
+        parts[1],
         0
       );
 
@@ -2508,21 +3121,21 @@
     let diff =
       Math.floor(
         (
-          leaveDate.getTime() -
-          now.getTime()
+          leaveDate -
+          now
         ) / 1000
       );
 
 
     if (diff >= 0) {
 
-      const hh =
+      const h =
         Math.floor(
           diff / 3600
         );
 
 
-      const mm =
+      const m =
         Math.floor(
           (
             diff % 3600
@@ -2537,9 +3150,9 @@
 
       $('tc-leave-count')
         .textContent =
-          pad(hh) +
+          pad(h) +
           ':' +
-          pad(mm);
+          pad(m);
 
     } else {
 
@@ -2547,13 +3160,13 @@
         Math.abs(diff);
 
 
-      const hh =
+      const h =
         Math.floor(
           diff / 3600
         );
 
 
-      const mm =
+      const m =
         Math.floor(
           (
             diff % 3600
@@ -2561,7 +3174,7 @@
         );
 
 
-      const ss =
+      const s =
         diff % 60;
 
 
@@ -2572,11 +3185,11 @@
 
       $('tc-leave-count')
         .textContent =
-          pad(hh) +
+          pad(h) +
           ':' +
-          pad(mm) +
+          pad(m) +
           ':' +
-          pad(ss);
+          pad(s);
     }
   }
 
@@ -2585,20 +3198,10 @@
      START
   ========================================================= */
 
-  /*
-    NOW表示直前に一度実DOMを取得。
-  */
-
   syncFromTaskChute();
-
 
   render();
 
-
-  /*
-    表示：
-    1秒更新
-  */
 
   window.tcNowRenderTimer =
     setInterval(
@@ -2606,11 +3209,6 @@
       RENDER_INTERVAL
     );
 
-
-  /*
-    TaskChute：
-    5秒ごと再同期
-  */
 
   window.tcNowSyncTimer =
     setInterval(
