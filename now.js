@@ -1,7 +1,12 @@
 (() => {
   'use strict';
 
-  const VERSION = '3.7.3-iOS1';
+  /* =========================================================
+     TaskChute NOW
+     iOS Edition v3.7.3-iOS2
+  ========================================================= */
+
+  const VERSION = '3.7.3-iOS2';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -9,30 +14,50 @@
   const SYNC_INTERVAL = 5000;
   const RENDER_INTERVAL = 1000;
 
+
+  /* =========================================================
+     UTIL
+  ========================================================= */
+
   const clean = value =>
-    String(value || '').replace(/\s+/g, ' ').trim();
+    String(value || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
 
   const pad = n =>
     String(n).padStart(2, '0');
 
+
   const text = el =>
     clean(el?.textContent);
+
 
   const isInsideNow = el =>
     !!el?.closest?.('#' + ROOT_ID);
 
+
   const isHM = value =>
-    /^\d{1,2}:\d{2}$/.test(clean(value));
-
-  const isHMS = value =>
-    /^\d{2}:\d{2}:\d{2}$/.test(clean(value));
-
-  function hmsToSeconds(value) {
-    const m = clean(value).match(
-      /^(\d{1,2}):(\d{2}):(\d{2})$/
+    /^\d{1,2}:\d{2}$/.test(
+      clean(value)
     );
 
-    if (!m) return null;
+
+  const isHMS = value =>
+    /^\d{2}:\d{2}:\d{2}$/.test(
+      clean(value)
+    );
+
+
+  function hmsToSeconds(value) {
+
+    const m =
+      clean(value).match(
+        /^(\d{1,2}):(\d{2}):(\d{2})$/
+      );
+
+    if (!m)
+      return null;
 
     return (
       Number(m[1]) * 3600 +
@@ -41,12 +66,16 @@
     );
   }
 
-  function durationToSeconds(value) {
-    const m = clean(value).match(
-      /^(\d{1,2}):(\d{2})$/
-    );
 
-    if (!m) return null;
+  function durationToSeconds(value) {
+
+    const m =
+      clean(value).match(
+        /^(\d{1,2}):(\d{2})$/
+      );
+
+    if (!m)
+      return null;
 
     return (
       Number(m[1]) * 3600 +
@@ -54,7 +83,9 @@
     );
   }
 
+
   function secondsToHMS(seconds) {
+
     if (
       seconds === null ||
       seconds === undefined ||
@@ -63,14 +94,24 @@
       return '--:--:--';
     }
 
-    seconds = Math.max(
-      0,
-      Math.floor(seconds)
-    );
+    seconds =
+      Math.max(
+        0,
+        Math.floor(seconds)
+      );
 
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+    const h =
+      Math.floor(
+        seconds / 3600
+      );
+
+    const m =
+      Math.floor(
+        (seconds % 3600) / 60
+      );
+
+    const s =
+      seconds % 60;
 
     return (
       pad(h) +
@@ -81,7 +122,54 @@
     );
   }
 
-  function addDurationToTime(startTime, seconds) {
+
+  /*
+    PLANNED表示専用
+
+    00:10:00
+      ↓
+    00:10
+  */
+
+  function secondsToHM(seconds) {
+
+    if (
+      seconds === null ||
+      seconds === undefined ||
+      Number.isNaN(seconds)
+    ) {
+      return '--:--';
+    }
+
+    seconds =
+      Math.max(
+        0,
+        Math.floor(seconds)
+      );
+
+    const h =
+      Math.floor(
+        seconds / 3600
+      );
+
+    const m =
+      Math.floor(
+        (seconds % 3600) / 60
+      );
+
+    return (
+      pad(h) +
+      ':' +
+      pad(m)
+    );
+  }
+
+
+  function addDurationToTime(
+    startTime,
+    seconds
+  ) {
+
     if (
       !startTime ||
       seconds === null
@@ -90,7 +178,9 @@
     }
 
     const parts =
-      startTime.split(':').map(Number);
+      startTime
+        .split(':')
+        .map(Number);
 
     if (
       parts.length !== 2 ||
@@ -100,7 +190,8 @@
       return '--:--';
     }
 
-    const d = new Date();
+    const d =
+      new Date();
 
     d.setHours(
       parts[0],
@@ -110,7 +201,8 @@
     );
 
     d.setSeconds(
-      d.getSeconds() + seconds
+      d.getSeconds() +
+      seconds
     );
 
     return (
@@ -120,10 +212,14 @@
     );
   }
 
-  function validTaskName(value) {
-    const t = clean(value);
 
-    if (!t) return false;
+  function validTaskName(value) {
+
+    const t =
+      clean(value);
+
+    if (!t)
+      return false;
 
     if (
       t.length > 150 ||
@@ -133,33 +229,67 @@
       return false;
     }
 
-    if (/^[-\d\s:./]+$/.test(t)) {
+    if (
+      /^[-\d\s:./]+$/.test(t)
+    ) {
       return false;
     }
 
     return true;
   }
 
+
+  /* =========================================================
+     STATE
+  ========================================================= */
+
   const state = {
-    currentTask: null,
-    currentStart: null,
-    plannedSeconds: null,
-    elapsedBase: null,
-    elapsedCapturedAt: null,
-    previous: null,
-    next: [],
-    leaveTime: null
+
+    currentTask:
+      null,
+
+    currentStart:
+      null,
+
+    plannedSeconds:
+      null,
+
+    elapsedBase:
+      null,
+
+    elapsedCapturedAt:
+      null,
+
+    previous:
+      null,
+
+    next:
+      [],
+
+    leaveTime:
+      null
   };
+
 
   /* =========================================================
      CURRENT PLAYER
   ========================================================= */
 
   function findCurrentPlayer() {
+
     const elapsedElements =
-      [...document.querySelectorAll('div, p, span')]
+      [
+        ...document.querySelectorAll(
+          'div, p, span'
+        )
+      ]
         .filter(el => {
-          if (isInsideNow(el)) {
+
+          if (
+            isInsideNow(
+              el
+            )
+          ) {
             return false;
           }
 
@@ -168,181 +298,344 @@
           );
         });
 
-    const candidates = [];
 
-    for (const elapsedEl of elapsedElements) {
+    const candidates =
+      [];
+
+
+    for (
+      const elapsedEl
+      of elapsedElements
+    ) {
+
       const taskEl =
         elapsedEl
           ?.parentElement
           ?.parentElement
           ?.previousElementSibling;
 
-      if (!taskEl) continue;
+
+      if (!taskEl)
+        continue;
+
 
       const taskName =
-        clean(taskEl.textContent);
+        clean(
+          taskEl.textContent
+        );
 
-      if (!validTaskName(taskName)) {
+
+      if (
+        !validTaskName(
+          taskName
+        )
+      ) {
         continue;
       }
 
+
       const rect =
-        elapsedEl.getBoundingClientRect();
+        elapsedEl
+          .getBoundingClientRect();
+
 
       candidates.push({
-        task: taskName,
-        elapsed: clean(elapsedEl.textContent),
-        top: rect.top,
+
+        task:
+          taskName,
+
+        elapsed:
+          clean(
+            elapsedEl.textContent
+          ),
+
+        top:
+          rect.top,
+
         visible:
           rect.width > 0 &&
           rect.height > 0
       });
     }
 
-    if (!candidates.length) {
+
+    if (
+      !candidates.length
+    ) {
       return null;
     }
 
-    candidates.sort((a, b) => {
-      if (a.visible !== b.visible) {
-        return a.visible ? -1 : 1;
-      }
 
-      return b.top - a.top;
-    });
+    candidates.sort(
+      (a, b) => {
+
+        if (
+          a.visible !==
+          b.visible
+        ) {
+
+          return a.visible
+            ? -1
+            : 1;
+        }
+
+        return (
+          b.top -
+          a.top
+        );
+      }
+    );
+
 
     return candidates[0];
   }
 
+
   /* =========================================================
-     SCHEDULE
+     TASK ROWS
   ========================================================= */
 
   function getTaskRowElements() {
+
     return [
       ...document.querySelectorAll(
         'div.MuiBox-root.my-0'
       )
-    ].filter(el => {
-      if (isInsideNow(el)) {
-        return false;
-      }
+    ]
+      .filter(el => {
 
-      const r =
-        el.getBoundingClientRect();
+        if (
+          isInsideNow(
+            el
+          )
+        ) {
+          return false;
+        }
 
-      return (
-        r.left >= -20 &&
-        r.left <= 150 &&
-        r.width >= 250 &&
-        r.width <= 1800 &&
-        r.height >= 22 &&
-        r.height <= 48
-      );
-    });
+
+        const r =
+          el.getBoundingClientRect();
+
+
+        return (
+          r.left >= -20 &&
+          r.left <= 150 &&
+          r.width >= 250 &&
+          r.width <= 1800 &&
+          r.height >= 22 &&
+          r.height <= 48
+        );
+      });
   }
 
-  function findScheduleRow(taskName) {
-    if (!taskName) return null;
+
+  function findScheduleRow(
+    taskName
+  ) {
+
+    if (!taskName)
+      return null;
+
 
     const candidates =
       getTaskRowElements()
         .filter(el =>
-          clean(el.textContent) === taskName
+          clean(
+            el.textContent
+          ) ===
+          taskName
         );
 
-    for (const taskEl of candidates) {
-      const row =
-        taskEl.parentElement;
 
-      if (!row) continue;
+    for (
+      const taskEl
+      of candidates
+    ) {
+
+      const row =
+        taskEl
+          .parentElement;
+
+
+      if (!row)
+        continue;
+
 
       const rowText =
-        clean(row.textContent);
+        clean(
+          row.textContent
+        );
+
 
       if (
         rowText.length >
         taskName.length
       ) {
+
         return {
+
           taskEl,
+
           row
         };
       }
     }
 
+
     return null;
   }
 
-  function getRowLeafValues(row) {
-    if (!row) return [];
+
+  function getRowLeafValues(
+    row
+  ) {
+
+    if (!row)
+      return [];
+
 
     return [
-      ...row.querySelectorAll('*')
+      ...row.querySelectorAll(
+        '*'
+      )
     ]
       .filter(el =>
         el.children.length === 0 &&
-        clean(el.textContent)
+        clean(
+          el.textContent
+        )
       )
       .map(el => ({
-        value: clean(el.textContent),
-        tag: el.tagName,
+
+        value:
+          clean(
+            el.textContent
+          ),
+
+        tag:
+          el.tagName,
+
         el
       }));
   }
 
-  function getCurrentScheduleInfo(currentTask) {
-    const found =
-      findScheduleRow(currentTask);
 
-    if (!found) return null;
+  /* =========================================================
+     CURRENT TASK INFO
+  ========================================================= */
+
+  function getCurrentScheduleInfo(
+    currentTask
+  ) {
+
+    const found =
+      findScheduleRow(
+        currentTask
+      );
+
+
+    if (!found)
+      return null;
+
 
     const leaves =
-      getRowLeafValues(found.row);
+      getRowLeafValues(
+        found.row
+      );
 
-    let start = null;
-    let finish = null;
-    let planned = null;
+
+    let start =
+      null;
+
+
+    let finish =
+      null;
+
+
+    let planned =
+      null;
+
+
+    /*
+      START
+    */
 
     if (
       leaves[1] &&
-      isHM(leaves[1].value)
+      isHM(
+        leaves[1].value
+      )
     ) {
-      start = leaves[1].value;
+
+      start =
+        leaves[1].value;
     }
 
-    if (leaves[2]) {
+
+    /*
+      FINISH
+    */
+
+    if (
+      leaves[2]
+    ) {
+
       const v =
         leaves[2].value;
+
 
       if (
         isHM(v) ||
         isHMS(v)
       ) {
-        finish = v;
+
+        finish =
+          v;
       }
     }
 
+
+    /*
+      PLANNED
+    */
+
     if (
       leaves[6] &&
-      isHM(leaves[6].value)
+      isHM(
+        leaves[6].value
+      )
     ) {
+
       planned =
         leaves[6].value;
     }
 
+
+    /*
+      fallback
+    */
+
     if (!planned) {
+
       const buttonDurations =
         leaves
-          .filter(x =>
-            x.tag === 'BUTTON' &&
-            isHM(x.value)
+          .filter(
+            x =>
+              x.tag === 'BUTTON' &&
+              isHM(
+                x.value
+              )
           )
-          .map(x => x.value);
+          .map(
+            x =>
+              x.value
+          );
+
 
       if (
         buttonDurations.length >= 2
       ) {
+
         planned =
           buttonDurations[
             buttonDurations.length - 1
@@ -350,159 +643,317 @@
       }
     }
 
+
     return {
+
       start,
+
       finish,
+
       planned,
+
       plannedSeconds:
         planned
-          ? durationToSeconds(planned)
+          ? durationToSeconds(
+              planned
+            )
           : null
     };
   }
 
+
+  /* =========================================================
+     SCHEDULE LIST
+  ========================================================= */
+
   function getScheduleRows() {
-    const rows = [];
 
-    for (const taskEl of getTaskRowElements()) {
+    const rows =
+      [];
+
+
+    for (
+      const taskEl
+      of getTaskRowElements()
+    ) {
+
       const task =
-        clean(taskEl.textContent);
+        clean(
+          taskEl.textContent
+        );
 
-      if (!validTaskName(task)) {
+
+      if (
+        !validTaskName(
+          task
+        )
+      ) {
         continue;
       }
 
-      const row =
-        taskEl.parentElement;
 
-      if (!row) continue;
+      const row =
+        taskEl
+          .parentElement;
+
+
+      if (!row)
+        continue;
+
 
       const rowText =
-        clean(row.textContent);
+        clean(
+          row.textContent
+        );
+
 
       if (
         rowText === task ||
-        rowText.length < task.length + 3
+        rowText.length <
+          task.length + 3
       ) {
         continue;
       }
 
+
       const rect =
-        taskEl.getBoundingClientRect();
+        taskEl
+          .getBoundingClientRect();
+
 
       const leaves =
-        getRowLeafValues(row);
+        getRowLeafValues(
+          row
+        );
 
-      let start = null;
-      let finish = null;
-      let actualDuration = null;
-      let planned = null;
-      let scheduleTime = null;
+
+      let start =
+        null;
+
+
+      let finish =
+        null;
+
+
+      let actualDuration =
+        null;
+
+
+      let planned =
+        null;
+
+
+      let scheduleTime =
+        null;
+
+
+      /*
+        START
+      */
 
       if (
         leaves[1] &&
-        isHM(leaves[1].value)
+        isHM(
+          leaves[1].value
+        )
       ) {
-        start = leaves[1].value;
+
+        start =
+          leaves[1].value;
       }
+
+
+      /*
+        FINISH
+      */
 
       if (
         leaves[2] &&
         (
-          isHM(leaves[2].value) ||
-          isHMS(leaves[2].value)
+          isHM(
+            leaves[2].value
+          ) ||
+          isHMS(
+            leaves[2].value
+          )
         )
       ) {
+
         finish =
           leaves[2].value;
       }
 
+
+      /*
+        ACTUAL
+      */
+
       if (
         leaves[5] &&
-        isHM(leaves[5].value)
+        isHM(
+          leaves[5].value
+        )
       ) {
+
         actualDuration =
           leaves[5].value;
       }
 
+
+      /*
+        PLANNED
+      */
+
       if (
         leaves[6] &&
-        isHM(leaves[6].value)
+        isHM(
+          leaves[6].value
+        )
       ) {
+
         planned =
           leaves[6].value;
       }
 
+
+      /*
+        SCHEDULE TIME
+      */
+
       const HMvalues =
         leaves
-          .map(x => x.value)
-          .filter(isHM);
+          .map(
+            x =>
+              x.value
+          )
+          .filter(
+            isHM
+          );
+
 
       if (!start) {
+
         const last =
           HMvalues[
             HMvalues.length - 1
           ];
 
+
         if (last) {
-          scheduleTime = last;
+
+          scheduleTime =
+            last;
         }
+
       } else {
-        scheduleTime = start;
+
+        scheduleTime =
+          start;
       }
 
+
       rows.push({
+
         task,
+
         start,
+
         finish,
+
         actualDuration,
+
         planned,
+
         scheduleTime,
-        top: rect.top
+
+        top:
+          rect.top
       });
     }
 
+
     rows.sort(
       (a, b) =>
-        a.top - b.top
+        a.top -
+        b.top
     );
 
-    const unique = [];
 
-    for (const row of rows) {
+    const unique =
+      [];
+
+
+    for (
+      const row
+      of rows
+    ) {
+
       const duplicate =
-        unique.some(x =>
-          x.task === row.task &&
-          Math.abs(
-            x.top - row.top
-          ) < 3
+        unique.some(
+          x =>
+            x.task ===
+              row.task &&
+            Math.abs(
+              x.top -
+              row.top
+            ) < 3
         );
 
-      if (!duplicate) {
-        unique.push(row);
+
+      if (
+        !duplicate
+      ) {
+
+        unique.push(
+          row
+        );
       }
     }
+
 
     return unique;
   }
 
-  function getNeighbours(rows, currentTask) {
+
+  /* =========================================================
+     PREVIOUS / NEXT
+  ========================================================= */
+
+  function getNeighbours(
+    rows,
+    currentTask
+  ) {
+
     const index =
       rows.findIndex(
-        x => x.task === currentTask
+        x =>
+          x.task ===
+          currentTask
       );
 
-    if (index < 0) {
+
+    if (
+      index < 0
+    ) {
+
       return {
-        previous: null,
-        next: []
+
+        previous:
+          null,
+
+        next:
+          []
       };
     }
 
+
     return {
+
       previous:
         index > 0
-          ? rows[index - 1]
+          ? rows[
+              index - 1
+            ]
           : null,
 
       next:
@@ -513,13 +964,26 @@
     };
   }
 
-  function getLeaveTime(rows) {
+
+  /* =========================================================
+     LEAVE
+  ========================================================= */
+
+  function getLeaveTime(
+    rows
+  ) {
+
     const leave =
       rows.find(
-        x => x.task === '退勤'
+        x =>
+          x.task ===
+          '退勤'
       );
 
-    if (!leave) return null;
+
+    if (!leave)
+      return null;
+
 
     return (
       leave.scheduleTime ||
@@ -528,34 +992,61 @@
     );
   }
 
+
   /* =========================================================
      SYNC
-     v3.7.3 FIX:
-     START / PLANNEDを毎回リセット
+
+     v3.7.3:
+     START / PLANNED を毎回リセット
   ========================================================= */
 
   function sync() {
+
     const player =
       findCurrentPlayer();
 
-    if (player) {
-      const taskChanged =
-        state.currentTask !== player.task;
 
-      if (taskChanged) {
-        state.currentStart = null;
-        state.plannedSeconds = null;
+    if (
+      player
+    ) {
+
+      const taskChanged =
+        state.currentTask !==
+        player.task;
+
+
+      /*
+        タスクが切り替わったら
+        前タスク固有値を即破棄
+      */
+
+      if (
+        taskChanged
+      ) {
+
+        state.currentStart =
+          null;
+
+        state.plannedSeconds =
+          null;
       }
+
 
       state.currentTask =
         player.task;
 
+
       const elapsedSeconds =
-        hmsToSeconds(player.elapsed);
+        hmsToSeconds(
+          player.elapsed
+        );
+
 
       if (
-        elapsedSeconds !== null
+        elapsedSeconds !==
+        null
       ) {
+
         state.elapsedBase =
           elapsedSeconds;
 
@@ -564,36 +1055,66 @@
       }
     }
 
-    if (state.currentTask) {
-      /*
-        ★重要
-        毎回いったん現在タスク固有値を破棄
-      */
-      state.currentStart = null;
-      state.plannedSeconds = null;
+
+    /*
+      CURRENT TASK INFO
+
+      毎回一度クリアしてから
+      現在タスクの値を取得する。
+
+      PLANNED未入力タスクで
+      前タスクの値が残ることを防止。
+    */
+
+    if (
+      state.currentTask
+    ) {
+
+      state.currentStart =
+        null;
+
+      state.plannedSeconds =
+        null;
+
 
       const info =
         getCurrentScheduleInfo(
           state.currentTask
         );
 
-      if (info) {
-        if (info.start) {
+
+      if (
+        info
+      ) {
+
+        if (
+          info.start
+        ) {
+
           state.currentStart =
             info.start;
         }
 
+
         if (
-          info.plannedSeconds !== null
+          info.plannedSeconds !==
+          null
         ) {
+
           state.plannedSeconds =
             info.plannedSeconds;
         }
       }
     }
 
+
+    /*
+      SCHEDULE
+    */
+
     const rows =
       getScheduleRows();
+
 
     const neighbours =
       getNeighbours(
@@ -601,26 +1122,37 @@
         state.currentTask
       );
 
+
     state.previous =
       neighbours.previous;
+
 
     state.next =
       neighbours.next;
 
-    const leave =
-      getLeaveTime(rows);
 
     state.leaveTime =
-      leave || null;
+      getLeaveTime(
+        rows
+      ) ||
+      null;
   }
 
+
+  /* =========================================================
+     LIVE VALUES
+  ========================================================= */
+
   function getElapsedSeconds() {
+
     if (
       state.elapsedBase === null ||
       state.elapsedCapturedAt === null
     ) {
+
       return null;
     }
+
 
     return (
       state.elapsedBase +
@@ -628,18 +1160,23 @@
         (
           Date.now() -
           state.elapsedCapturedAt
-        ) / 1000
+        ) /
+        1000
       )
     );
   }
 
+
   function getPlannedEnd() {
+
     if (
       !state.currentStart ||
       state.plannedSeconds === null
     ) {
+
       return '--:--';
     }
+
 
     return addDurationToTime(
       state.currentStart,
@@ -647,29 +1184,44 @@
     );
   }
 
+
   /* =========================================================
      CLEANUP
   ========================================================= */
 
-  if (window.tcNowRenderTimer) {
+  if (
+    window.tcNowRenderTimer
+  ) {
+
     clearInterval(
       window.tcNowRenderTimer
     );
   }
 
-  if (window.tcNowSyncTimer) {
+
+  if (
+    window.tcNowSyncTimer
+  ) {
+
     clearInterval(
       window.tcNowSyncTimer
     );
   }
 
-  document
-    .getElementById(ROOT_ID)
-    ?.remove();
 
   document
-    .getElementById(STYLE_ID)
+    .getElementById(
+      ROOT_ID
+    )
     ?.remove();
+
+
+  document
+    .getElementById(
+      STYLE_ID
+    )
+    ?.remove();
+
 
   /* =========================================================
      VIEWPORT
@@ -680,29 +1232,44 @@
       'meta[name="viewport"]'
     );
 
-  if (!viewport) {
-    viewport =
-      document.createElement('meta');
 
-    viewport.name = 'viewport';
+  if (!viewport) {
+
+    viewport =
+      document.createElement(
+        'meta'
+      );
+
+    viewport.name =
+      'viewport';
 
     viewport.content =
       'width=device-width,initial-scale=1,viewport-fit=cover';
 
-    document.head.appendChild(
-      viewport
-    );
+    document.head
+      .appendChild(
+        viewport
+      );
+
   } else {
+
     let content =
-      viewport.getAttribute('content') || '';
+      viewport
+        .getAttribute(
+          'content'
+        ) ||
+      '';
+
 
     if (
       !content.includes(
         'viewport-fit=cover'
       )
     ) {
+
       content +=
         ',viewport-fit=cover';
+
 
       viewport.setAttribute(
         'content',
@@ -711,14 +1278,20 @@
     }
   }
 
+
   /* =========================================================
      CSS
   ========================================================= */
 
   const style =
-    document.createElement('style');
+    document.createElement(
+      'style'
+    );
 
-  style.id = STYLE_ID;
+
+  style.id =
+    STYLE_ID;
+
 
   style.textContent = `
 
@@ -727,12 +1300,15 @@
       background:#07090d !important;
     }
 
+
     #${ROOT_ID},
     #${ROOT_ID} * {
       box-sizing:border-box;
     }
 
+
     #${ROOT_ID} {
+
       --bg:#07090d;
       --panel:#1a2029;
       --panel2:#0d1016;
@@ -742,6 +1318,7 @@
 
       position:fixed;
       inset:0;
+
       z-index:2147483647;
 
       width:100vw;
@@ -767,7 +1344,9 @@
         max(12px,env(safe-area-inset-left));
     }
 
+
     #tc-layout {
+
       width:100%;
       height:100%;
 
@@ -777,10 +1356,17 @@
         auto
         minmax(0,1fr);
 
-      gap:clamp(10px,2.5vh,26px);
+      gap:
+        clamp(10px,2.5vh,26px);
     }
 
+
+    /* =====================================================
+       HEADER
+    ===================================================== */
+
     #tc-header {
+
       display:grid;
 
       grid-template-columns:
@@ -789,47 +1375,61 @@
         minmax(130px,.7fr);
 
       align-items:center;
+
       gap:2vw;
     }
 
+
     #tc-brand {
+
       color:var(--muted);
 
       font-size:
         clamp(14px,2.2vw,28px);
 
       font-weight:800;
+
       letter-spacing:.13em;
+
       white-space:nowrap;
     }
 
+
     #tc-leave {
+
       font-size:
         clamp(16px,2.5vw,29px);
 
       font-weight:800;
+
       line-height:1.32;
 
       font-variant-numeric:
         tabular-nums;
     }
 
+
     .tc-leave-row {
+
       display:grid;
 
       grid-template-columns:
-        3.1em max-content;
+        3.1em
+        max-content;
 
       column-gap:.45em;
     }
 
+
     #tc-clock {
+
       justify-self:end;
 
       font-size:
         clamp(40px,6.7vw,78px);
 
       font-weight:800;
+
       line-height:1;
 
       letter-spacing:-.04em;
@@ -840,7 +1440,13 @@
       white-space:nowrap;
     }
 
+
+    /* =====================================================
+       MAIN
+    ===================================================== */
+
     #tc-main {
+
       min-width:0;
       min-height:0;
 
@@ -854,7 +1460,13 @@
         clamp(12px,2.4vw,30px);
     }
 
+
+    /* =====================================================
+       NOW
+    ===================================================== */
+
     #tc-now {
+
       position:relative;
 
       min-width:0;
@@ -872,12 +1484,15 @@
         clamp(28px,4vw,60px);
 
       display:flex;
+
       flex-direction:column;
 
       justify-content:center;
     }
 
+
     #tc-now::before {
+
       content:"";
 
       position:absolute;
@@ -892,10 +1507,13 @@
       background:white;
     }
 
+
     #tc-now-badge {
+
       align-self:flex-start;
 
       background:white;
+
       color:#101218;
 
       font-size:
@@ -907,13 +1525,16 @@
 
       border-radius:18px;
 
-      padding:9px 20px;
+      padding:
+        9px 20px;
 
       margin-bottom:
         clamp(12px,3vh,30px);
     }
 
+
     .tc-now-metric {
+
       display:grid;
 
       grid-template-columns:
@@ -928,18 +1549,24 @@
       min-width:0;
     }
 
+
     .tc-now-label {
+
       color:var(--muted);
 
       font-size:
         clamp(12px,1.65vw,20px);
 
       font-weight:900;
+
       letter-spacing:.2em;
+
       white-space:nowrap;
     }
 
+
     .tc-now-value {
+
       color:#c7cad2;
 
       font-size:
@@ -953,7 +1580,9 @@
       white-space:nowrap;
     }
 
+
     #tc-task {
+
       margin:
         clamp(8px,1.6vh,18px)
         0;
@@ -968,28 +1597,42 @@
       overflow-wrap:anywhere;
     }
 
+
     #tc-progress {
+
       display:grid;
 
       gap:
         clamp(4px,.8vh,9px);
     }
 
+
     #tc-status-row {
+
       margin-top:
         clamp(3px,.8vh,8px);
     }
 
+
     #tc-status-label.tc-over,
     #tc-status-value.tc-over {
+
       color:white;
     }
 
+
     #tc-status-value.tc-over {
+
       font-weight:700;
     }
 
+
+    /* =====================================================
+       SIDE
+    ===================================================== */
+
     #tc-side {
+
       min-width:0;
       min-height:0;
 
@@ -1003,7 +1646,9 @@
         clamp(10px,2vh,20px);
     }
 
+
     .tc-card {
+
       min-width:0;
       min-height:0;
 
@@ -1019,18 +1664,22 @@
         clamp(18px,2.5vw,32px);
 
       display:flex;
+
       flex-direction:column;
 
       justify-content:flex-start;
     }
 
+
     .tc-card-title {
+
       color:var(--dim);
 
       font-size:
         clamp(12px,1.65vw,20px);
 
       font-weight:900;
+
       letter-spacing:.18em;
 
       margin-bottom:
@@ -1039,7 +1688,13 @@
       flex-shrink:0;
     }
 
+
+    /* =====================================================
+       PREVIOUS
+    ===================================================== */
+
     #tc-prev-task {
+
       color:#767b86;
 
       font-size:
@@ -1057,12 +1712,15 @@
       white-space:nowrap;
 
       overflow:hidden;
+
       text-overflow:ellipsis;
 
       flex-shrink:0;
     }
 
+
     .tc-prev-metric {
+
       display:grid;
 
       grid-template-columns:
@@ -1076,7 +1734,9 @@
       margin:1px 0;
     }
 
+
     .tc-prev-label {
+
       color:#555a66;
 
       font-size:
@@ -1087,7 +1747,9 @@
       letter-spacing:.18em;
     }
 
+
     .tc-prev-value {
+
       color:#747985;
 
       font-size:
@@ -1099,18 +1761,27 @@
       white-space:nowrap;
     }
 
+
+    /* =====================================================
+       NEXT
+    ===================================================== */
+
     #tc-next-list {
+
       display:grid;
 
       gap:
         clamp(5px,.8vh,10px);
     }
 
+
     .tc-next-row {
+
       display:grid;
 
       grid-template-columns:
-        max-content minmax(0,1fr);
+        max-content
+        minmax(0,1fr);
 
       column-gap:
         clamp(10px,1.4vw,18px);
@@ -1118,22 +1789,28 @@
       align-items:baseline;
     }
 
+
     .tc-next-time,
     .tc-next-task {
+
       color:#747985;
 
       font-size:
         clamp(18px,2.7vw,33px);
     }
 
+
     .tc-next-time {
+
       font-variant-numeric:
         tabular-nums;
 
       white-space:nowrap;
     }
 
+
     .tc-next-task {
+
       min-width:0;
 
       font-weight:700;
@@ -1141,10 +1818,13 @@
       white-space:nowrap;
 
       overflow:hidden;
+
       text-overflow:ellipsis;
     }
 
+
     #tc-version {
+
       position:absolute;
 
       right:
@@ -1162,14 +1842,21 @@
       color:#41454f;
 
       font-size:10px;
+
       font-weight:700;
     }
 
+
+    /* =====================================================
+       LANDSCAPE SMALL HEIGHT
+    ===================================================== */
+
     @media
-      (orientation: landscape)
+      (orientation:landscape)
       and (max-height:500px) {
 
       #${ROOT_ID} {
+
         padding:
           max(4px,env(safe-area-inset-top))
           max(8px,env(safe-area-inset-right))
@@ -1177,7 +1864,9 @@
           max(8px,env(safe-area-inset-left));
       }
 
+
       #tc-layout {
+
         grid-template-rows:
           17dvh
           minmax(0,1fr);
@@ -1185,22 +1874,30 @@
         gap:1.8dvh;
       }
 
+
       #tc-brand {
+
         font-size:
           clamp(10px,3.2dvh,17px);
       }
 
+
       #tc-leave {
+
         font-size:
           clamp(12px,4dvh,20px);
       }
 
+
       #tc-clock {
+
         font-size:
           clamp(29px,11.5dvh,58px);
       }
 
+
       #tc-main {
+
         grid-template-columns:
           minmax(0,1.65fr)
           minmax(190px,.9fr);
@@ -1208,7 +1905,9 @@
         gap:1.6vw;
       }
 
+
       #tc-now {
+
         padding:
           2.2dvh 3vw;
 
@@ -1216,17 +1915,22 @@
           clamp(13px,5dvh,25px);
       }
 
+
       #tc-now-badge {
+
         font-size:
           clamp(10px,3.2dvh,16px);
 
         padding:
           1.2dvh 1.4vw;
 
-        margin-bottom:1.7dvh;
+        margin-bottom:
+          1.7dvh;
       }
 
+
       .tc-now-metric {
+
         grid-template-columns:
           clamp(100px,12vw,145px)
           minmax(0,1fr);
@@ -1234,34 +1938,47 @@
         column-gap:1.2vw;
       }
 
+
       .tc-now-label {
+
         font-size:
           clamp(9px,2.9dvh,14px);
       }
 
+
       .tc-now-value {
+
         font-size:
           clamp(16px,5dvh,25px);
       }
 
+
       #tc-task {
+
         font-size:
           clamp(22px,7.4dvh,39px);
 
-        margin:1.2dvh 0;
+        margin:
+          1.2dvh 0;
 
         line-height:1;
       }
 
+
       #tc-progress {
+
         gap:.4dvh;
       }
 
+
       #tc-side {
+
         gap:1.8dvh;
       }
 
+
       .tc-card {
+
         padding:
           1.6dvh 1.4vw;
 
@@ -1269,24 +1986,31 @@
           clamp(11px,4dvh,21px);
       }
 
+
       .tc-card-title {
+
         font-size:
           clamp(9px,3dvh,15px);
 
         margin-bottom:.7dvh;
       }
 
+
       #tc-prev-task {
+
         font-size:
           clamp(14px,4.5dvh,23px);
 
         line-height:1.15;
 
         margin-top:.3dvh;
+
         margin-bottom:1dvh;
       }
 
+
       .tc-prev-metric {
+
         grid-template-columns:
           clamp(65px,6.5vw,90px)
           1fr;
@@ -1294,31 +2018,45 @@
         margin:.2dvh 0;
       }
 
+
       .tc-prev-label {
+
         font-size:
           clamp(8px,2.7dvh,13px);
       }
 
+
       .tc-prev-value {
+
         font-size:
           clamp(13px,4.1dvh,21px);
       }
+
 
       .tc-next-time,
       .tc-next-task {
+
         font-size:
           clamp(13px,4.1dvh,21px);
       }
 
+
       #tc-next-list {
+
         gap:.7dvh;
       }
     }
 
+
+    /* =====================================================
+       PORTRAIT
+    ===================================================== */
+
     @media
-      (orientation: portrait) {
+      (orientation:portrait) {
 
       #${ROOT_ID} {
+
         padding:
           max(8px,env(safe-area-inset-top))
           max(10px,env(safe-area-inset-right))
@@ -1326,7 +2064,9 @@
           max(10px,env(safe-area-inset-left));
       }
 
+
       #tc-layout {
+
         grid-template-rows:
           auto
           minmax(0,1fr);
@@ -1334,7 +2074,9 @@
         gap:8px;
       }
 
+
       #tc-header {
+
         grid-template-columns:
           minmax(0,1fr)
           auto;
@@ -1346,10 +2088,13 @@
         align-items:center;
 
         column-gap:10px;
+
         row-gap:4px;
       }
 
+
       #tc-brand {
+
         grid-area:brand;
 
         font-size:
@@ -1358,7 +2103,9 @@
         letter-spacing:.11em;
       }
 
+
       #tc-clock {
+
         grid-area:clock;
 
         justify-self:end;
@@ -1369,7 +2116,9 @@
         line-height:.95;
       }
 
+
       #tc-leave {
+
         grid-area:leave;
 
         display:flex;
@@ -1385,16 +2134,21 @@
         line-height:1.1;
       }
 
+
       .tc-leave-row {
+
         display:grid;
 
         grid-template-columns:
-          max-content max-content;
+          max-content
+          max-content;
 
         column-gap:.45em;
       }
 
+
       #tc-main {
+
         display:grid;
 
         grid-template-columns:1fr;
@@ -1408,7 +2162,16 @@
         min-height:0;
       }
 
+
+      /*
+        Portrait:
+        NOW
+        NEXT
+        PREVIOUS
+      */
+
       #tc-side {
+
         display:flex;
 
         flex-direction:column;
@@ -1418,17 +2181,25 @@
         min-height:0;
       }
 
+
       #tc-side > .tc-card:first-child {
+
         order:2;
+
         flex:1 1 0;
       }
+
 
       #tc-side > .tc-card:last-child {
+
         order:1;
+
         flex:1 1 0;
       }
 
+
       #tc-now {
+
         justify-content:flex-start;
 
         padding:
@@ -1437,11 +2208,15 @@
         border-radius:20px;
       }
 
+
       #tc-now::before {
+
         width:6px;
       }
 
+
       #tc-now-badge {
+
         font-size:13px;
 
         padding:
@@ -1452,28 +2227,37 @@
         border-radius:12px;
       }
 
+
       .tc-now-metric {
+
         grid-template-columns:
-          122px minmax(0,1fr);
+          122px
+          minmax(0,1fr);
 
         column-gap:10px;
       }
 
+
       .tc-now-label {
+
         font-size:
           clamp(11px,3.3vw,14px);
 
         letter-spacing:.14em;
       }
 
+
       .tc-now-value {
+
         font-size:
           clamp(22px,6.3vw,29px);
 
         line-height:1.05;
       }
 
+
       #tc-task {
+
         margin:
           7px 0 9px;
 
@@ -1485,18 +2269,25 @@
         white-space:nowrap;
 
         overflow:hidden;
+
         text-overflow:ellipsis;
       }
 
+
       #tc-progress {
+
         gap:3px;
       }
 
+
       #tc-status-row {
+
         margin-top:1px;
       }
 
+
       .tc-card {
+
         padding:
           10px 14px;
 
@@ -1505,7 +2296,9 @@
         justify-content:flex-start;
       }
 
+
       .tc-card-title {
+
         font-size:
           clamp(11px,3.3vw,14px);
 
@@ -1514,79 +2307,109 @@
         margin-bottom:5px;
       }
 
+
       #tc-next-list {
+
         gap:4px;
       }
 
+
       .tc-next-row {
+
         grid-template-columns:
-          60px minmax(0,1fr);
+          60px
+          minmax(0,1fr);
 
         column-gap:9px;
       }
 
+
       .tc-next-time,
       .tc-next-task {
+
         font-size:
           clamp(16px,4.8vw,21px);
 
         line-height:1.15;
       }
 
+
       #tc-prev-task {
+
         font-size:
           clamp(17px,5.2vw,22px);
 
         line-height:1.1;
 
         margin-top:0;
+
         margin-bottom:5px;
 
         white-space:nowrap;
 
         overflow:hidden;
+
         text-overflow:ellipsis;
       }
 
+
       .tc-prev-metric {
+
         grid-template-columns:
-          76px minmax(0,1fr);
+          76px
+          minmax(0,1fr);
 
         column-gap:9px;
 
         margin:0;
       }
 
+
       .tc-prev-label {
+
         font-size:
           clamp(9px,2.9vw,12px);
 
         letter-spacing:.13em;
       }
 
+
       .tc-prev-value {
+
         font-size:
           clamp(15px,4.5vw,19px);
 
         line-height:1.1;
       }
 
+
       #tc-version {
+
         font-size:8px;
       }
     }
   `;
 
-  document.head.appendChild(style);
+
+  document.head
+    .appendChild(
+      style
+    );
+
 
   /* =========================================================
      HTML
   ========================================================= */
 
   const root =
-    document.createElement('div');
+    document.createElement(
+      'div'
+    );
 
-  root.id = ROOT_ID;
+
+  root.id =
+    ROOT_ID;
+
 
   root.innerHTML = `
 
@@ -1598,25 +2421,43 @@
           TaskChute NOW
         </div>
 
+
         <div id="tc-leave">
 
           <div class="tc-leave-row">
-            <span>退勤</span>
-            <span id="tc-leave-time">--:--</span>
+
+            <span>
+              退勤
+            </span>
+
+            <span id="tc-leave-time">
+              --:--
+            </span>
+
           </div>
 
+
           <div class="tc-leave-row">
-            <span id="tc-leave-label">あと</span>
-            <span id="tc-leave-count">--:--</span>
+
+            <span id="tc-leave-label">
+              あと
+            </span>
+
+            <span id="tc-leave-count">
+              --:--
+            </span>
+
           </div>
 
         </div>
+
 
         <div id="tc-clock">
           --:--
         </div>
 
       </header>
+
 
       <main id="tc-main">
 
@@ -1626,7 +2467,9 @@
             NOW
           </div>
 
+
           <div class="tc-now-metric">
+
             <span class="tc-now-label">
               START
             </span>
@@ -1636,15 +2479,39 @@
               class="tc-now-value">
               --:--
             </span>
+
           </div>
+
 
           <div id="tc-task">
             タスクを取得できません
           </div>
 
+
           <div id="tc-progress">
 
+            <!--
+              v3.7.3-iOS2
+              表示順変更
+            -->
+
             <div class="tc-now-metric">
+
+              <span class="tc-now-label">
+                PLANNED
+              </span>
+
+              <span
+                id="tc-planned"
+                class="tc-now-value">
+                --:--
+              </span>
+
+            </div>
+
+
+            <div class="tc-now-metric">
+
               <span class="tc-now-label">
                 PLANNED END
               </span>
@@ -1654,9 +2521,12 @@
                 class="tc-now-value">
                 --:--
               </span>
+
             </div>
 
+
             <div class="tc-now-metric">
+
               <span class="tc-now-label">
                 ELAPSED
               </span>
@@ -1666,19 +2536,9 @@
                 class="tc-now-value">
                 --:--:--
               </span>
+
             </div>
 
-            <div class="tc-now-metric">
-              <span class="tc-now-label">
-                PLANNED
-              </span>
-
-              <span
-                id="tc-planned"
-                class="tc-now-value">
-                --:--:--
-              </span>
-            </div>
 
             <div
               id="tc-status-row"
@@ -1702,6 +2562,7 @@
 
         </section>
 
+
         <aside id="tc-side">
 
           <section
@@ -1712,11 +2573,14 @@
               PREVIOUS
             </div>
 
+
             <div id="tc-prev-task">
               —
             </div>
 
+
             <div class="tc-prev-metric">
+
               <span class="tc-prev-label">
                 START
               </span>
@@ -1726,9 +2590,12 @@
                 class="tc-prev-value">
                 —
               </span>
+
             </div>
 
+
             <div class="tc-prev-metric">
+
               <span class="tc-prev-label">
                 FINISH
               </span>
@@ -1738,9 +2605,12 @@
                 class="tc-prev-value">
                 —
               </span>
+
             </div>
 
+
             <div class="tc-prev-metric">
+
               <span class="tc-prev-label">
                 ELAPSED
               </span>
@@ -1750,9 +2620,11 @@
                 class="tc-prev-value">
                 —
               </span>
+
             </div>
 
           </section>
+
 
           <section
             id="tc-next-card"
@@ -1762,9 +2634,11 @@
               NEXT
             </div>
 
+
             <div id="tc-next-list">
 
               <div class="tc-next-row">
+
                 <span
                   id="tc-next-time-0"
                   class="tc-next-time">
@@ -1776,9 +2650,12 @@
                   class="tc-next-task">
                   —
                 </span>
+
               </div>
 
+
               <div class="tc-next-row">
+
                 <span
                   id="tc-next-time-1"
                   class="tc-next-time">
@@ -1790,9 +2667,12 @@
                   class="tc-next-task">
                   —
                 </span>
+
               </div>
 
+
               <div class="tc-next-row">
+
                 <span
                   id="tc-next-time-2"
                   class="tc-next-time">
@@ -1804,6 +2684,7 @@
                   class="tc-next-task">
                   —
                 </span>
+
               </div>
 
             </div>
@@ -1816,188 +2697,341 @@
 
     </div>
 
+
     <div id="tc-version">
       v${VERSION}
     </div>
   `;
 
-  document.body.appendChild(root);
+
+  document.body
+    .appendChild(
+      root
+    );
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   const $ =
     id =>
-      document.getElementById(id);
+      document.getElementById(
+        id
+      );
+
 
   function render() {
+
     const now =
       new Date();
 
-    $('tc-clock').textContent =
-      pad(now.getHours()) +
-      ':' +
-      pad(now.getMinutes());
 
-    $('tc-task').textContent =
-      state.currentTask ||
-      'タスクを取得できません';
+    /* CLOCK */
 
-    $('tc-start').textContent =
-      state.currentStart ||
-      '--:--';
+    $('tc-clock')
+      .textContent =
+        pad(
+          now.getHours()
+        ) +
+        ':' +
+        pad(
+          now.getMinutes()
+        );
 
-    $('tc-planned-end').textContent =
-      getPlannedEnd();
+
+    /* CURRENT TASK */
+
+    $('tc-task')
+      .textContent =
+        state.currentTask ||
+        'タスクを取得できません';
+
+
+    /* START */
+
+    $('tc-start')
+      .textContent =
+        state.currentStart ||
+        '--:--';
+
+
+    /*
+      PLANNED
+
+      v3.7.3-iOS2:
+      秒を表示しない
+    */
+
+    $('tc-planned')
+      .textContent =
+        secondsToHM(
+          state.plannedSeconds
+        );
+
+
+    /* PLANNED END */
+
+    $('tc-planned-end')
+      .textContent =
+        getPlannedEnd();
+
+
+    /* ELAPSED */
 
     const elapsed =
       getElapsedSeconds();
 
-    $('tc-elapsed').textContent =
-      secondsToHMS(elapsed);
 
-    $('tc-planned').textContent =
-      secondsToHMS(
-        state.plannedSeconds
-      );
+    $('tc-elapsed')
+      .textContent =
+        secondsToHMS(
+          elapsed
+        );
+
+
+    /* REMAINING / OVER */
 
     const statusLabel =
       $('tc-status-label');
 
+
     const statusValue =
       $('tc-status-value');
+
 
     if (
       elapsed !== null &&
       state.plannedSeconds !== null
     ) {
+
       const diff =
         state.plannedSeconds -
         elapsed;
 
-      if (diff >= 0) {
-        statusLabel.textContent =
-          'REMAINING';
 
-        statusValue.textContent =
-          secondsToHMS(diff);
+      if (
+        diff >= 0
+      ) {
 
-        statusLabel.classList.remove(
-          'tc-over'
-        );
+        statusLabel
+          .textContent =
+            'REMAINING';
 
-        statusValue.classList.remove(
-          'tc-over'
-        );
-      } else {
-        statusLabel.textContent =
-          'OVER';
 
-        statusValue.textContent =
-          secondsToHMS(
-            Math.abs(diff)
+        statusValue
+          .textContent =
+            secondsToHMS(
+              diff
+            );
+
+
+        statusLabel
+          .classList
+          .remove(
+            'tc-over'
           );
 
-        statusLabel.classList.add(
-          'tc-over'
-        );
 
-        statusValue.classList.add(
-          'tc-over'
-        );
+        statusValue
+          .classList
+          .remove(
+            'tc-over'
+          );
+
+      } else {
+
+        statusLabel
+          .textContent =
+            'OVER';
+
+
+        statusValue
+          .textContent =
+            secondsToHMS(
+              Math.abs(
+                diff
+              )
+            );
+
+
+        statusLabel
+          .classList
+          .add(
+            'tc-over'
+          );
+
+
+        statusValue
+          .classList
+          .add(
+            'tc-over'
+          );
       }
+
     } else {
-      statusLabel.textContent =
-        'REMAINING';
 
-      statusValue.textContent =
-        '--:--:--';
+      statusLabel
+        .textContent =
+          'REMAINING';
 
-      statusLabel.classList.remove(
-        'tc-over'
-      );
 
-      statusValue.classList.remove(
-        'tc-over'
-      );
+      statusValue
+        .textContent =
+          '--:--:--';
+
+
+      statusLabel
+        .classList
+        .remove(
+          'tc-over'
+        );
+
+
+      statusValue
+        .classList
+        .remove(
+          'tc-over'
+        );
     }
+
+
+    /* PREVIOUS */
 
     const prev =
       state.previous;
 
-    $('tc-prev-task').textContent =
-      prev?.task || '—';
 
-    $('tc-prev-start').textContent =
-      prev?.start || '—';
+    $('tc-prev-task')
+      .textContent =
+        prev?.task ||
+        '—';
+
+
+    $('tc-prev-start')
+      .textContent =
+        prev?.start ||
+        '—';
+
 
     let prevFinish =
-      prev?.finish || '—';
+      prev?.finish ||
+      '—';
+
 
     if (
-      prevFinish === '--:--:--'
+      prevFinish ===
+      '--:--:--'
     ) {
-      prevFinish = '—';
+
+      prevFinish =
+        '—';
     }
 
-    $('tc-prev-finish').textContent =
-      prevFinish;
 
-    let prevElapsed = '—';
+    $('tc-prev-finish')
+      .textContent =
+        prevFinish;
 
-    if (prev?.actualDuration) {
+
+    let prevElapsed =
+      '—';
+
+
+    if (
+      prev?.actualDuration
+    ) {
+
       const sec =
         durationToSeconds(
           prev.actualDuration
         );
 
-      if (sec !== null) {
+
+      if (
+        sec !== null
+      ) {
+
         prevElapsed =
-          secondsToHMS(sec);
+          secondsToHMS(
+            sec
+          );
       }
     }
 
-    $('tc-prev-elapsed').textContent =
-      prevElapsed;
+
+    $('tc-prev-elapsed')
+      .textContent =
+        prevElapsed;
+
+
+    /* NEXT */
 
     for (
       let i = 0;
       i < 3;
       i++
     ) {
+
       const row =
         state.next[i];
 
+
       $(
         `tc-next-time-${i}`
-      ).textContent =
-        row?.scheduleTime || '—';
+      )
+        .textContent =
+          row?.scheduleTime ||
+          '—';
+
 
       $(
         `tc-next-task-${i}`
-      ).textContent =
-        row?.task || '—';
+      )
+        .textContent =
+          row?.task ||
+          '—';
     }
 
-    $('tc-leave-time').textContent =
-      state.leaveTime ||
-      '--:--';
 
-    if (!state.leaveTime) {
-      $('tc-leave-label').textContent =
-        'あと';
+    /* LEAVE */
 
-      $('tc-leave-count').textContent =
+    $('tc-leave-time')
+      .textContent =
+        state.leaveTime ||
         '--:--';
+
+
+    if (
+      !state.leaveTime
+    ) {
+
+      $('tc-leave-label')
+        .textContent =
+          'あと';
+
+
+      $('tc-leave-count')
+        .textContent =
+          '--:--';
 
       return;
     }
+
 
     const parts =
       state.leaveTime
         .split(':')
         .map(Number);
 
-    if (parts.length !== 2) {
+
+    if (
+      parts.length !== 2
+    ) {
+
       return;
     }
+
 
     const leaveDate =
       new Date(
@@ -2009,42 +3043,72 @@
         0
       );
 
+
     let diff =
       Math.floor(
         (
           leaveDate.getTime() -
           now.getTime()
-        ) / 1000
+        ) /
+        1000
       );
 
-    if (diff >= 0) {
-      $('tc-leave-label').textContent =
-        'あと';
 
-      $('tc-leave-count').textContent =
-        pad(
-          Math.floor(diff / 3600)
-        ) +
-        ':' +
-        pad(
-          Math.floor(
-            (diff % 3600) / 60
-          )
-        );
+    if (
+      diff >= 0
+    ) {
+
+      $('tc-leave-label')
+        .textContent =
+          'あと';
+
+
+      $('tc-leave-count')
+        .textContent =
+          pad(
+            Math.floor(
+              diff / 3600
+            )
+          ) +
+          ':' +
+          pad(
+            Math.floor(
+              (
+                diff % 3600
+              ) / 60
+            )
+          );
+
     } else {
+
       diff =
-        Math.abs(diff);
+        Math.abs(
+          diff
+        );
 
-      $('tc-leave-label').textContent =
-        '超過';
 
-      $('tc-leave-count').textContent =
-        secondsToHMS(diff);
+      $('tc-leave-label')
+        .textContent =
+          '超過';
+
+
+      $('tc-leave-count')
+        .textContent =
+          secondsToHMS(
+            diff
+          );
     }
   }
 
+
+  /* =========================================================
+     START
+  ========================================================= */
+
   sync();
+
   render();
+
 
   window.tcNowRenderTimer =
     setInterval(
@@ -2052,11 +3116,15 @@
       RENDER_INTERVAL
     );
 
+
   window.tcNowSyncTimer =
     setInterval(
       () => {
+
         sync();
+
         render();
+
       },
       SYNC_INTERVAL
     );
