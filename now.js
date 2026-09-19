@@ -21,6 +21,9 @@
     document.body.style.overflow =
       window.tcNowOldBodyOverflow || '';
 
+    const oldStyle = document.getElementById('tc-now-style');
+    if (oldStyle) oldStyle.remove();
+
     return;
   }
 
@@ -39,7 +42,6 @@
   ========================================================= */
 
   const style = document.createElement('style');
-
   style.id = 'tc-now-style';
 
   style.textContent = `
@@ -59,6 +61,7 @@
 
       position: fixed;
       inset: 0;
+
       width: 100vw;
       height: 100dvh;
 
@@ -111,6 +114,7 @@
         minmax(130px, .7fr);
 
       align-items: start;
+
       gap: clamp(14px, 3vw, 40px);
 
       min-width: 0;
@@ -131,6 +135,7 @@
     #tc-leave {
       font-size: clamp(20px, 3vw, 34px);
       font-weight: 800;
+
       line-height: 1.4;
 
       font-variant-numeric: tabular-nums;
@@ -161,6 +166,7 @@
       letter-spacing: -.04em;
 
       font-variant-numeric: tabular-nums;
+
       white-space: nowrap;
     }
 
@@ -214,6 +220,7 @@
       content: "";
 
       position: absolute;
+
       left: 0;
       top: 0;
       bottom: 0;
@@ -384,7 +391,7 @@
 
     /* =====================================================
        iPHONE / SMALL LANDSCAPE
-       高さを基準に全部縮める
+       横画面では高さを基準に縮小
     ===================================================== */
 
     @media
@@ -401,17 +408,17 @@
 
       #tc-layout {
         grid-template-rows:
-          minmax(54px, 20dvh)
+          minmax(50px, 19dvh)
           minmax(0, 1fr);
 
-        gap: 2.5dvh;
+        gap: 2.2dvh;
       }
 
       #tc-header {
         grid-template-columns:
-          minmax(120px, .8fr)
-          minmax(180px, 1fr)
-          minmax(120px, .6fr);
+          minmax(110px, .8fr)
+          minmax(175px, 1fr)
+          minmax(110px, .6fr);
 
         gap: 2vw;
 
@@ -420,110 +427,110 @@
 
       #tc-brand {
         font-size:
-          clamp(13px, 4dvh, 20px);
+          clamp(12px, 3.8dvh, 19px);
 
-        line-height: 1.35;
+        line-height: 1.3;
 
-        letter-spacing: .20em;
+        letter-spacing: .19em;
       }
 
       #tc-leave {
         font-size:
-          clamp(15px, 5dvh, 23px);
+          clamp(14px, 4.5dvh, 22px);
 
-        line-height: 1.3;
+        line-height: 1.25;
       }
 
       #tc-clock {
         font-size:
-          clamp(34px, 14dvh, 64px);
+          clamp(32px, 13dvh, 62px);
       }
 
       #tc-main {
         grid-template-columns:
           minmax(0, 1.55fr)
-          minmax(190px, .95fr);
+          minmax(180px, .92fr);
 
         gap: 2vw;
       }
 
       #tc-now {
         border-radius:
-          clamp(18px, 7dvh, 34px);
+          clamp(16px, 6dvh, 32px);
 
         padding:
-          clamp(14px, 4dvh, 24px)
-          clamp(24px, 4vw, 42px);
+          clamp(10px, 3dvh, 20px)
+          clamp(22px, 3.5vw, 38px);
       }
 
       #tc-now::before {
         width:
-          clamp(7px, 1vw, 12px);
+          clamp(6px, .9vw, 11px);
       }
 
       #tc-now-badge {
         border-radius:
-          clamp(10px, 4dvh, 18px);
+          clamp(9px, 3.4dvh, 16px);
 
         padding:
-          clamp(7px, 2.4dvh, 11px)
-          clamp(14px, 2vw, 22px);
+          clamp(6px, 2dvh, 10px)
+          clamp(13px, 1.8vw, 20px);
 
         font-size:
-          clamp(13px, 4.5dvh, 20px);
+          clamp(12px, 4dvh, 19px);
 
         margin-bottom:
-          clamp(10px, 5dvh, 22px);
+          clamp(8px, 3.5dvh, 17px);
       }
 
       #tc-start {
         font-size:
-          clamp(20px, 7dvh, 32px);
+          clamp(18px, 6dvh, 30px);
 
         margin-bottom:
-          clamp(6px, 2.5dvh, 12px);
+          clamp(5px, 2dvh, 10px);
       }
 
       #tc-task {
         font-size:
-          clamp(28px, 10dvh, 48px);
+          clamp(26px, 8.5dvh, 45px);
 
-        line-height: 1.05;
+        line-height: 1.03;
       }
 
       #tc-elapsed {
         margin-top:
-          clamp(7px, 3dvh, 14px);
+          clamp(6px, 2dvh, 12px);
 
         font-size:
-          clamp(14px, 4.5dvh, 21px);
+          clamp(13px, 4dvh, 20px);
       }
 
       #tc-side {
-        gap: 2.5dvh;
+        gap: 2.2dvh;
       }
 
       .tc-side-card {
         border-radius:
-          clamp(15px, 6dvh, 28px);
+          clamp(14px, 5dvh, 26px);
 
         padding:
-          clamp(10px, 3dvh, 18px)
-          clamp(14px, 2vw, 24px);
+          clamp(8px, 2dvh, 15px)
+          clamp(13px, 1.8vw, 21px);
       }
 
       .tc-side-label {
         font-size:
-          clamp(12px, 4dvh, 18px);
+          clamp(11px, 3.5dvh, 17px);
 
         margin-bottom:
-          clamp(7px, 2.5dvh, 12px);
+          clamp(5px, 1.7dvh, 10px);
       }
 
       .tc-side-time,
       .tc-side-task {
         font-size:
-          clamp(17px, 6dvh, 27px);
+          clamp(16px, 5dvh, 25px);
       }
     }
 
@@ -632,7 +639,9 @@
       }
 
       #tc-side {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns:
+          1fr 1fr;
+
         grid-template-rows: auto;
 
         gap: 12px;
@@ -646,6 +655,7 @@
 
       .tc-side-label {
         font-size: 13px;
+
         margin-bottom: 10px;
       }
 
@@ -664,7 +674,7 @@
 
 
     /* =====================================================
-       VERY SMALL PORTRAIT
+       SMALL PORTRAIT
     ===================================================== */
 
     @media
@@ -677,6 +687,7 @@
 
       #tc-header {
         grid-template-columns: 1fr;
+
         grid-template-areas:
           "clock"
           "leave";
@@ -774,7 +785,7 @@
               <div
                 id="tc-prev-time"
                 class="tc-side-time">
-                --:--
+                —
               </div>
 
               <div
@@ -799,7 +810,7 @@
               <div
                 id="tc-next-time"
                 class="tc-side-time">
-                --:--
+                —
               </div>
 
               <div
@@ -838,9 +849,12 @@
 
   function visible(el) {
     if (!el) return false;
-    if (isInsideNow(el)) return false;
 
-    const r = el.getBoundingClientRect();
+    if (isInsideNow(el))
+      return false;
+
+    const r =
+      el.getBoundingClientRect();
 
     return (
       r.width > 0 &&
@@ -861,16 +875,14 @@
       [...document.querySelectorAll('p,div,span')]
         .filter(el =>
           visible(el) &&
-          /^\\d{2}:\\d{2}:\\d{2}$/
-            .test((el.textContent || '').trim())
+          /^\d{2}:\d{2}:\d{2}$/
+            .test(
+              (el.textContent || '').trim()
+            )
         );
 
-    if (!list.length) return null;
-
-    /*
-      下部プレイヤーの時間が
-      一番下にあるので優先
-    */
+    if (!list.length)
+      return null;
 
     list.sort(
       (a, b) =>
@@ -883,14 +895,16 @@
 
 
   /* =========================================================
-     現在タスク名
+     現在タスク
   ========================================================= */
 
   function getCurrentTask(elapsedEl) {
 
-    if (!elapsedEl) return null;
+    if (!elapsedEl)
+      return null;
 
-    let parent = elapsedEl;
+    let parent =
+      elapsedEl;
 
     for (
       let level = 0;
@@ -903,7 +917,8 @@
         parent.getBoundingClientRect();
 
       if (
-        r.top > window.innerHeight * .55 &&
+        r.top >
+          window.innerHeight * .55 &&
         r.height > 60
       ) {
 
@@ -918,7 +933,8 @@
                 return false;
 
               const t =
-                (el.textContent || '').trim();
+                (el.textContent || '')
+                  .trim();
 
               if (!t)
                 return false;
@@ -927,13 +943,13 @@
                 return false;
 
               if (
-                /^-?\\d{2}:\\d{2}:\\d{2}$/
+                /^-?\d{2}:\d{2}:\d{2}$/
                   .test(t)
               )
                 return false;
 
               if (
-                /^[-\\d\\s:./]+$/
+                /^[-\d\s:./]+$/
                   .test(t)
               )
                 return false;
@@ -941,7 +957,8 @@
               return true;
             })
             .map(el =>
-              (el.textContent || '').trim()
+              (el.textContent || '')
+                .trim()
             )
             .filter(t =>
               t !== 'Main' &&
@@ -965,7 +982,7 @@
 
 
   /* =========================================================
-     退勤予定時刻
+     退勤予定
   ========================================================= */
 
   function getLeaveTime() {
@@ -992,15 +1009,15 @@
         const times =
           [...parent.querySelectorAll('*')]
             .map(x =>
-              (x.textContent || '').trim()
+              (x.textContent || '')
+                .trim()
             )
             .filter(t =>
-              /^\\d{1,2}:\\d{2}$/
+              /^\d{1,2}:\d{2}$/
                 .test(t)
             );
 
         if (times.length) {
-
           return [
             ...new Set(times)
           ].pop();
@@ -1018,14 +1035,16 @@
 
   function elapsedToSeconds(text) {
 
-    if (!text) return null;
+    if (!text)
+      return null;
 
     const m =
       text.match(
-        /^(\\d{2}):(\\d{2}):(\\d{2})$/
+        /^(\d{2}):(\d{2}):(\d{2})$/
       );
 
-    if (!m) return null;
+    if (!m)
+      return null;
 
     return (
       Number(m[1]) * 3600 +
@@ -1036,7 +1055,7 @@
 
 
   /* =========================================================
-     現在タスク開始時刻
+     開始時刻
   ========================================================= */
 
   function getStartTime(elapsed) {
@@ -1063,7 +1082,6 @@
 
   /* =========================================================
      PREVIOUS / NEXT
-     DOM上のタスク名候補から現在タスクの前後を推定
   ========================================================= */
 
   function getNeighbourTasks(currentTask) {
@@ -1086,7 +1104,8 @@
             return false;
 
           const t =
-            (el.textContent || '').trim();
+            (el.textContent || '')
+              .trim();
 
           if (!t)
             return false;
@@ -1095,7 +1114,7 @@
             return false;
 
           if (
-            /^-?\\d{1,2}:\\d{2}(:\\d{2})?$/
+            /^-?\d{1,2}:\d{2}(:\d{2})?$/
               .test(t)
           )
             return false;
@@ -1103,26 +1122,29 @@
           return true;
         });
 
-    let index =
+    const index =
       leaves.findIndex(
         el =>
           (el.textContent || '').trim()
-          === currentTask
+            === currentTask
       );
 
     if (index < 0) {
-
       return {
         previous: null,
         next: null
       };
     }
 
-    function taskAround(start, step) {
+    function taskAround(
+      start,
+      step
+    ) {
 
       for (
         let i = start;
-        i >= 0 && i < leaves.length;
+        i >= 0 &&
+        i < leaves.length;
         i += step
       ) {
 
@@ -1137,7 +1159,6 @@
           text !== 'Main' &&
           text.length >= 2
         ) {
-
           return text;
         }
       }
@@ -1147,23 +1168,31 @@
 
     return {
       previous:
-        taskAround(index - 1, -1),
+        taskAround(
+          index - 1,
+          -1
+        ),
 
       next:
-        taskAround(index + 1, 1)
+        taskAround(
+          index + 1,
+          1
+        )
     };
   }
 
 
   /* =========================================================
-     更新
+     UPDATE
   ========================================================= */
 
   function update() {
 
-    const now = new Date();
+    const now =
+      new Date();
 
-    /* 現在時計 */
+
+    /* ---------- CLOCK ---------- */
 
     $('tc-clock').textContent =
       pad(now.getHours()) +
@@ -1171,7 +1200,7 @@
       pad(now.getMinutes());
 
 
-    /* 現在タスク */
+    /* ---------- CURRENT TASK ---------- */
 
     const elapsedEl =
       getElapsedElement();
@@ -1182,27 +1211,33 @@
         : null;
 
     const task =
-      getCurrentTask(elapsedEl);
-
+      getCurrentTask(
+        elapsedEl
+      );
 
     $('tc-elapsed').textContent =
-      elapsed || '--:--:--';
+      elapsed ||
+      '--:--:--';
 
     $('tc-task').textContent =
       task ||
       'タスクを取得できません';
 
     $('tc-start').textContent =
-      getStartTime(elapsed);
+      getStartTime(
+        elapsed
+      );
 
 
-    /* 退勤 */
+    /* ---------- LEAVE ---------- */
 
     const leaveTime =
       getLeaveTime();
 
-    $('tc-leave-time').textContent =
-      leaveTime || '--:--';
+    $('tc-leave-time')
+      .textContent =
+        leaveTime ||
+        '--:--';
 
     if (leaveTime) {
 
@@ -1239,7 +1274,8 @@
           );
 
         $('tc-leave-label')
-          .textContent = 'あと';
+          .textContent =
+            'あと';
 
         $('tc-leave-count')
           .textContent =
@@ -1266,7 +1302,8 @@
           diff % 60;
 
         $('tc-leave-label')
-          .textContent = '超過';
+          .textContent =
+            '超過';
 
         $('tc-leave-count')
           .textContent =
@@ -1280,35 +1317,39 @@
     } else {
 
       $('tc-leave-label')
-        .textContent = 'あと';
+        .textContent =
+          'あと';
 
       $('tc-leave-count')
-        .textContent = '--:--';
+        .textContent =
+          '--:--';
     }
 
 
-    /* PREVIOUS / NEXT */
+    /* ---------- PREVIOUS / NEXT ---------- */
 
     const neighbours =
-      getNeighbourTasks(task);
+      getNeighbourTasks(
+        task
+      );
 
-    $('tc-prev-task').textContent =
-      neighbours.previous || '—';
+    $('tc-prev-task')
+      .textContent =
+        neighbours.previous ||
+        '—';
 
-    $('tc-next-task').textContent =
-      neighbours.next || '—';
+    $('tc-next-task')
+      .textContent =
+        neighbours.next ||
+        '—';
 
-    /*
-      前後タスクの時刻については
-      DOM構造が確定していないので
-      現段階では現在開始時刻のみ確実に表示。
-    */
+    $('tc-prev-time')
+      .textContent =
+        '—';
 
-    $('tc-prev-time').textContent =
-      '—';
-
-    $('tc-next-time').textContent =
-      '—';
+    $('tc-next-time')
+      .textContent =
+        '—';
   }
 
 
@@ -1319,6 +1360,9 @@
   update();
 
   window.tcNowTimer =
-    setInterval(update, 1000);
+    setInterval(
+      update,
+      1000
+    );
 
 })();
