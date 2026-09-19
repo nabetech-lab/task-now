@@ -2,14 +2,21 @@
   'use strict';
 
   /* =========================================================
-     TaskChute NOW v3.6.1
-     - データ取得: v3.5系の確認済みロジック
-     - レイアウト: PREVIOUS文字切れ修正
-     - 再同期: 5秒
-     - 表示更新: 1秒
+     TaskChute NOW v3.7.0
+
+     LANDSCAPE
+       NOW | PREVIOUS
+           | NEXT
+
+     PORTRAIT
+       NOW
+       NEXT
+       PREVIOUS
+
+     Data acquisition logic = v3.6.1
   ========================================================= */
 
-  const VERSION = '3.6.1';
+  const VERSION = '3.7.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -222,12 +229,6 @@
 
   /* =========================================================
      CURRENT PLAYER
-     確認済み:
-     elapsed
-       ↓ parent
-       ↓ parent
-       ↓ previousElementSibling
-     current task
   ========================================================= */
 
   function findCurrentPlayer() {
@@ -455,16 +456,17 @@
 
 
   /* =========================================================
-     CURRENT TASK INFO
-     実機確認:
-     0 task
-     1 START
-     2 FINISH
-     3 project
-     4 mode
-     5 elapsed-ish
-     6 PLANNED
-     7 ...
+     CURRENT SCHEDULE INFO
+
+     Verified:
+       0 task
+       1 START
+       2 FINISH
+       3 project
+       4 mode
+       5 actual-ish
+       6 PLANNED
+       7 ...
   ========================================================= */
 
   function getCurrentScheduleInfo(
@@ -1000,7 +1002,7 @@
 
 
   /* =========================================================
-     CLEAN OLD
+     CLEAN OLD INSTANCE
   ========================================================= */
 
   if (
@@ -1214,7 +1216,9 @@
     }
 
 
-    /* HEADER */
+    /* =====================================================
+       HEADER
+    ===================================================== */
 
     #tc-header {
 
@@ -1314,10 +1318,15 @@
 
       font-variant-numeric:
         tabular-nums;
+
+      white-space:
+        nowrap;
     }
 
 
-    /* MAIN */
+    /* =====================================================
+       MAIN - LANDSCAPE DEFAULT
+    ===================================================== */
 
     #tc-main {
 
@@ -1343,7 +1352,9 @@
     }
 
 
-    /* NOW */
+    /* =====================================================
+       NOW
+    ===================================================== */
 
     #tc-now {
 
@@ -1603,7 +1614,9 @@
     }
 
 
-    /* SIDE */
+    /* =====================================================
+       SIDE
+    ===================================================== */
 
     #tc-side {
 
@@ -1703,7 +1716,9 @@
     }
 
 
-    /* PREVIOUS */
+    /* =====================================================
+       PREVIOUS
+    ===================================================== */
 
     #tc-prev-task {
 
@@ -1811,7 +1826,9 @@
     }
 
 
-    /* NEXT */
+    /* =====================================================
+       NEXT
+    ===================================================== */
 
     #tc-next-list {
 
@@ -1920,7 +1937,9 @@
     }
 
 
-    /* iPHONE LANDSCAPE */
+    /* =====================================================
+       iPHONE LANDSCAPE
+    ===================================================== */
 
     @media
       (orientation: landscape)
@@ -2209,6 +2228,690 @@
           .7dvh;
       }
     }
+
+
+    /* =====================================================
+       PORTRAIT
+       情報量は維持
+       NOW → NEXT → PREVIOUS
+    ===================================================== */
+
+    @media
+      (orientation: portrait) {
+
+      #${ROOT_ID} {
+
+        padding:
+          max(
+            8px,
+            env(safe-area-inset-top)
+          )
+          max(
+            10px,
+            env(safe-area-inset-right)
+          )
+          max(
+            8px,
+            env(safe-area-inset-bottom)
+          )
+          max(
+            10px,
+            env(safe-area-inset-left)
+          );
+      }
+
+
+      /*
+        HEADER
+
+        TaskChute NOW     20:12
+        退勤 20:30   超過 00:00:12
+      */
+
+      #tc-layout {
+
+        grid-template-rows:
+          auto
+          minmax(0, 1fr);
+
+        gap:
+          8px;
+      }
+
+
+      #tc-header {
+
+        grid-template-columns:
+          minmax(0, 1fr)
+          auto;
+
+        grid-template-areas:
+          "brand clock"
+          "leave leave";
+
+        align-items:
+          center;
+
+        column-gap:
+          10px;
+
+        row-gap:
+          4px;
+      }
+
+
+      #tc-brand {
+
+        grid-area:
+          brand;
+
+        font-size:
+          clamp(
+            12px,
+            3.8vw,
+            17px
+          );
+
+        letter-spacing:
+          .11em;
+      }
+
+
+      #tc-clock {
+
+        grid-area:
+          clock;
+
+        justify-self:
+          end;
+
+        font-size:
+          clamp(
+            34px,
+            10.5vw,
+            48px
+          );
+
+        line-height:
+          .95;
+      }
+
+
+      #tc-leave {
+
+        grid-area:
+          leave;
+
+        display:
+          flex;
+
+        align-items:
+          center;
+
+        gap:
+          clamp(
+            18px,
+            6vw,
+            32px
+          );
+
+        font-size:
+          clamp(
+            12px,
+            3.5vw,
+            16px
+          );
+
+        line-height:
+          1.1;
+      }
+
+
+      .tc-leave-row {
+
+        display:
+          grid;
+
+        grid-template-columns:
+          max-content
+          max-content;
+
+        column-gap:
+          .45em;
+      }
+
+
+      /*
+        NOW
+        ↓
+        SIDE(NEXT→PREVIOUS)
+      */
+
+      #tc-main {
+
+        display:
+          grid;
+
+        grid-template-columns:
+          1fr;
+
+        grid-template-rows:
+          minmax(0, 1.55fr)
+          minmax(0, 1fr);
+
+        gap:
+          8px;
+
+        min-height:
+          0;
+      }
+
+
+      /*
+        sideは縦積み。
+        HTML上はPREVIOUS→NEXTなので
+        orderで入れ替える。
+      */
+
+      #tc-side {
+
+        display:
+          flex;
+
+        flex-direction:
+          column;
+
+        gap:
+          7px;
+
+        min-height:
+          0;
+      }
+
+
+      #tc-side > .tc-card:first-child {
+
+        order:
+          2;
+
+        flex:
+          1 1 0;
+      }
+
+
+      #tc-side > .tc-card:last-child {
+
+        order:
+          1;
+
+        flex:
+          1 1 0;
+      }
+
+
+      /*
+        NOW
+      */
+
+      #tc-now {
+
+        justify-content:
+          flex-start;
+
+        padding:
+          14px
+          18px;
+
+        border-radius:
+          20px;
+      }
+
+
+      #tc-now::before {
+
+        width:
+          6px;
+      }
+
+
+      #tc-now-badge {
+
+        font-size:
+          12px;
+
+        padding:
+          6px
+          13px;
+
+        margin-bottom:
+          9px;
+
+        border-radius:
+          12px;
+      }
+
+
+      /*
+        START / PLANNED END / ELAPSED /
+        PLANNED / REMAINING/OVER
+
+        数値の開始位置はすべて揃える
+      */
+
+      .tc-now-metric {
+
+        grid-template-columns:
+          112px
+          minmax(0, 1fr);
+
+        column-gap:
+          10px;
+      }
+
+
+      .tc-now-label {
+
+        font-size:
+          clamp(
+            9px,
+            2.8vw,
+            12px
+          );
+
+        letter-spacing:
+          .14em;
+      }
+
+
+      .tc-now-value {
+
+        font-size:
+          clamp(
+            18px,
+            5.2vw,
+            24px
+          );
+
+        line-height:
+          1.05;
+      }
+
+
+      #tc-task {
+
+        margin:
+          7px
+          0
+          9px;
+
+        font-size:
+          clamp(
+            25px,
+            8vw,
+            36px
+          );
+
+        line-height:
+          1.05;
+
+        white-space:
+          nowrap;
+
+        overflow:
+          hidden;
+
+        text-overflow:
+          ellipsis;
+      }
+
+
+      #tc-progress {
+
+        gap:
+          3px;
+      }
+
+
+      #tc-status-row {
+
+        margin-top:
+          1px;
+      }
+
+
+      /*
+        NEXT + PREVIOUS cards
+      */
+
+      .tc-card {
+
+        padding:
+          9px
+          14px;
+
+        border-radius:
+          16px;
+
+        justify-content:
+          flex-start;
+      }
+
+
+      .tc-card-title {
+
+        font-size:
+          10px;
+
+        letter-spacing:
+          .16em;
+
+        margin-bottom:
+          5px;
+      }
+
+
+      /*
+        NEXT
+      */
+
+      #tc-next-list {
+
+        gap:
+          3px;
+      }
+
+
+      .tc-next-row {
+
+        grid-template-columns:
+          52px
+          minmax(0, 1fr);
+
+        column-gap:
+          8px;
+      }
+
+
+      .tc-next-time,
+      .tc-next-task {
+
+        font-size:
+          clamp(
+            13px,
+            4vw,
+            17px
+          );
+
+        line-height:
+          1.15;
+      }
+
+
+      /*
+        PREVIOUS
+      */
+
+      #tc-prev-task {
+
+        font-size:
+          clamp(
+            14px,
+            4.5vw,
+            19px
+          );
+
+        line-height:
+          1.1;
+
+        margin-top:
+          0;
+
+        margin-bottom:
+          4px;
+
+        white-space:
+          nowrap;
+
+        overflow:
+          hidden;
+
+        text-overflow:
+          ellipsis;
+      }
+
+
+      .tc-prev-metric {
+
+        grid-template-columns:
+          68px
+          minmax(0, 1fr);
+
+        column-gap:
+          8px;
+
+        margin:
+          0;
+      }
+
+
+      .tc-prev-label {
+
+        font-size:
+          clamp(
+            8px,
+            2.5vw,
+            10px
+          );
+
+        letter-spacing:
+          .13em;
+      }
+
+
+      .tc-prev-value {
+
+        font-size:
+          clamp(
+            12px,
+            3.8vw,
+            16px
+          );
+
+        line-height:
+          1.1;
+      }
+
+
+      #tc-version {
+
+        font-size:
+          8px;
+      }
+    }
+
+
+    /* =====================================================
+       SMALL PORTRAIT
+       iPhone等で高さが小さい場合も
+       情報そのものは削除しない
+    ===================================================== */
+
+    @media
+      (orientation: portrait)
+      and (max-height: 750px) {
+
+      #tc-layout {
+
+        gap:
+          5px;
+      }
+
+
+      #tc-header {
+
+        row-gap:
+          2px;
+      }
+
+
+      #tc-brand {
+
+        font-size:
+          11px;
+      }
+
+
+      #tc-clock {
+
+        font-size:
+          32px;
+      }
+
+
+      #tc-leave {
+
+        font-size:
+          11px;
+      }
+
+
+      #tc-main {
+
+        grid-template-rows:
+          minmax(0, 1.55fr)
+          minmax(0, 1fr);
+
+        gap:
+          5px;
+      }
+
+
+      #tc-side {
+
+        gap:
+          5px;
+      }
+
+
+      #tc-now {
+
+        padding:
+          10px
+          15px;
+      }
+
+
+      #tc-now-badge {
+
+        font-size:
+          10px;
+
+        padding:
+          5px
+          11px;
+
+        margin-bottom:
+          6px;
+      }
+
+
+      .tc-now-metric {
+
+        grid-template-columns:
+          105px
+          minmax(0, 1fr);
+      }
+
+
+      .tc-now-label {
+
+        font-size:
+          9px;
+      }
+
+
+      .tc-now-value {
+
+        font-size:
+          17px;
+      }
+
+
+      #tc-task {
+
+        font-size:
+          24px;
+
+        margin:
+          4px
+          0
+          6px;
+      }
+
+
+      #tc-progress {
+
+        gap:
+          1px;
+      }
+
+
+      .tc-card {
+
+        padding:
+          6px
+          12px;
+      }
+
+
+      .tc-card-title {
+
+        font-size:
+          9px;
+
+        margin-bottom:
+          3px;
+      }
+
+
+      #tc-prev-task {
+
+        font-size:
+          14px;
+
+        margin-bottom:
+          2px;
+      }
+
+
+      .tc-prev-label {
+
+        font-size:
+          8px;
+      }
+
+
+      .tc-prev-value {
+
+        font-size:
+          12px;
+      }
+
+
+      .tc-next-time,
+      .tc-next-task {
+
+        font-size:
+          12px;
+      }
+
+
+      #tc-next-list {
+
+        gap:
+          1px;
+      }
+    }
   `;
 
 
@@ -2246,14 +2949,20 @@
         <div id="tc-leave">
 
           <div class="tc-leave-row">
-            <span>退勤</span>
+
+            <span>
+              退勤
+            </span>
+
             <span id="tc-leave-time">
               --:--
             </span>
+
           </div>
 
 
           <div class="tc-leave-row">
+
             <span id="tc-leave-label">
               あと
             </span>
@@ -2261,6 +2970,7 @@
             <span id="tc-leave-count">
               --:--
             </span>
+
           </div>
 
         </div>
@@ -2274,6 +2984,8 @@
 
 
       <main id="tc-main">
+
+        <!-- NOW -->
 
         <section id="tc-now">
 
@@ -2372,9 +3084,15 @@
         </section>
 
 
+        <!-- SIDE -->
+
         <aside id="tc-side">
 
-          <section class="tc-card">
+          <!-- PREVIOUS -->
+
+          <section
+            id="tc-prev-card"
+            class="tc-card">
 
             <div class="tc-card-title">
               PREVIOUS
@@ -2433,7 +3151,11 @@
           </section>
 
 
-          <section class="tc-card">
+          <!-- NEXT -->
+
+          <section
+            id="tc-next-card"
+            class="tc-card">
 
             <div class="tc-card-title">
               NEXT
@@ -2532,6 +3254,8 @@
       new Date();
 
 
+    /* CLOCK */
+
     $('tc-clock')
       .textContent =
         pad(
@@ -2543,7 +3267,9 @@
         );
 
 
-    /* NOW */
+    /* =====================================================
+       NOW
+    ===================================================== */
 
     $('tc-task')
       .textContent =
@@ -2579,6 +3305,8 @@
           state.plannedSeconds
         );
 
+
+    /* REMAINING / OVER */
 
     const statusLabel =
       $('tc-status-label');
@@ -2668,7 +3396,9 @@
     }
 
 
-    /* PREVIOUS */
+    /* =====================================================
+       PREVIOUS
+    ===================================================== */
 
     const prev =
       state.previous;
@@ -2734,7 +3464,9 @@
         prevElapsed;
 
 
-    /* NEXT */
+    /* =====================================================
+       NEXT
+    ===================================================== */
 
     for (
       let i = 0;
@@ -2763,7 +3495,9 @@
     }
 
 
-    /* LEAVE */
+    /* =====================================================
+       LEAVE
+    ===================================================== */
 
     $('tc-leave-time')
       .textContent =
