@@ -1,66 +1,595 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '2.0.0';
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
+  const CACHE_KEY = 'tc-now-cache-v2';
 
   /* =========================================================
-     既存NOWを閉じる
+     共通
   ========================================================= */
 
-  const existing = document.getElementById(ROOT_ID);
+  const pad = n =>
+    String(n).padStart(2, '0');
 
-  if (existing) {
-    existing.remove();
+  function todayKey() {
+    const d = new Date();
 
-    if (window.tcNowTimer) {
-      clearInterval(window.tcNowTimer);
-      window.tcNowTimer = null;
-    }
+    return (
+      d.getFullYear() +
+      '-' +
+      pad(d.getMonth() + 1) +
+      '-' +
+      pad(d.getDate())
+    );
+  }
 
-    const oldStyle = document.getElementById(STYLE_ID);
-    if (oldStyle) oldStyle.remove();
+  function text(el) {
+    return (el?.textContent || '').trim();
+  }
 
-    return;
+  function insideNow(el) {
+    return !!el?.closest?.('#' + ROOT_ID);
+  }
+
+  function hmsToSeconds(value) {
+    const m =
+      String(value || '').match(
+        /^(\d{2}):(\d{2}):(\d{2})$/
+      );
+
+    if (!m)
+      return null;
+
+    return (
+      Number(m[1]) * 3600 +
+      Number(m[2]) * 60 +
+      Number(m[3])
+    );
+  }
+
+  function secondsToHMS(total) {
+    total = Math.max(0, Math.floor(total));
+
+    const h =
+      Math.floor(total / 3600);
+
+    const m =
+      Math.floor((total % 3600) / 60);
+
+    const s =
+      total % 60;
+
+    return (
+      pad(h) +
+      ':' +
+      pad(m) +
+      ':' +
+      pad(s)
+    );
   }
 
 
   /* =========================================================
-     iPhone Safari / Safe Area
+     キャッシュ
   ========================================================= */
 
-  let viewport = document.querySelector('meta[name="viewport"]');
+  function loadCache() {
+    try {
+      const obj =
+        JSON.parse(
+          localStorage.getItem(CACHE_KEY) || 'null'
+        );
 
-  if (!viewport) {
-    viewport = document.createElement('meta');
-    viewport.name = 'viewport';
-    viewport.content =
-      'width=device-width,initial-scale=1,viewport-fit=cover';
-    document.head.appendChild(viewport);
-  } else {
-    let content = viewport.getAttribute('content') || '';
+      if (!obj)
+        return {};
 
-    if (!content.includes('viewport-fit=cover')) {
-      content += ',viewport-fit=cover';
-      viewport.setAttribute('content', content);
+      if (obj.date !== todayKey())
+        return {};
+
+      return obj;
+
+    } catch {
+      return {};
     }
   }
+
+  function saveCache(state) {
+    try {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          date: todayKey(),
+          task: state.task || null,
+          leaveTime: state.leaveTime || null
+        })
+      );
+    } catch {}
+  }
+
+
+  /* =========================================================
+     TaskChuteから経過時間を取得
+     最初に実際に動いていたロジックをベースにする
+  ========================================================= */
+
+  function findElapsedElement() {
+
+    const candidates =
+      [...document.querySelectorAll(
+        'p, div, span'
+      )]
+        .filter(el => {
+
+          if (insideNow(el))
+            return false;
+
+          return (
+            /^\d{2}:\d{2}:\d{2}$/
+              .test(text(el))
+          );
+        });
+
+    if (!candidates.length)
+      return null;
+
+
+    /*
+      TaskChuteの下部プレイヤーでは
+      Pタグで経過時間が出ていたため優先。
+    */
+
+    const pCandidates =
+      candidates.filter(
+        el => el.tagName === 'P'
+      );
+
+    const list =
+      pCandidates.length
+        ? pCandidates
+        : candidates;
+
+
+    /*
+      最も画面下にある時間を優先。
+      display:noneの場合でもDOM順をフォールバックに使う。
+    */
+
+    list.sort((a, b) => {
+
+      const ar =
+        a.getBoundingClientRect();
+
+      const br =
+        b.getBoundingClientRect();
+
+      const aVisible =
+        ar.width > 0 &&
+        ar.height > 0;
+
+      const bVisible =
+        br.width > 0 &&
+        br.height > 0;
+
+      if (aVisible && bVisible)
+        return br.top - ar.top;
+
+      if (aVisible)
+        return -1;
+
+      if (bVisible)
+        return 1;
+
+      return 0;
+    });
+
+    return list[0] || null;
+  }
+
+
+  /* =========================================================
+     現在タスク名
+  ========================================================= */
+
+  function validTaskText(value) {
+
+    const t =
+      String(value || '').trim();
+
+    if (!t)
+      return false;
+
+    if (
+      t.length < 2 ||
+      t.length > 100
+    )
+      return false;
+
+    if (
+      /^-?\d{1,2}:\d{2}(:\d{2})?$/
+        .test(t)
+    )
+      return false;
+
+    if (
+      /^[-\d\s:./]+$/
+        .test(t)
+    )
+      return false;
+
+    const blacklist = new Set([
+      'Main',
+      'NOW',
+      '退勤',
+      'プロジェクトモード',
+      'PREVIOUS',
+      'NEXT',
+      'TaskChute Cloud 2'
+    ]);
+
+    return !blacklist.has(t);
+  }
+
+
+  function findTaskFromElapsed(elapsedEl) {
+
+    if (!elapsedEl)
+      return null;
+
+    /*
+      最初に成功した方式。
+      経過時間を起点に、親DOMを少しずつ広げる。
+    */
+
+    let parent =
+      elapsedEl.parentElement;
+
+    for (
+      let level = 0;
+      level < 10 && parent;
+      level++,
+      parent = parent.parentElement
+    ) {
+
+      const leaves =
+        [...parent.querySelectorAll('*')]
+          .filter(el => {
+
+            if (insideNow(el))
+              return false;
+
+            if (el.children.length !== 0)
+              return false;
+
+            return validTaskText(
+              text(el)
+            );
+          });
+
+      const values =
+        [...new Set(
+          leaves.map(el => text(el))
+        )];
+
+      if (!values.length)
+        continue;
+
+
+      /*
+        プレイヤー内で現在タスク名に最もなりやすいものを選ぶ。
+        単純な「最長文字列」だけではなく、
+        明らかなUI語を除外した後で採用。
+      */
+
+      const preferred =
+        values.filter(v =>
+          !v.includes('時間指定') &&
+          !v.includes('再実行') &&
+          !v.includes('通常画面')
+        );
+
+      const pool =
+        preferred.length
+          ? preferred
+          : values;
+
+      pool.sort(
+        (a, b) =>
+          b.length - a.length
+      );
+
+      if (pool[0])
+        return pool[0];
+    }
+
+    return null;
+  }
+
+
+  function findTaskFromTitle() {
+
+    const title =
+      document.title || '';
+
+    /*
+      例:
+      [30m] 晩ご飯 - TaskChute Cloud 2
+    */
+
+    let m =
+      title.match(
+        /^\[[^\]]+\]\s*(.+?)\s*-\s*TaskChute/i
+      );
+
+    if (m?.[1])
+      return m[1].trim();
+
+
+    m =
+      title.match(
+        /^(.+?)\s*-\s*TaskChute/i
+      );
+
+    if (
+      m?.[1] &&
+      validTaskText(m[1])
+    )
+      return m[1].trim();
+
+    return null;
+  }
+
+
+  /* =========================================================
+     退勤予定時刻
+  ========================================================= */
+
+  function findLeaveTime() {
+
+    const leaveNodes =
+      [...document.querySelectorAll(
+        'body *'
+      )]
+        .filter(el =>
+          !insideNow(el) &&
+          text(el) === '退勤'
+        );
+
+
+    /*
+      最も小さい「退勤タスク行」から順に時刻を探す。
+    */
+
+    for (const leaveNode of leaveNodes) {
+
+      let parent =
+        leaveNode;
+
+      for (
+        let level = 0;
+        level < 10 && parent;
+        level++,
+        parent = parent.parentElement
+      ) {
+
+        const times =
+          [...parent.querySelectorAll('*')]
+            .map(el => text(el))
+            .filter(value =>
+              /^\d{1,2}:\d{2}$/
+                .test(value)
+            );
+
+        const unique =
+          [...new Set(times)];
+
+        if (unique.length) {
+
+          /*
+            実機調査では
+            行末側のHH:MMが予定開始時刻だった。
+          */
+
+          return unique[
+            unique.length - 1
+          ];
+        }
+      }
+    }
+
+    return null;
+  }
+
+
+  /* =========================================================
+     NOWを出す前にTaskChuteをスナップショット
+  ========================================================= */
+
+  function captureTaskChute() {
+
+    const cache =
+      loadCache();
+
+    const elapsedEl =
+      findElapsedElement();
+
+    const elapsedText =
+      elapsedEl
+        ? text(elapsedEl)
+        : null;
+
+    const elapsedSeconds =
+      hmsToSeconds(
+        elapsedText
+      );
+
+    let task =
+      findTaskFromElapsed(
+        elapsedEl
+      );
+
+    if (!task)
+      task =
+        findTaskFromTitle();
+
+    if (!task)
+      task =
+        cache.task || null;
+
+
+    let leaveTime =
+      findLeaveTime();
+
+    if (!leaveTime)
+      leaveTime =
+        cache.leaveTime || null;
+
+
+    const state = {
+      task,
+      leaveTime,
+
+      elapsedBase:
+        elapsedSeconds,
+
+      capturedAt:
+        Date.now()
+    };
+
+
+    if (
+      state.task ||
+      state.leaveTime
+    ) {
+      saveCache(state);
+    }
+
+    return state;
+  }
+
+
+  /* =========================================================
+     ★ここが重要
+     NOWを作る前にデータを取る
+  ========================================================= */
+
+  let newState =
+    captureTaskChute();
+
+
+  /*
+    再実行時にDOM取得できなくても、
+    前回の有効データを捨てない。
+  */
+
+  if (window.tcNowState) {
+
+    const oldState =
+      window.tcNowState;
+
+    if (!newState.task)
+      newState.task =
+        oldState.task;
+
+    if (!newState.leaveTime)
+      newState.leaveTime =
+        oldState.leaveTime;
+
+    if (
+      newState.elapsedBase == null &&
+      oldState.elapsedBase != null
+    ) {
+
+      const passed =
+        Math.floor(
+          (
+            Date.now() -
+            oldState.capturedAt
+          ) / 1000
+        );
+
+      newState.elapsedBase =
+        oldState.elapsedBase +
+        passed;
+
+      newState.capturedAt =
+        Date.now();
+    }
+  }
+
+
+  window.tcNowState =
+    newState;
+
+
+  /* =========================================================
+     再実行は「非表示」にしない
+     古いNOWだけ破棄して再生成
+  ========================================================= */
+
+  const oldRoot =
+    document.getElementById(
+      ROOT_ID
+    );
+
+  if (oldRoot)
+    oldRoot.remove();
+
+
+  const oldStyle =
+    document.getElementById(
+      STYLE_ID
+    );
+
+  if (oldStyle)
+    oldStyle.remove();
+
+
+  if (window.tcNowTimer) {
+    clearInterval(
+      window.tcNowTimer
+    );
+
+    window.tcNowTimer =
+      null;
+  }
+
+
+  /* =========================================================
+     ページ背景
+  ========================================================= */
+
+  document.documentElement
+    .style
+    .setProperty(
+      'background',
+      '#07090d',
+      'important'
+    );
+
+  document.body
+    .style
+    .setProperty(
+      'background',
+      '#07090d',
+      'important'
+    );
 
 
   /* =========================================================
      CSS
   ========================================================= */
 
-  const style = document.createElement('style');
-  style.id = STYLE_ID;
+  const style =
+    document.createElement(
+      'style'
+    );
+
+  style.id =
+    STYLE_ID;
 
   style.textContent = `
-
-    html,
-    body {
-      background: #07090d !important;
-    }
 
     #${ROOT_ID},
     #${ROOT_ID} * {
@@ -72,17 +601,19 @@
       --panel: #1a2029;
       --panel2: #0d1016;
       --text: #f7f7f8;
-      --muted: #999da7;
-      --dim: #50545f;
+      --muted: #979ba5;
+      --dim: #4b4f59;
 
       position: fixed;
 
       inset: 0;
 
+      z-index: 2147483647;
+
       width: 100vw;
       height: 100dvh;
 
-      z-index: 2147483647;
+      overflow: hidden;
 
       background: var(--bg);
       color: var(--text);
@@ -95,19 +626,13 @@
         "Yu Gothic",
         sans-serif;
 
-      overflow: hidden;
-
       padding:
-        max(12px, env(safe-area-inset-top))
-        max(16px, env(safe-area-inset-right))
-        max(12px, env(safe-area-inset-bottom))
-        max(16px, env(safe-area-inset-left));
+        max(8px, env(safe-area-inset-top))
+        max(12px, env(safe-area-inset-right))
+        max(8px, env(safe-area-inset-bottom))
+        max(12px, env(safe-area-inset-left));
     }
 
-
-    /* =====================================================
-       LAYOUT
-    ===================================================== */
 
     #tc-layout {
       width: 100%;
@@ -119,13 +644,16 @@
         auto
         minmax(0, 1fr);
 
-      gap: clamp(14px, 2.5vh, 28px);
+      gap:
+        clamp(
+          10px,
+          2.5vh,
+          26px
+        );
     }
 
 
-    /* =====================================================
-       HEADER
-    ===================================================== */
+    /* HEADER */
 
     #tc-header {
       min-width: 0;
@@ -133,40 +661,60 @@
       display: grid;
 
       grid-template-columns:
-        minmax(150px, .8fr)
-        minmax(210px, 1fr)
-        minmax(130px, .7fr);
-
-      gap: clamp(15px, 3vw, 40px);
+        minmax(140px, .8fr)
+        minmax(190px, 1fr)
+        minmax(120px, .65fr);
 
       align-items: center;
+
+      gap:
+        clamp(
+          12px,
+          2.5vw,
+          36px
+        );
     }
 
-    #tc-brand {
-      color: var(--muted);
 
-      font-size: clamp(16px, 2.4vw, 30px);
+    #tc-brand {
+      color:
+        var(--muted);
+
+      font-size:
+        clamp(
+          14px,
+          2.3vw,
+          28px
+        );
 
       font-weight: 800;
+
+      line-height: 1.4;
 
       letter-spacing: .22em;
 
-      line-height: 1.45;
-
       white-space: nowrap;
     }
 
+
     #tc-leave {
-      font-size: clamp(19px, 2.8vw, 32px);
+      font-size:
+        clamp(
+          17px,
+          2.6vw,
+          30px
+        );
 
       font-weight: 800;
 
-      line-height: 1.35;
+      line-height: 1.32;
+
+      font-variant-numeric:
+        tabular-nums;
 
       white-space: nowrap;
-
-      font-variant-numeric: tabular-nums;
     }
+
 
     .tc-leave-row {
       display: grid;
@@ -178,10 +726,16 @@
       gap: .4em;
     }
 
+
     #tc-clock {
       justify-self: end;
 
-      font-size: clamp(40px, 7vw, 82px);
+      font-size:
+        clamp(
+          38px,
+          6.8vw,
+          78px
+        );
 
       font-weight: 800;
 
@@ -191,13 +745,12 @@
 
       white-space: nowrap;
 
-      font-variant-numeric: tabular-nums;
+      font-variant-numeric:
+        tabular-nums;
     }
 
 
-    /* =====================================================
-       MAIN
-    ===================================================== */
+    /* MAIN */
 
     #tc-main {
       min-width: 0;
@@ -206,16 +759,19 @@
       display: grid;
 
       grid-template-columns:
-        minmax(0, 1.62fr)
-        minmax(210px, .9fr);
+        minmax(0, 1.65fr)
+        minmax(190px, .9fr);
 
-      gap: clamp(14px, 2.7vw, 32px);
+      gap:
+        clamp(
+          12px,
+          2.4vw,
+          30px
+        );
     }
 
 
-    /* =====================================================
-       NOW
-    ===================================================== */
+    /* NOW */
 
     #tc-now {
       position: relative;
@@ -225,14 +781,27 @@
 
       overflow: hidden;
 
-      background: var(--panel);
+      background:
+        var(--panel);
 
       border-radius:
-        clamp(22px, 4vw, 52px);
+        clamp(
+          18px,
+          3.5vw,
+          46px
+        );
 
       padding:
-        clamp(22px, 5vh, 50px)
-        clamp(30px, 5vw, 68px);
+        clamp(
+          18px,
+          4.5vh,
+          46px
+        )
+        clamp(
+          26px,
+          4.6vw,
+          62px
+        );
 
       display: flex;
 
@@ -240,6 +809,7 @@
 
       justify-content: center;
     }
+
 
     #tc-now::before {
       content: "";
@@ -251,79 +821,134 @@
       bottom: 0;
 
       width:
-        clamp(8px, 1vw, 16px);
+        clamp(
+          7px,
+          .9vw,
+          14px
+        );
 
       background: white;
     }
 
+
     #tc-now-badge {
-      align-self: flex-start;
+      align-self:
+        flex-start;
 
-      background: white;
+      background:
+        white;
 
-      color: #101116;
-
-      border-radius:
-        clamp(13px, 2vw, 23px);
-
-      padding:
-        clamp(9px, 1.8vh, 17px)
-        clamp(18px, 2.8vw, 32px);
+      color:
+        #111318;
 
       font-size:
-        clamp(16px, 2.3vw, 28px);
+        clamp(
+          15px,
+          2.1vw,
+          26px
+        );
 
       font-weight: 900;
 
-      letter-spacing: .18em;
+      letter-spacing:
+        .18em;
+
+      border-radius:
+        clamp(
+          11px,
+          1.8vw,
+          20px
+        );
+
+      padding:
+        clamp(
+          7px,
+          1.5vh,
+          14px
+        )
+        clamp(
+          16px,
+          2.4vw,
+          28px
+        );
 
       margin-bottom:
-        clamp(20px, 6vh, 60px);
+        clamp(
+          18px,
+          5vh,
+          54px
+        );
     }
 
+
     #tc-start {
-      color: #c9ccd3;
+      color:
+        #c6cad2;
 
       font-size:
-        clamp(23px, 3.7vw, 48px);
+        clamp(
+          21px,
+          3.5vw,
+          44px
+        );
 
       font-weight: 500;
 
-      font-variant-numeric: tabular-nums;
+      font-variant-numeric:
+        tabular-nums;
 
       margin-bottom:
-        clamp(10px, 2.5vh, 22px);
+        clamp(
+          8px,
+          2vh,
+          18px
+        );
     }
+
 
     #tc-task {
       font-size:
-        clamp(32px, 5.5vw, 72px);
+        clamp(
+          30px,
+          5.3vw,
+          68px
+        );
 
       font-weight: 900;
 
-      line-height: 1.08;
+      line-height: 1.07;
 
-      overflow-wrap: anywhere;
+      overflow-wrap:
+        anywhere;
     }
+
 
     #tc-elapsed {
       margin-top:
-        clamp(12px, 3vh, 30px);
+        clamp(
+          10px,
+          2.5vh,
+          25px
+        );
 
-      color: #aeb2bb;
+      color:
+        #aeb2bb;
 
       font-size:
-        clamp(17px, 2.6vw, 32px);
+        clamp(
+          16px,
+          2.4vw,
+          30px
+        );
 
       font-weight: 700;
 
-      font-variant-numeric: tabular-nums;
+      font-variant-numeric:
+        tabular-nums;
     }
 
 
-    /* =====================================================
-       SIDE
-    ===================================================== */
+    /* SIDE */
 
     #tc-side {
       min-width: 0;
@@ -336,23 +961,41 @@
         minmax(0, 1fr);
 
       gap:
-        clamp(12px, 2.3vh, 22px);
+        clamp(
+          10px,
+          2vh,
+          20px
+        );
     }
+
 
     .tc-card {
       min-width: 0;
       min-height: 0;
 
-      background: var(--panel2);
+      overflow: hidden;
+
+      background:
+        var(--panel2);
 
       border-radius:
-        clamp(18px, 3vw, 34px);
+        clamp(
+          16px,
+          2.8vw,
+          30px
+        );
 
       padding:
-        clamp(18px, 3.5vh, 34px)
-        clamp(20px, 2.8vw, 36px);
-
-      overflow: hidden;
+        clamp(
+          14px,
+          3vh,
+          30px
+        )
+        clamp(
+          17px,
+          2.4vw,
+          32px
+        );
 
       display: flex;
 
@@ -361,19 +1004,31 @@
       justify-content: center;
     }
 
+
     .tc-card-label {
-      color: var(--dim);
+      color:
+        var(--dim);
 
       font-size:
-        clamp(13px, 1.8vw, 22px);
+        clamp(
+          12px,
+          1.7vw,
+          20px
+        );
 
       font-weight: 900;
 
-      letter-spacing: .18em;
+      letter-spacing:
+        .18em;
 
       margin-bottom:
-        clamp(12px, 3vh, 28px);
+        clamp(
+          8px,
+          2vh,
+          20px
+        );
     }
+
 
     .tc-card-row {
       min-width: 0;
@@ -384,25 +1039,39 @@
         max-content
         minmax(0, 1fr);
 
-      gap:
-        clamp(12px, 2vw, 26px);
-
       align-items: baseline;
+
+      gap:
+        clamp(
+          8px,
+          1.5vw,
+          20px
+        );
     }
+
 
     .tc-card-time,
     .tc-card-task {
-      color: #6e737e;
+      color:
+        #707580;
 
       font-size:
-        clamp(20px, 3.2vw, 40px);
+        clamp(
+          18px,
+          3vw,
+          36px
+        );
     }
+
 
     .tc-card-time {
-      white-space: nowrap;
+      white-space:
+        nowrap;
 
-      font-variant-numeric: tabular-nums;
+      font-variant-numeric:
+        tabular-nums;
     }
+
 
     .tc-card-task {
       min-width: 0;
@@ -413,35 +1082,43 @@
 
       overflow: hidden;
 
-      text-overflow: ellipsis;
+      text-overflow:
+        ellipsis;
     }
 
-
-    /* =====================================================
-       VERSION
-    ===================================================== */
 
     #tc-version {
       position: absolute;
 
       right:
-        max(12px, env(safe-area-inset-right));
+        max(
+          11px,
+          env(safe-area-inset-right)
+        );
 
       bottom:
-        max(5px, env(safe-area-inset-bottom));
+        max(
+          4px,
+          env(safe-area-inset-bottom)
+        );
 
-      color: #424650;
+      color:
+        #41454f;
 
-      font-size: 11px;
+      font-size:
+        10px;
 
-      font-weight: 700;
+      font-weight:
+        700;
 
-      letter-spacing: .08em;
+      letter-spacing:
+        .08em;
     }
 
 
     /* =====================================================
-       iPHONE 横画面
+       iPhone横画面
+       高さを基準に必ず収める
     ===================================================== */
 
     @media
@@ -450,133 +1127,257 @@
 
       #${ROOT_ID} {
         padding:
-          max(5px, env(safe-area-inset-top))
-          max(10px, env(safe-area-inset-right))
-          max(5px, env(safe-area-inset-bottom))
-          max(10px, env(safe-area-inset-left));
+          max(
+            4px,
+            env(safe-area-inset-top)
+          )
+          max(
+            8px,
+            env(safe-area-inset-right)
+          )
+          max(
+            4px,
+            env(safe-area-inset-bottom)
+          )
+          max(
+            8px,
+            env(safe-area-inset-left)
+          );
       }
+
 
       #tc-layout {
         grid-template-rows:
-          18dvh
+          17dvh
           minmax(0, 1fr);
 
-        gap: 2dvh;
+        gap: 1.8dvh;
       }
+
 
       #tc-header {
         grid-template-columns:
-          minmax(100px, .8fr)
-          minmax(170px, 1fr)
-          minmax(110px, .6fr);
+          minmax(90px, .75fr)
+          minmax(150px, 1fr)
+          minmax(100px, .55fr);
 
-        gap: 2vw;
+        gap: 1.7vw;
       }
+
 
       #tc-brand {
         font-size:
-          clamp(11px, 3.5dvh, 18px);
+          clamp(
+            10px,
+            3.3dvh,
+            17px
+          );
 
-        line-height: 1.3;
+        line-height:
+          1.28;
       }
+
 
       #tc-leave {
         font-size:
-          clamp(13px, 4.3dvh, 21px);
+          clamp(
+            12px,
+            4dvh,
+            20px
+          );
 
-        line-height: 1.25;
+        line-height:
+          1.22;
       }
+
 
       #tc-clock {
         font-size:
-          clamp(30px, 12dvh, 58px);
+          clamp(
+            28px,
+            11.5dvh,
+            56px
+          );
       }
+
 
       #tc-main {
         grid-template-columns:
-          minmax(0, 1.62fr)
-          minmax(170px, .9fr);
+          minmax(0, 1.67fr)
+          minmax(160px, .88fr);
 
-        gap: 1.8vw;
+        gap: 1.6vw;
       }
+
 
       #tc-now {
         border-radius:
-          clamp(14px, 5.5dvh, 28px);
+          clamp(
+            13px,
+            5dvh,
+            25px
+          );
 
         padding:
-          clamp(9px, 2.5dvh, 17px)
-          clamp(20px, 3.3vw, 34px);
+          clamp(
+            8px,
+            2.2dvh,
+            15px
+          )
+          clamp(
+            18px,
+            3vw,
+            30px
+          );
       }
+
 
       #tc-now::before {
         width:
-          clamp(6px, .8vw, 10px);
+          clamp(
+            5px,
+            .7vw,
+            9px
+          );
       }
+
 
       #tc-now-badge {
+        font-size:
+          clamp(
+            10px,
+            3.4dvh,
+            17px
+          );
+
         border-radius:
-          clamp(8px, 3dvh, 14px);
+          clamp(
+            7px,
+            2.7dvh,
+            13px
+          );
 
         padding:
-          clamp(5px, 1.6dvh, 8px)
-          clamp(12px, 1.6vw, 18px);
-
-        font-size:
-          clamp(11px, 3.6dvh, 18px);
+          clamp(
+            4px,
+            1.3dvh,
+            7px
+          )
+          clamp(
+            10px,
+            1.4vw,
+            16px
+          );
 
         margin-bottom:
-          clamp(7px, 2.5dvh, 13px);
+          clamp(
+            6px,
+            2dvh,
+            11px
+          );
       }
+
 
       #tc-start {
         font-size:
-          clamp(17px, 5.5dvh, 28px);
+          clamp(
+            16px,
+            5.2dvh,
+            26px
+          );
 
         margin-bottom:
-          clamp(4px, 1.6dvh, 8px);
+          clamp(
+            3px,
+            1.2dvh,
+            6px
+          );
       }
+
 
       #tc-task {
         font-size:
-          clamp(24px, 8dvh, 42px);
+          clamp(
+            22px,
+            7.5dvh,
+            39px
+          );
 
-        line-height: 1.03;
+        line-height:
+          1.02;
       }
+
 
       #tc-elapsed {
         margin-top:
-          clamp(5px, 1.6dvh, 9px);
+          clamp(
+            4px,
+            1.4dvh,
+            8px
+          );
 
         font-size:
-          clamp(12px, 3.8dvh, 19px);
+          clamp(
+            11px,
+            3.5dvh,
+            18px
+          );
       }
 
+
       #tc-side {
-        gap: 2dvh;
+        gap:
+          1.8dvh;
       }
+
 
       .tc-card {
         border-radius:
-          clamp(12px, 4.5dvh, 23px);
+          clamp(
+            11px,
+            4dvh,
+            21px
+          );
 
         padding:
-          clamp(7px, 1.8dvh, 13px)
-          clamp(12px, 1.6vw, 19px);
+          clamp(
+            6px,
+            1.5dvh,
+            11px
+          )
+          clamp(
+            10px,
+            1.4vw,
+            17px
+          );
       }
+
 
       .tc-card-label {
         font-size:
-          clamp(10px, 3.2dvh, 16px);
+          clamp(
+            9px,
+            3dvh,
+            15px
+          );
 
         margin-bottom:
-          clamp(4px, 1.5dvh, 8px);
+          clamp(
+            3px,
+            1.2dvh,
+            6px
+          );
       }
+
 
       .tc-card-time,
       .tc-card-task {
         font-size:
-          clamp(15px, 4.7dvh, 23px);
+          clamp(
+            14px,
+            4.4dvh,
+            22px
+          );
       }
     }
 
@@ -585,7 +1386,8 @@
        縦画面
     ===================================================== */
 
-    @media (orientation: portrait) {
+    @media
+      (orientation: portrait) {
 
       #tc-header {
         grid-template-columns:
@@ -596,50 +1398,64 @@
           "brand clock"
           "leave leave";
 
-        gap: 10px;
+        gap: 9px;
       }
+
 
       #tc-brand {
-        grid-area: brand;
+        grid-area:
+          brand;
       }
+
 
       #tc-clock {
-        grid-area: clock;
+        grid-area:
+          clock;
       }
 
+
       #tc-leave {
-        grid-area: leave;
+        grid-area:
+          leave;
 
         display: flex;
 
-        gap: 22px;
+        gap: 20px;
       }
 
+
       #tc-main {
-        grid-template-columns: 1fr;
+        grid-template-columns:
+          1fr;
 
         grid-template-rows:
           minmax(0, 1fr)
           auto;
 
-        gap: 14px;
+        gap: 12px;
       }
+
 
       #tc-side {
         grid-template-columns:
           1fr 1fr;
 
-        grid-template-rows: auto;
+        grid-template-rows:
+          auto;
 
-        gap: 10px;
+        gap: 9px;
       }
+
 
       .tc-card {
-        padding: 15px;
+        padding:
+          14px;
       }
 
+
       .tc-card-row {
-        grid-template-columns: 1fr;
+        grid-template-columns:
+          1fr;
 
         gap: 3px;
       }
@@ -651,40 +1467,57 @@
       and (max-width: 430px) {
 
       #tc-brand {
-        display: none;
+        display:
+          none;
       }
 
+
       #tc-header {
-        grid-template-columns: 1fr;
+        grid-template-columns:
+          1fr;
 
         grid-template-areas:
           "clock"
           "leave";
       }
 
+
       #tc-clock {
-        justify-self: center;
+        justify-self:
+          center;
       }
+
 
       #tc-leave {
-        justify-content: center;
+        justify-content:
+          center;
       }
 
+
       #tc-side {
-        display: none;
+        display:
+          none;
       }
     }
   `;
 
-  document.head.appendChild(style);
+  document.head.appendChild(
+    style
+  );
 
 
   /* =========================================================
      HTML
   ========================================================= */
 
-  const root = document.createElement('div');
-  root.id = ROOT_ID;
+  const root =
+    document.createElement(
+      'div'
+    );
+
+  root.id =
+    ROOT_ID;
+
 
   root.innerHTML = `
 
@@ -701,12 +1534,19 @@
 
           <div class="tc-leave-row">
             <span>退勤</span>
-            <span id="tc-leave-time">--:--</span>
+            <span id="tc-leave-time">
+              --:--
+            </span>
           </div>
 
           <div class="tc-leave-row">
-            <span id="tc-leave-label">あと</span>
-            <span id="tc-leave-count">--:--</span>
+            <span id="tc-leave-label">
+              あと
+            </span>
+
+            <span id="tc-leave-count">
+              --:--
+            </span>
           </div>
 
         </div>
@@ -752,13 +1592,11 @@
             <div class="tc-card-row">
 
               <div
-                id="tc-prev-time"
                 class="tc-card-time">
                 —
               </div>
 
               <div
-                id="tc-prev-task"
                 class="tc-card-task">
                 —
               </div>
@@ -777,13 +1615,11 @@
             <div class="tc-card-row">
 
               <div
-                id="tc-next-time"
                 class="tc-card-time">
                 —
               </div>
 
               <div
-                id="tc-next-task"
                 class="tc-card-task">
                 —
               </div>
@@ -803,371 +1639,83 @@
     </div>
   `;
 
-  document.body.appendChild(root);
+
+  document.body.appendChild(
+    root
+  );
 
 
   /* =========================================================
-     HELPERS
+     表示更新
   ========================================================= */
 
-  const $ = id =>
-    document.getElementById(id);
-
-  const pad = n =>
-    String(n).padStart(2, '0');
-
-  function insideNow(el) {
-    return !!el?.closest?.('#' + ROOT_ID);
-  }
+  const $ =
+    id =>
+      document.getElementById(
+        id
+      );
 
 
-  /* =========================================================
-     経過時間取得
-     ★ 最初に成功していた方式を基準にする
-  ========================================================= */
+  function getElapsedNow() {
 
-  function findElapsedElement() {
+    const state =
+      window.tcNowState;
 
-    const all =
-      [...document.querySelectorAll(
-        'p,div,span'
-      )]
-        .filter(el => {
-
-          if (insideNow(el))
-            return false;
-
-          const text =
-            (el.textContent || '')
-              .trim();
-
-          return (
-            /^\d{2}:\d{2}:\d{2}$/
-              .test(text)
-          );
-        });
-
-    if (!all.length)
+    if (
+      !state ||
+      state.elapsedBase == null
+    )
       return null;
 
 
-    /*
-      TaskChute下部プレイヤーは
-      DOM上でも画面上でも後方に存在する。
-
-      まずPタグを優先。
-    */
-
-    const pTags =
-      all.filter(
-        el =>
-          el.tagName === 'P'
+    const passed =
+      Math.floor(
+        (
+          Date.now() -
+          state.capturedAt
+        ) / 1000
       );
 
-    if (pTags.length) {
-
-      pTags.sort(
-        (a, b) =>
-          b.getBoundingClientRect().top -
-          a.getBoundingClientRect().top
-      );
-
-      return pTags[0];
-    }
-
-
-    /*
-      Pがなければ最下部の時間
-    */
-
-    all.sort(
-      (a, b) =>
-        b.getBoundingClientRect().top -
-        a.getBoundingClientRect().top
-    );
-
-    return all[0];
-  }
-
-
-  /* =========================================================
-     現在タスク名取得
-     ★ 経過時間の親DOMから探す
-  ========================================================= */
-
-  function isTaskCandidate(text) {
-
-    const t =
-      (text || '').trim();
-
-    if (!t)
-      return false;
-
-    if (t.length < 2)
-      return false;
-
-    if (t.length > 120)
-      return false;
-
-    if (
-      /^\d{1,2}:\d{2}(:\d{2})?$/
-        .test(t)
-    )
-      return false;
-
-    if (
-      /^-?\d{1,2}:\d{2}(:\d{2})?$/
-        .test(t)
-    )
-      return false;
-
-    if (
-      /^[-\d\s:./]+$/
-        .test(t)
-    )
-      return false;
-
-    const blacklist = new Set([
-      'Main',
-      'NOW',
-      '退勤',
-      'プロジェクトモード',
-      'PREVIOUS',
-      'NEXT'
-    ]);
-
-    return !blacklist.has(t);
-  }
-
-
-  function findCurrentTask(
-    elapsedElement
-  ) {
-
-    if (!elapsedElement)
-      return null;
-
-
-    /*
-      最初に動いた方式：
-      経過時間から親を数段上がる。
-    */
-
-    let parent =
-      elapsedElement.parentElement;
-
-    for (
-      let level = 0;
-      level < 9 && parent;
-      level++,
-      parent = parent.parentElement
-    ) {
-
-      const leaves =
-        [...parent.querySelectorAll('*')]
-          .filter(el => {
-
-            if (insideNow(el))
-              return false;
-
-            if (el.children.length !== 0)
-              return false;
-
-            return isTaskCandidate(
-              el.textContent
-            );
-          });
-
-
-      const candidates =
-        [
-          ...new Set(
-            leaves.map(
-              el =>
-                (el.textContent || '')
-                  .trim()
-            )
-          )
-        ];
-
-
-      if (candidates.length) {
-
-        /*
-          TaskChuteプレイヤーでは
-          タスク名が最も意味のある
-          長めの文字列になる。
-        */
-
-        candidates.sort(
-          (a, b) =>
-            b.length - a.length
-        );
-
-        return candidates[0];
-      }
-    }
-
-
-    /*
-      フォールバック：
-      document.title
-
-      例：
-      [30m] 晩ご飯 - TaskChute...
-    */
-
-    const title =
-      document.title || '';
-
-    const match =
-      title.match(
-        /^\[[^\]]+\]\s*(.+?)\s*-\s*TaskChute/i
-      );
-
-    if (
-      match &&
-      match[1]
-    ) {
-      return match[1].trim();
-    }
-
-
-    return null;
-  }
-
-
-  /* =========================================================
-     退勤予定
-  ========================================================= */
-
-  function findLeaveTime() {
-
-    const leaveNodes =
-      [...document.querySelectorAll(
-        'body *'
-      )]
-        .filter(el =>
-          !insideNow(el) &&
-          (el.textContent || '')
-            .trim() === '退勤'
-        );
-
-
-    for (
-      const leaveNode
-      of leaveNodes
-    ) {
-
-      let parent =
-        leaveNode;
-
-      for (
-        let level = 0;
-        level < 9 && parent;
-        level++,
-        parent = parent.parentElement
-      ) {
-
-        const times =
-          [...parent.querySelectorAll('*')]
-            .map(
-              el =>
-                (el.textContent || '')
-                  .trim()
-            )
-            .filter(
-              text =>
-                /^\d{1,2}:\d{2}$/
-                  .test(text)
-            );
-
-
-        if (times.length) {
-
-          const unique =
-            [...new Set(times)];
-
-          /*
-            調査時と同じく
-            行の末尾側が予定時刻
-          */
-
-          return unique[
-            unique.length - 1
-          ];
-        }
-      }
-    }
-
-    return null;
-  }
-
-
-  /* =========================================================
-     開始時刻
-  ========================================================= */
-
-  function elapsedToSeconds(
-    elapsed
-  ) {
-
-    const match =
-      (elapsed || '')
-        .match(
-          /^(\d{2}):(\d{2}):(\d{2})$/
-        );
-
-    if (!match)
-      return null;
 
     return (
-      Number(match[1]) * 3600 +
-      Number(match[2]) * 60 +
-      Number(match[3])
+      state.elapsedBase +
+      passed
     );
   }
 
 
   function calculateStartTime(
-    elapsed
+    elapsedSeconds
   ) {
 
-    const seconds =
-      elapsedToSeconds(
-        elapsed
-      );
-
-    if (seconds == null)
+    if (
+      elapsedSeconds == null
+    )
       return '--:--';
 
-    const date =
+
+    const start =
       new Date(
         Date.now() -
-        seconds * 1000
+        elapsedSeconds * 1000
       );
 
+
     return (
-      pad(date.getHours()) +
+      pad(start.getHours()) +
       ':' +
-      pad(date.getMinutes())
+      pad(start.getMinutes())
     );
   }
 
 
-  /* =========================================================
-     UPDATE
-  ========================================================= */
-
-  function update() {
+  function render() {
 
     const now =
       new Date();
 
 
-    /* -------------------------
-       現在時計
-    ------------------------- */
+    /* 時計 */
 
     $('tc-clock')
       .textContent =
@@ -1176,53 +1724,42 @@
         pad(now.getMinutes());
 
 
-    /* -------------------------
-       現在タスク
-    ------------------------- */
+    /* 現在タスク */
 
-    const elapsedElement =
-      findElapsedElement();
-
-    const elapsed =
-      elapsedElement
-        ? (
-            elapsedElement.textContent ||
-            ''
-          ).trim()
-        : null;
+    const state =
+      window.tcNowState || {};
 
 
-    const currentTask =
-      findCurrentTask(
-        elapsedElement
-      );
+    $('tc-task')
+      .textContent =
+        state.task ||
+        'タスクを取得できません';
+
+
+    const elapsedSeconds =
+      getElapsedNow();
 
 
     $('tc-elapsed')
       .textContent =
-        elapsed ||
-        '--:--:--';
+        elapsedSeconds == null
+          ? '--:--:--'
+          : secondsToHMS(
+              elapsedSeconds
+            );
 
 
     $('tc-start')
       .textContent =
         calculateStartTime(
-          elapsed
+          elapsedSeconds
         );
 
 
-    $('tc-task')
-      .textContent =
-        currentTask ||
-        'タスクを取得できません';
-
-
-    /* -------------------------
-       退勤
-    ------------------------- */
+    /* 退勤 */
 
     const leaveTime =
-      findLeaveTime();
+      state.leaveTime;
 
 
     $('tc-leave-time')
@@ -1236,6 +1773,7 @@
       $('tc-leave-label')
         .textContent =
           'あと';
+
 
       $('tc-leave-count')
         .textContent =
@@ -1265,33 +1803,34 @@
       );
 
 
-    let seconds =
+    let diff =
       Math.floor(
         (
-          leaveDate.getTime() -
-          now.getTime()
+          leaveDate -
+          now
         ) / 1000
       );
 
 
-    if (seconds >= 0) {
-
-      const hh =
-        Math.floor(
-          seconds / 3600
-        );
-
-      const mm =
-        Math.floor(
-          (
-            seconds % 3600
-          ) / 60
-        );
-
+    if (diff >= 0) {
 
       $('tc-leave-label')
         .textContent =
           'あと';
+
+
+      const hh =
+        Math.floor(
+          diff / 3600
+        );
+
+
+      const mm =
+        Math.floor(
+          (
+            diff % 3600
+          ) / 60
+        );
 
 
       $('tc-leave-count')
@@ -1302,33 +1841,31 @@
 
     } else {
 
-      seconds =
-        Math.abs(
-          seconds
-        );
+      diff =
+        Math.abs(diff);
+
+
+      $('tc-leave-label')
+        .textContent =
+          '超過';
 
 
       const hh =
         Math.floor(
-          seconds / 3600
+          diff / 3600
         );
 
 
       const mm =
         Math.floor(
           (
-            seconds % 3600
+            diff % 3600
           ) / 60
         );
 
 
       const ss =
-        seconds % 60;
-
-
-      $('tc-leave-label')
-        .textContent =
-          '超過';
+        diff % 60;
 
 
       $('tc-leave-count')
@@ -1342,15 +1879,12 @@
   }
 
 
-  /* =========================================================
-     START
-  ========================================================= */
+  render();
 
-  update();
 
   window.tcNowTimer =
     setInterval(
-      update,
+      render,
       1000
     );
 
