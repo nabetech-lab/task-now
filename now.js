@@ -2,20 +2,26 @@
   'use strict';
 
   /* =========================================================
-     TaskChute NOW v3.1.0
+     TaskChute NOW v3.2.0
+
+     UI更新       : 1秒
+     TaskChute同期: 5秒
+
+     PREVIOUS : 1件
+     NEXT     : 3件
   ========================================================= */
 
-  const VERSION = '3.1.0';
+  const VERSION = '3.2.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
 
-  const RENDER_INTERVAL = 1000;
+  const UI_INTERVAL = 1000;
   const SYNC_INTERVAL = 5000;
 
 
   /* =========================================================
-     BASIC HELPERS
+     UTIL
   ========================================================= */
 
   const pad = n =>
@@ -28,14 +34,12 @@
       .trim();
 
 
-  const getText = el =>
+  const txt = el =>
     clean(el?.textContent);
 
 
-  const isHM = value =>
-    /^\d{1,2}:\d{2}$/.test(
-      clean(value)
-    );
+  const insideNow = el =>
+    !!el?.closest?.('#' + ROOT_ID);
 
 
   const isHMS = value =>
@@ -44,36 +48,26 @@
     );
 
 
-  const isInsideNow = el =>
-    !!el?.closest?.('#' + ROOT_ID);
-
-
-  function escapeRegExp(value) {
-
-    return String(value)
-      .replace(
-        /[.*+?^${}()|[\]\\]/g,
-        '\\$&'
-      );
-  }
+  const isHM = value =>
+    /^\d{1,2}:\d{2}$/.test(
+      clean(value)
+    );
 
 
   function hmsToSeconds(value) {
 
-    const match =
+    const m =
       clean(value).match(
         /^(\d{2}):(\d{2}):(\d{2})$/
       );
 
-
-    if (!match)
+    if (!m)
       return null;
 
-
     return (
-      Number(match[1]) * 3600 +
-      Number(match[2]) * 60 +
-      Number(match[3])
+      Number(m[1]) * 3600 +
+      Number(m[2]) * 60 +
+      Number(m[3])
     );
   }
 
@@ -88,37 +82,82 @@
       return '--:--:--';
     }
 
-
     total =
       Math.max(
         0,
         Math.floor(total)
       );
 
+    const h =
+      Math.floor(total / 3600);
 
-    const hours =
-      Math.floor(
-        total / 3600
-      );
-
-
-    const minutes =
+    const m =
       Math.floor(
         (total % 3600) / 60
       );
 
-
-    const seconds =
+    const s =
       total % 60;
 
-
     return (
-      pad(hours) +
+      pad(h) +
       ':' +
-      pad(minutes) +
+      pad(m) +
       ':' +
-      pad(seconds)
+      pad(s)
     );
+  }
+
+
+  function validTaskName(value) {
+
+    const t =
+      clean(value);
+
+    if (!t)
+      return false;
+
+    if (
+      t.length < 2 ||
+      t.length > 120
+    ) {
+      return false;
+    }
+
+    if (
+      isHM(t) ||
+      isHMS(t)
+    ) {
+      return false;
+    }
+
+    if (
+      /^-?\d{1,2}:\d{2}(:\d{2})?$/
+        .test(t)
+    ) {
+      return false;
+    }
+
+    if (
+      /^[-\d\s:./]+$/
+        .test(t)
+    ) {
+      return false;
+    }
+
+    const blacklist =
+      new Set([
+        'Main',
+        'NOW',
+        'PREVIOUS',
+        'NEXT',
+        '退勤',
+        'プロジェクトモード',
+        'TaskChute Cloud 2',
+        'タスクを取得できません'
+      ]);
+
+    return !blacklist.has(t);
   }
 
 
@@ -126,70 +165,934 @@
      STATE
   ========================================================= */
 
-  if (!window.tcNowStateV31) {
+  const state = {
 
-    window.tcNowStateV31 = {
+    currentTask: null,
 
-      currentTask: null,
+    elapsedBase: null,
+    elapsedCapturedAt: null,
 
-      elapsedBase: null,
-      elapsedCapturedAt: null,
+    leaveTime: null,
 
-      leaveTime: null,
+    previous: null,
 
-      previous: null,
+    next: [],
 
-      next: [],
+    lastSync: null
+  };
 
-      schedule: [],
 
-      lastSync: null
+  /* =========================================================
+     1. PLAYER取得
+
+     実機DOM:
+
+     経過時間
+       ↓ parent
+       ↓ parent
+       ↓ previousElementSibling
+     現在タスク
+  ========================================================= */
+
+  function findPlayer() {
+
+    const times =
+      [...document.querySelectorAll(
+        'p, div, span'
+      )]
+        .filter(el => {
+
+          if (insideNow(el))
+            return false;
+
+          return isHMS(
+            txt(el)
+          );
+        });
+
+
+    if (!times.length) {
+
+      return {
+        elapsedElement: null,
+        elapsed: null,
+        task: null
+      };
+    }
+
+
+    /*
+      各HH:MM:SSについて、
+      実機で確認済みの位置にタスク名があるか調べる。
+    */
+
+    const candidates = [];
+
+
+    for (const el of times) {
+
+      const taskElement =
+        el
+          ?.parentElement
+          ?.parentElement
+          ?.previousElementSibling;
+
+
+      const taskName =
+        txt(taskElement);
+
+
+      if (!validTaskName(taskName))
+        continue;
+
+
+      const rect =
+        el.getBoundingClientRect();
+
+
+      let score = 0;
+
+
+      /*
+        表示中の下部playerを優先
+      */
+
+      if (
+        rect.width > 0 &&
+        rect.height > 0
+      ) {
+        score += 1000;
+      }
+
+
+      /*
+        画面下側ほどplayerらしい
+      */
+
+      score +=
+        Math.max(
+          0,
+          Math.round(rect.top)
+        );
+
+
+      candidates.push({
+        elapsedElement: el,
+        elapsed: txt(el),
+        task: taskName,
+        score
+      });
+    }
+
+
+    if (candidates.length) {
+
+      candidates.sort(
+        (a, b) =>
+          b.score - a.score
+      );
+
+      return candidates[0];
+    }
+
+
+    /*
+      念のため経過時間だけフォールバック
+    */
+
+    const fallback =
+      times[times.length - 1];
+
+
+    return {
+      elapsedElement: fallback,
+      elapsed: txt(fallback),
+      task: null
     };
   }
 
 
-  const state =
-    window.tcNowStateV31;
+  /* =========================================================
+     2. 予定表側の現在タスク行を探す
+
+     実機確認済み:
+     タスク名を含む予定行の親には
+     「プロジェクトモード」が含まれる。
+  ========================================================= */
+
+  function findScheduleRow(
+    currentTask
+  ) {
+
+    if (!currentTask)
+      return null;
+
+
+    const exact =
+      [...document.querySelectorAll(
+        'body *'
+      )]
+        .filter(el => {
+
+          if (insideNow(el))
+            return false;
+
+          return (
+            txt(el) ===
+            currentTask
+          );
+        });
+
+
+    let best = null;
+
+
+    for (const taskElement of exact) {
+
+      let parent =
+        taskElement;
+
+
+      for (
+        let level = 0;
+        level < 7 && parent;
+        level++,
+        parent = parent.parentElement
+      ) {
+
+        const full =
+          txt(parent);
+
+
+        if (
+          !full ||
+          full.length > 500
+        ) {
+          continue;
+        }
+
+
+        /*
+          予定タスク行の特徴
+        */
+
+        if (
+          !full.includes(
+            'プロジェクトモード'
+          )
+        ) {
+          continue;
+        }
+
+
+        const rect =
+          parent.getBoundingClientRect();
+
+
+        let score = 0;
+
+
+        /*
+          実機では現在行の高さは小さい
+        */
+
+        if (
+          rect.height >= 20 &&
+          rect.height <= 100
+        ) {
+          score += 100;
+        }
+
+
+        /*
+          横長の予定行
+        */
+
+        if (
+          rect.width > 250
+        ) {
+          score += 100;
+        }
+
+
+        /*
+          小さい祖先ほど優先
+        */
+
+        score -=
+          level * 10;
+
+
+        /*
+          テキストがコンパクトなら優先
+        */
+
+        if (
+          full.length < 250
+        ) {
+          score += 50;
+        }
+
+
+        if (
+          !best ||
+          score > best.score
+        ) {
+
+          best = {
+            element: parent,
+            taskElement,
+            score
+          };
+        }
+      }
+    }
+
+
+    return best;
+  }
 
 
   /* =========================================================
-     STOP OLD TIMERS / REMOVE OLD UI
+     3. 一つの予定行を解析
   ========================================================= */
 
-  if (window.tcNowRenderTimer) {
+  function parseScheduleRow(
+    row
+  ) {
+
+    if (!row)
+      return null;
+
+
+    const leaves =
+      [...row.querySelectorAll('*')]
+        .filter(el => {
+
+          if (insideNow(el))
+            return false;
+
+          return (
+            el.children.length === 0
+          );
+        });
+
+
+    const values =
+      leaves
+        .map(el =>
+          txt(el)
+        )
+        .filter(Boolean);
+
+
+    /*
+      最初に出てくる
+      タスク名らしい文字列を採用
+    */
+
+    let taskName = null;
+
+
+    for (const value of values) {
+
+      if (
+        validTaskName(value) &&
+        value !==
+          'プロジェクトモード'
+      ) {
+
+        taskName = value;
+
+        break;
+      }
+    }
+
+
+    /*
+      行内の予定開始時刻。
+
+      実機:
+      晩ご飯17:29--:--...
+    */
+
+    let scheduledTime = null;
+
+
+    if (taskName) {
+
+      const full =
+        txt(row);
+
+
+      const escaped =
+        taskName.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&'
+        );
+
+
+      const match =
+        full.match(
+          new RegExp(
+            escaped +
+            '(\\d{1,2}:\\d{2})'
+          )
+        );
+
+
+      if (match) {
+
+        scheduledTime =
+          match[1];
+      }
+    }
+
+
+    /*
+      上記で取れなければ
+      最初のHH:MM
+    */
+
+    if (!scheduledTime) {
+
+      const times =
+        values.filter(
+          value =>
+            isHM(value)
+        );
+
+
+      if (times.length) {
+
+        scheduledTime =
+          times[0];
+      }
+    }
+
+
+    return {
+
+      task:
+        taskName,
+
+      time:
+        scheduledTime,
+
+      element:
+        row
+    };
+  }
+
+
+  /* =========================================================
+     4. 同じ種類の予定行を全部取得
+
+     現在行と同じclassNameの要素を
+     TaskChute予定順に配列化する。
+  ========================================================= */
+
+  function getScheduleRows(
+    currentTask
+  ) {
+
+    const found =
+      findScheduleRow(
+        currentTask
+      );
+
+
+    if (!found)
+      return [];
+
+
+    const currentRow =
+      found.element;
+
+
+    const className =
+      currentRow.className;
+
+
+    let rows = [];
+
+
+    /*
+      現在行と同じMUI row classを持つ要素
+    */
+
+    if (
+      typeof className ===
+        'string' &&
+      className.length
+    ) {
+
+      rows =
+        [...document.querySelectorAll(
+          'body *'
+        )]
+          .filter(el => {
+
+            if (insideNow(el))
+              return false;
+
+            return (
+              el.className ===
+              className
+            );
+          });
+    }
+
+
+    /*
+      同classが取れなかった場合、
+      currentRowの親コンテナ内を探索
+    */
+
+    if (rows.length < 2) {
+
+      const container =
+        currentRow.parentElement;
+
+
+      if (container) {
+
+        rows =
+          [...container.children];
+      }
+    }
+
+
+    /*
+      TaskChute予定行として
+      パースできるものだけ残す
+    */
+
+    const parsed = [];
+
+
+    for (const row of rows) {
+
+      const item =
+        parseScheduleRow(
+          row
+        );
+
+
+      if (
+        !item ||
+        !item.task
+      ) {
+        continue;
+      }
+
+
+      /*
+        section等を誤認しないよう
+        「プロジェクトモード」含有を優先
+      */
+
+      const full =
+        txt(row);
+
+
+      if (
+        !full.includes(
+          'プロジェクトモード'
+        )
+      ) {
+        continue;
+      }
+
+
+      parsed.push(item);
+    }
+
+
+    /*
+      DOM順をそのまま予定順として使う。
+
+      getBoundingClientRect()順は
+      スクロールや非表示で壊れるため使わない。
+    */
+
+    return parsed;
+  }
+
+
+  /* =========================================================
+     5. PREVIOUS 1件 / NEXT 3件
+  ========================================================= */
+
+  function findNeighbours(
+    currentTask
+  ) {
+
+    const rows =
+      getScheduleRows(
+        currentTask
+      );
+
+
+    if (!rows.length) {
+
+      return {
+        previous: null,
+        next: []
+      };
+    }
+
+
+    /*
+      同名タスクが複数あれば、
+      現在予定行に最も近いものを使う。
+      通常は最初の完全一致で十分。
+    */
+
+    const index =
+      rows.findIndex(
+        item =>
+          item.task ===
+          currentTask
+      );
+
+
+    if (index < 0) {
+
+      return {
+        previous: null,
+        next: []
+      };
+    }
+
+
+    const previous =
+      index > 0
+        ? rows[index - 1]
+        : null;
+
+
+    const next =
+      rows.slice(
+        index + 1,
+        index + 4
+      );
+
+
+    return {
+      previous,
+      next
+    };
+  }
+
+
+  /* =========================================================
+     6. 退勤予定時刻
+  ========================================================= */
+
+  function findLeaveTime() {
+
+    const leaveNodes =
+      [...document.querySelectorAll(
+        'body *'
+      )]
+        .filter(el => {
+
+          if (insideNow(el))
+            return false;
+
+          return (
+            txt(el) ===
+            '退勤'
+          );
+        });
+
+
+    for (
+      const leaveNode
+      of leaveNodes
+    ) {
+
+      let parent =
+        leaveNode;
+
+
+      for (
+        let level = 0;
+        level < 9 && parent;
+        level++,
+        parent = parent.parentElement
+      ) {
+
+        const full =
+          txt(parent);
+
+
+        /*
+          予定行を優先
+        */
+
+        if (
+          full.includes(
+            'プロジェクトモード'
+          )
+        ) {
+
+          const times =
+            [...parent.querySelectorAll(
+              '*'
+            )]
+              .map(el =>
+                txt(el)
+              )
+              .filter(value =>
+                isHM(value)
+              );
+
+
+          const unique =
+            [...new Set(times)];
+
+
+          if (unique.length) {
+
+            return unique[
+              unique.length - 1
+            ];
+          }
+        }
+      }
+    }
+
+
+    /*
+      以前成功した一般フォールバック
+    */
+
+    for (
+      const leaveNode
+      of leaveNodes
+    ) {
+
+      let parent =
+        leaveNode;
+
+
+      for (
+        let level = 0;
+        level < 9 && parent;
+        level++,
+        parent = parent.parentElement
+      ) {
+
+        const times =
+          [...parent.querySelectorAll(
+            '*'
+          )]
+            .map(el =>
+              txt(el)
+            )
+            .filter(value =>
+              isHM(value)
+            );
+
+
+        const unique =
+          [...new Set(times)];
+
+
+        if (unique.length) {
+
+          return unique[
+            unique.length - 1
+          ];
+        }
+      }
+    }
+
+
+    return null;
+  }
+
+
+  /* =========================================================
+     7. 5秒同期
+  ========================================================= */
+
+  function syncFromTaskChute() {
+
+    /* ---------- PLAYER ---------- */
+
+    const player =
+      findPlayer();
+
+
+    if (player.task) {
+
+      state.currentTask =
+        player.task;
+    }
+
+
+    const elapsedSeconds =
+      hmsToSeconds(
+        player.elapsed
+      );
+
+
+    if (
+      elapsedSeconds !== null
+    ) {
+
+      state.elapsedBase =
+        elapsedSeconds;
+
+      state.elapsedCapturedAt =
+        Date.now();
+    }
+
+
+    /* ---------- LEAVE ---------- */
+
+    const leave =
+      findLeaveTime();
+
+
+    if (leave) {
+
+      state.leaveTime =
+        leave;
+    }
+
+
+    /* ---------- PREV/NEXT ---------- */
+
+    if (state.currentTask) {
+
+      const neighbours =
+        findNeighbours(
+          state.currentTask
+        );
+
+
+      state.previous =
+        neighbours.previous;
+
+
+      state.next =
+        neighbours.next;
+    }
+
+
+    state.lastSync =
+      Date.now();
+  }
+
+
+  /* =========================================================
+     8. 経過時間
+  ========================================================= */
+
+  function currentElapsedSeconds() {
+
+    if (
+      state.elapsedBase === null ||
+      state.elapsedCapturedAt === null
+    ) {
+      return null;
+    }
+
+
+    const extra =
+      Math.floor(
+        (
+          Date.now() -
+          state.elapsedCapturedAt
+        ) / 1000
+      );
+
+
+    return (
+      state.elapsedBase +
+      extra
+    );
+  }
+
+
+  function startTimeText() {
+
+    const elapsed =
+      currentElapsedSeconds();
+
+
+    if (elapsed === null)
+      return '--:--';
+
+
+    const start =
+      new Date(
+        Date.now() -
+        elapsed * 1000
+      );
+
+
+    return (
+      pad(start.getHours()) +
+      ':' +
+      pad(start.getMinutes())
+    );
+  }
+
+
+  /* =========================================================
+     9. 再実行処理
+
+     再実行しても閉じない。
+     古いNOWを消して再生成するだけ。
+  ========================================================= */
+
+  if (
+    window.tcNowRenderTimer
+  ) {
 
     clearInterval(
       window.tcNowRenderTimer
     );
-
-    window.tcNowRenderTimer =
-      null;
   }
 
 
-  if (window.tcNowSyncTimer) {
+  if (
+    window.tcNowSyncTimer
+  ) {
 
     clearInterval(
       window.tcNowSyncTimer
     );
-
-    window.tcNowSyncTimer =
-      null;
   }
 
 
-  document
-    .getElementById(ROOT_ID)
-    ?.remove();
+  const oldRoot =
+    document.getElementById(
+      ROOT_ID
+    );
 
 
-  document
-    .getElementById(STYLE_ID)
-    ?.remove();
+  if (oldRoot)
+    oldRoot.remove();
+
+
+  const oldStyle =
+    document.getElementById(
+      STYLE_ID
+    );
+
+
+  if (oldStyle)
+    oldStyle.remove();
 
 
   /* =========================================================
-     VIEWPORT / SAFE AREA
+     10. VIEWPORT / SAFE AREA
   ========================================================= */
 
   let viewport =
@@ -205,11 +1108,14 @@
         'meta'
       );
 
+
     viewport.name =
       'viewport';
 
+
     viewport.content =
       'width=device-width,initial-scale=1,viewport-fit=cover';
+
 
     document.head.appendChild(
       viewport
@@ -232,6 +1138,7 @@
 
       content +=
         ',viewport-fit=cover';
+
 
       viewport.setAttribute(
         'content',
@@ -260,949 +1167,7 @@
 
 
   /* =========================================================
-     CURRENT PLAYER
-     実機で確認済みのDOM構造を使う
-  ========================================================= */
-
-  function findElapsedElement() {
-
-    const candidates =
-      [
-        ...document.querySelectorAll(
-          'p, div, span'
-        )
-      ]
-        .filter(el => {
-
-          if (isInsideNow(el))
-            return false;
-
-          return isHMS(
-            getText(el)
-          );
-        });
-
-
-    if (!candidates.length)
-      return null;
-
-
-    /*
-      実機では経過時間はPタグ。
-    */
-
-    const pElements =
-      candidates.filter(
-        el =>
-          el.tagName === 'P'
-      );
-
-
-    const pool =
-      pElements.length
-        ? pElements
-        : candidates;
-
-
-    /*
-      下部プレイヤーなので、
-      画面上で最も下にある候補を優先。
-    */
-
-    pool.sort((a, b) => {
-
-      const ra =
-        a.getBoundingClientRect();
-
-      const rb =
-        b.getBoundingClientRect();
-
-
-      const aVisible =
-        ra.width > 0 &&
-        ra.height > 0;
-
-
-      const bVisible =
-        rb.width > 0 &&
-        rb.height > 0;
-
-
-      if (
-        aVisible &&
-        bVisible
-      ) {
-        return (
-          rb.top -
-          ra.top
-        );
-      }
-
-
-      if (aVisible)
-        return -1;
-
-
-      if (bVisible)
-        return 1;
-
-
-      return 0;
-    });
-
-
-    return pool[0] || null;
-  }
-
-
-  function findCurrentTaskFromPlayer(
-    elapsedElement
-  ) {
-
-    if (!elapsedElement)
-      return null;
-
-
-    /*
-      実機調査：
-
-      経過時間
-      ↓ parent
-      ↓ parent
-      ↓ previousElementSibling
-      = 現在タスク名
-    */
-
-    const taskElement =
-      elapsedElement
-        ?.parentElement
-        ?.parentElement
-        ?.previousElementSibling;
-
-
-    const taskName =
-      clean(
-        taskElement?.textContent
-      );
-
-
-    if (
-      taskName &&
-      taskName.length <= 120
-    ) {
-      return taskName;
-    }
-
-
-    return null;
-  }
-
-
-  /* =========================================================
-     SCHEDULE ROWS
-     実機調査結果：
-     タスク名領域
-       left ≒ 24
-       width ≒ 580
-       height ≒ 32
-     親に「プロジェクトモード」等の行情報
-  ========================================================= */
-
-  function validScheduleTaskName(
-    value
-  ) {
-
-    const name =
-      clean(value);
-
-
-    if (!name)
-      return false;
-
-
-    if (
-      name.length < 1 ||
-      name.length > 120
-    )
-      return false;
-
-
-    if (
-      isHM(name) ||
-      isHMS(name)
-    )
-      return false;
-
-
-    if (
-      /^[-\d\s:./]+$/
-        .test(name)
-    )
-      return false;
-
-
-    const blacklist =
-      new Set([
-        'Main',
-        'NOW',
-        'PREVIOUS',
-        'NEXT',
-        'プロジェクトモード',
-        'TaskChute Cloud 2'
-      ]);
-
-
-    return !blacklist.has(
-      name
-    );
-  }
-
-
-  function findScheduleTasks() {
-
-    const result = [];
-
-
-    const elements =
-      [
-        ...document.querySelectorAll(
-          'body *'
-        )
-      ];
-
-
-    for (
-      const el
-      of elements
-    ) {
-
-      if (
-        isInsideNow(el)
-      )
-        continue;
-
-
-      const name =
-        getText(el);
-
-
-      if (
-        !validScheduleTaskName(
-          name
-        )
-      )
-        continue;
-
-
-      const rect =
-        el.getBoundingClientRect();
-
-
-      /*
-        実機で確認した
-        TaskChute予定表のタスク名領域。
-
-        完全な固定値ではなく
-        ある程度余裕を持たせる。
-      */
-
-      if (
-        rect.left > 120 ||
-        rect.width < 220 ||
-        rect.height < 18 ||
-        rect.height > 65
-      ) {
-        continue;
-      }
-
-
-      const parent =
-        el.parentElement;
-
-
-      if (!parent)
-        continue;
-
-
-      const parentText =
-        getText(
-          parent
-        );
-
-
-      /*
-        予定タスク行の特徴。
-      */
-
-      if (
-        !parentText.includes(
-          'プロジェクトモード'
-        )
-      ) {
-        continue;
-      }
-
-
-      /*
-        タスク名だけを包む
-        nested DIVを除外。
-      */
-
-      if (
-        parentText.length <=
-        name.length + 3
-      ) {
-        continue;
-      }
-
-
-      /*
-        実機例：
-        晩ご飯17:29--:--:--プロジェクトモード...
-      */
-
-      const directMatch =
-        parentText.match(
-          new RegExp(
-            '^' +
-            escapeRegExp(name) +
-            '(\\d{1,2}:\\d{2})'
-          )
-        );
-
-
-      let scheduledTime =
-        directMatch
-          ? directMatch[1]
-          : null;
-
-
-      /*
-        直接取れない場合は
-        行内のHH:MMを探す。
-      */
-
-      if (!scheduledTime) {
-
-        const times =
-          [
-            ...parent.querySelectorAll(
-              '*'
-            )
-          ]
-            .map(node =>
-              getText(node)
-            )
-            .filter(value =>
-              isHM(value)
-            );
-
-
-        const uniqueTimes =
-          [
-            ...new Set(times)
-          ];
-
-
-        if (
-          uniqueTimes.length
-        ) {
-          scheduledTime =
-            uniqueTimes[0];
-        }
-      }
-
-
-      result.push({
-
-        task:
-          name,
-
-        time:
-          scheduledTime,
-
-        top:
-          rect.top,
-
-        left:
-          rect.left,
-
-        element:
-          el
-      });
-    }
-
-
-    /*
-      同じタスク行について
-      nestedされた候補が重複する可能性がある。
-
-      タスク名 + top位置がほぼ同じなら1件化。
-    */
-
-    const unique = [];
-
-
-    for (
-      const row
-      of result
-    ) {
-
-      const duplicate =
-        unique.some(
-          existing =>
-            existing.task ===
-              row.task &&
-            Math.abs(
-              existing.top -
-              row.top
-            ) < 3
-        );
-
-
-      if (!duplicate) {
-
-        unique.push(
-          row
-        );
-      }
-    }
-
-
-    /*
-      画面上の予定順。
-    */
-
-    unique.sort(
-      (a, b) =>
-        a.top -
-        b.top
-    );
-
-
-    return unique;
-  }
-
-
-  /* =========================================================
-     PREVIOUS / NEXT x3
-  ========================================================= */
-
-  function findCurrentScheduleIndex(
-    schedule,
-    currentTask
-  ) {
-
-    if (
-      !currentTask ||
-      !schedule.length
-    )
-      return -1;
-
-
-    /*
-      同名タスクが複数ある可能性もあるが、
-      まず完全一致。
-    */
-
-    const indexes = [];
-
-
-    schedule.forEach(
-      (row, index) => {
-
-        if (
-          row.task ===
-          currentTask
-        ) {
-          indexes.push(
-            index
-          );
-        }
-      }
-    );
-
-
-    if (
-      indexes.length === 1
-    ) {
-      return indexes[0];
-    }
-
-
-    if (
-      indexes.length > 1
-    ) {
-
-      /*
-        同名が複数ある場合は、
-        現在時刻に近い予定開始時刻を優先。
-      */
-
-      const now =
-        new Date();
-
-
-      const nowMinutes =
-        now.getHours() * 60 +
-        now.getMinutes();
-
-
-      let bestIndex =
-        indexes[0];
-
-
-      let bestDistance =
-        Infinity;
-
-
-      for (
-        const index
-        of indexes
-      ) {
-
-        const time =
-          schedule[index].time;
-
-
-        if (!time)
-          continue;
-
-
-        const [
-          h,
-          m
-        ] =
-          time
-            .split(':')
-            .map(Number);
-
-
-        const minutes =
-          h * 60 + m;
-
-
-        const distance =
-          Math.abs(
-            minutes -
-            nowMinutes
-          );
-
-
-        if (
-          distance <
-          bestDistance
-        ) {
-
-          bestDistance =
-            distance;
-
-          bestIndex =
-            index;
-        }
-      }
-
-
-      return bestIndex;
-    }
-
-
-    return -1;
-  }
-
-
-  function updateNeighbours() {
-
-    const schedule =
-      state.schedule;
-
-
-    const index =
-      findCurrentScheduleIndex(
-        schedule,
-        state.currentTask
-      );
-
-
-    if (index < 0) {
-
-      state.previous =
-        null;
-
-      state.next =
-        [];
-
-      return;
-    }
-
-
-    state.previous =
-      index > 0
-        ? schedule[
-            index - 1
-          ]
-        : null;
-
-
-    state.next =
-      schedule.slice(
-        index + 1,
-        index + 4
-      );
-  }
-
-
-  /* =========================================================
-     LEAVE TIME
-  ========================================================= */
-
-  function findLeaveTime(
-    schedule
-  ) {
-
-    /*
-      予定一覧から取れるなら
-      こちらを優先。
-    */
-
-    const leaveRows =
-      schedule.filter(
-        row =>
-          row.task ===
-          '退勤'
-      );
-
-
-    if (
-      leaveRows.length
-    ) {
-
-      /*
-        同名「退勤」が複数ある場合、
-        現在時刻以降で最も近いものを優先。
-      */
-
-      const now =
-        new Date();
-
-
-      const nowMinutes =
-        now.getHours() * 60 +
-        now.getMinutes();
-
-
-      let best = null;
-      let bestDistance =
-        Infinity;
-
-
-      for (
-        const row
-        of leaveRows
-      ) {
-
-        if (!row.time)
-          continue;
-
-
-        const [
-          h,
-          m
-        ] =
-          row.time
-            .split(':')
-            .map(Number);
-
-
-        const rowMinutes =
-          h * 60 + m;
-
-
-        const distance =
-          rowMinutes -
-          nowMinutes;
-
-
-        if (
-          distance >= 0 &&
-          distance <
-            bestDistance
-        ) {
-
-          bestDistance =
-            distance;
-
-          best =
-            row.time;
-        }
-      }
-
-
-      if (best)
-        return best;
-
-
-      /*
-        全部過去なら最後の退勤。
-      */
-
-      const withTime =
-        leaveRows
-          .filter(
-            row =>
-              !!row.time
-          );
-
-
-      if (
-        withTime.length
-      ) {
-        return (
-          withTime[
-            withTime.length - 1
-          ].time
-        );
-      }
-    }
-
-
-    /*
-      旧方式をフォールバック。
-    */
-
-    const leaveElements =
-      [
-        ...document.querySelectorAll(
-          'body *'
-        )
-      ]
-        .filter(el =>
-          !isInsideNow(el) &&
-          getText(el) ===
-            '退勤'
-        );
-
-
-    for (
-      const leaveElement
-      of leaveElements
-    ) {
-
-      let parent =
-        leaveElement;
-
-
-      for (
-        let level = 0;
-        level < 9 &&
-        parent;
-        level++,
-        parent =
-          parent.parentElement
-      ) {
-
-        const times =
-          [
-            ...parent.querySelectorAll(
-              '*'
-            )
-          ]
-            .map(el =>
-              getText(el)
-            )
-            .filter(value =>
-              isHM(value)
-            );
-
-
-        const unique =
-          [
-            ...new Set(times)
-          ];
-
-
-        if (
-          unique.length
-        ) {
-
-          return unique[
-            unique.length - 1
-          ];
-        }
-      }
-    }
-
-
-    return null;
-  }
-
-
-  /* =========================================================
-     DOM SYNC — EVERY 5 sec
-  ========================================================= */
-
-  function syncFromTaskChute() {
-
-    /*
-      1. 現在タスク・経過時間
-    */
-
-    const elapsedElement =
-      findElapsedElement();
-
-
-    const elapsedText =
-      elapsedElement
-        ? getText(
-            elapsedElement
-          )
-        : null;
-
-
-    const elapsedSeconds =
-      hmsToSeconds(
-        elapsedText
-      );
-
-
-    const currentTask =
-      findCurrentTaskFromPlayer(
-        elapsedElement
-      );
-
-
-    if (
-      currentTask
-    ) {
-
-      state.currentTask =
-        currentTask;
-    }
-
-
-    if (
-      elapsedSeconds !== null
-    ) {
-
-      state.elapsedBase =
-        elapsedSeconds;
-
-      state.elapsedCapturedAt =
-        Date.now();
-    }
-
-
-    /*
-      2. 予定一覧を全部取得
-    */
-
-    const schedule =
-      findScheduleTasks();
-
-
-    if (
-      schedule.length
-    ) {
-
-      state.schedule =
-        schedule;
-    }
-
-
-    /*
-      3. PREVIOUS / NEXT
-    */
-
-    updateNeighbours();
-
-
-    /*
-      4. 退勤
-    */
-
-    const leaveTime =
-      findLeaveTime(
-        state.schedule
-      );
-
-
-    if (
-      leaveTime
-    ) {
-
-      state.leaveTime =
-        leaveTime;
-    }
-
-
-    state.lastSync =
-      Date.now();
-  }
-
-
-  /* =========================================================
-     LOCAL ELAPSED CLOCK
-  ========================================================= */
-
-  function getCurrentElapsedSeconds() {
-
-    if (
-      state.elapsedBase === null ||
-      state.elapsedCapturedAt === null
-    ) {
-      return null;
-    }
-
-
-    const passed =
-      Math.floor(
-        (
-          Date.now() -
-          state.elapsedCapturedAt
-        ) / 1000
-      );
-
-
-    return (
-      state.elapsedBase +
-      passed
-    );
-  }
-
-
-  function getStartTime() {
-
-    const elapsed =
-      getCurrentElapsedSeconds();
-
-
-    if (
-      elapsed === null
-    )
-      return '--:--';
-
-
-    const start =
-      new Date(
-        Date.now() -
-        elapsed * 1000
-      );
-
-
-    return (
-      pad(
-        start.getHours()
-      ) +
-      ':' +
-      pad(
-        start.getMinutes()
-      )
-    );
-  }
-
-
-  /* =========================================================
-     CSS
+     11. CSS
   ========================================================= */
 
   const style =
@@ -1246,10 +1211,10 @@
         #f7f7f8;
 
       --muted:
-        #969ba5;
+        #969aa4;
 
       --dim:
-        #515660;
+        #4c505a;
 
 
       position:
@@ -1322,15 +1287,15 @@
       gap:
         clamp(
           10px,
-          2.3vh,
-          24px
+          2.5vh,
+          26px
         );
     }
 
 
-    /* ===============================
+    /* =========================
        HEADER
-    =============================== */
+    ========================= */
 
     #tc-header {
 
@@ -1341,7 +1306,7 @@
         grid;
 
       grid-template-columns:
-        minmax(170px, .9fr)
+        minmax(140px, .8fr)
         minmax(190px, 1fr)
         minmax(120px, .65fr);
 
@@ -1351,8 +1316,8 @@
       gap:
         clamp(
           12px,
-          2.4vw,
-          34px
+          2.5vw,
+          36px
         );
     }
 
@@ -1364,16 +1329,16 @@
 
       font-size:
         clamp(
-          15px,
+          14px,
           2.3vw,
           28px
         );
 
       font-weight:
-        850;
+        800;
 
       line-height:
-        1.2;
+        1.3;
 
       letter-spacing:
         .10em;
@@ -1449,9 +1414,9 @@
     }
 
 
-    /* ===============================
+    /* =========================
        MAIN
-    =============================== */
+    ========================= */
 
     #tc-main {
 
@@ -1465,8 +1430,8 @@
         grid;
 
       grid-template-columns:
-        minmax(0, 1.62fr)
-        minmax(210px, .95fr);
+        minmax(0, 1.65fr)
+        minmax(200px, .90fr);
 
       gap:
         clamp(
@@ -1477,9 +1442,9 @@
     }
 
 
-    /* ===============================
-       NOW PANEL
-    =============================== */
+    /* =========================
+       NOW
+    ========================= */
 
     #tc-now {
 
@@ -1603,74 +1568,66 @@
       margin-bottom:
         clamp(
           16px,
-          4vh,
-          46px
+          4.5vh,
+          48px
         );
     }
 
 
-    .tc-current-meta {
+    .tc-info-row {
 
       display:
-        grid;
-
-      grid-template-columns:
-        max-content
-        max-content;
+        flex;
 
       align-items:
         baseline;
 
       gap:
         clamp(
-          8px,
-          1.3vw,
-          18px
-        );
-
-      margin-bottom:
-        clamp(
-          7px,
-          1.6vh,
-          14px
+          10px,
+          1.5vw,
+          20px
         );
     }
 
 
-    .tc-meta-label {
+    .tc-info-label {
 
       color:
-        #747985;
+        #737784;
 
       font-size:
         clamp(
           11px,
-          1.5vw,
-          18px
+          1.7vw,
+          20px
         );
 
       font-weight:
-        850;
+        900;
 
       letter-spacing:
-        .15em;
+        .20em;
+
+      flex:
+        0 0 auto;
     }
 
 
-    .tc-meta-value {
+    .tc-info-value {
 
       color:
-        #c7cbd3;
+        #c6cad2;
 
       font-size:
         clamp(
-          20px,
-          3.3vw,
-          42px
+          21px,
+          3.5vw,
+          44px
         );
 
       font-weight:
-        550;
+        500;
 
       font-variant-numeric:
         tabular-nums;
@@ -1681,9 +1638,9 @@
 
       margin:
         clamp(
-          5px,
-          1.3vh,
-          12px
+          8px,
+          2vh,
+          18px
         )
         0;
 
@@ -1705,9 +1662,9 @@
     }
 
 
-    /* ===============================
+    /* =========================
        SIDE
-    =============================== */
+    ========================= */
 
     #tc-side {
 
@@ -1721,8 +1678,8 @@
         grid;
 
       grid-template-rows:
-        .72fr
-        1.28fr;
+        minmax(0, .85fr)
+        minmax(0, 1.15fr);
 
       gap:
         clamp(
@@ -1756,9 +1713,9 @@
 
       padding:
         clamp(
-          13px,
-          2.7vh,
-          28px
+          14px,
+          3vh,
+          30px
         )
         clamp(
           17px,
@@ -1797,9 +1754,9 @@
 
       margin-bottom:
         clamp(
-          7px,
-          1.7vh,
-          16px
+          8px,
+          2vh,
+          18px
         );
     }
 
@@ -1816,63 +1773,63 @@
         max-content
         minmax(0, 1fr);
 
-      align-items:
-        baseline;
-
       gap:
         clamp(
           8px,
-          1.3vw,
-          17px
+          1.5vw,
+          18px
         );
+
+      align-items:
+        baseline;
     }
 
 
-    .tc-task-row +
-    .tc-task-row {
+    .tc-task-row
+      + .tc-task-row {
 
       margin-top:
         clamp(
           5px,
           1.2vh,
-          12px
+          11px
         );
     }
 
 
-    .tc-row-time {
+    .tc-side-time {
 
       color:
-        #737883;
+        #747985;
 
       font-size:
         clamp(
           17px,
-          2.8vw,
-          34px
+          2.5vw,
+          31px
         );
-
-      font-variant-numeric:
-        tabular-nums;
 
       white-space:
         nowrap;
+
+      font-variant-numeric:
+        tabular-nums;
     }
 
 
-    .tc-row-task {
+    .tc-side-task {
 
       min-width:
         0;
 
       color:
-        #737883;
+        #747985;
 
       font-size:
         clamp(
           17px,
-          2.8vw,
-          34px
+          2.5vw,
+          31px
         );
 
       font-weight:
@@ -1914,12 +1871,15 @@
 
       font-weight:
         700;
+
+      letter-spacing:
+        .08em;
     }
 
 
-    /* ===============================
-       iPHONE LANDSCAPE
-    =============================== */
+    /* =========================
+       iPhone landscape
+    ========================= */
 
     @media
       (orientation: landscape)
@@ -1961,12 +1921,12 @@
       #tc-header {
 
         grid-template-columns:
-          minmax(130px, .8fr)
+          minmax(100px, .75fr)
           minmax(145px, 1fr)
           minmax(95px, .55fr);
 
         gap:
-          1.5vw;
+          1.7vw;
       }
 
 
@@ -1974,9 +1934,9 @@
 
         font-size:
           clamp(
-            11px,
-            3.5dvh,
-            18px
+            10px,
+            3.3dvh,
+            17px
           );
       }
 
@@ -1991,7 +1951,7 @@
           );
 
         line-height:
-          1.2;
+          1.22;
       }
 
 
@@ -2009,8 +1969,8 @@
       #tc-main {
 
         grid-template-columns:
-          minmax(0, 1.62fr)
-          minmax(185px, .95fr);
+          minmax(0, 1.67fr)
+          minmax(180px, .90fr);
 
         gap:
           1.6vw;
@@ -2028,9 +1988,9 @@
 
         padding:
           clamp(
-            7px,
-            2dvh,
-            13px
+            8px,
+            2.2dvh,
+            15px
           )
           clamp(
             18px,
@@ -2056,82 +2016,86 @@
         font-size:
           clamp(
             10px,
-            3.2dvh,
-            16px
+            3.4dvh,
+            17px
           );
 
         border-radius:
-          9px;
+          clamp(
+            7px,
+            2.7dvh,
+            13px
+          );
 
         padding:
-          4px 11px;
+          clamp(
+            4px,
+            1.3dvh,
+            7px
+          )
+          clamp(
+            10px,
+            1.4vw,
+            16px
+          );
 
         margin-bottom:
           clamp(
             6px,
-            1.8dvh,
-            10px
+            2dvh,
+            11px
           );
       }
 
 
-      .tc-current-meta {
-
-        gap:
-          8px;
-
-        margin-bottom:
-          3px;
-      }
-
-
-      .tc-meta-label {
+      .tc-info-label {
 
         font-size:
           clamp(
             9px,
-            2.8dvh,
-            14px
+            3dvh,
+            15px
           );
       }
 
 
-      .tc-meta-value {
+      .tc-info-value {
 
         font-size:
           clamp(
-            15px,
-            4.8dvh,
-            24px
+            16px,
+            5.1dvh,
+            25px
           );
       }
 
 
       #tc-task {
 
+        margin:
+          clamp(
+            4px,
+            1.4dvh,
+            8px
+          )
+          0;
+
         font-size:
           clamp(
             22px,
-            7.2dvh,
-            38px
+            7.5dvh,
+            39px
           );
 
         line-height:
           1.02;
-
-        margin:
-          3px 0;
       }
 
 
       #tc-side {
 
         gap:
-          1.7dvh;
-
-        grid-template-rows:
-          .7fr
-          1.3fr;
+          1.8dvh;
       }
 
 
@@ -2147,8 +2111,8 @@
         padding:
           clamp(
             6px,
-            1.4dvh,
-            10px
+            1.5dvh,
+            11px
           )
           clamp(
             10px,
@@ -2163,25 +2127,33 @@
         font-size:
           clamp(
             9px,
-            2.8dvh,
-            14px
+            3dvh,
+            15px
           );
 
         margin-bottom:
-          3px;
+          clamp(
+            3px,
+            1dvh,
+            6px
+          );
       }
 
 
-      .tc-task-row +
-      .tc-task-row {
+      .tc-task-row
+        + .tc-task-row {
 
         margin-top:
-          2px;
+          clamp(
+            2px,
+            .7dvh,
+            5px
+          );
       }
 
 
-      .tc-row-time,
-      .tc-row-task {
+      .tc-side-time,
+      .tc-side-task {
 
         font-size:
           clamp(
@@ -2193,9 +2165,9 @@
     }
 
 
-    /* ===============================
-       PORTRAIT
-    =============================== */
+    /* =========================
+       Portrait
+    ========================= */
 
     @media
       (orientation: portrait) {
@@ -2216,12 +2188,14 @@
 
 
       #tc-brand {
+
         grid-area:
           brand;
       }
 
 
       #tc-clock {
+
         grid-area:
           clock;
       }
@@ -2257,30 +2231,13 @@
       #tc-side {
 
         grid-template-columns:
-          .8fr 1.2fr;
+          1fr 1fr;
 
         grid-template-rows:
           auto;
 
         gap:
           9px;
-      }
-
-
-      .tc-card {
-
-        padding:
-          13px;
-      }
-
-
-      .tc-task-row {
-
-        grid-template-columns:
-          1fr;
-
-        gap:
-          2px;
       }
     }
 
@@ -2291,20 +2248,33 @@
 
       #tc-brand {
 
-        font-size:
-          15px;
+        display:
+          none;
       }
 
 
       #tc-header {
 
         grid-template-columns:
-          1fr
-          auto;
+          1fr;
 
         grid-template-areas:
-          "brand clock"
-          "leave leave";
+          "clock"
+          "leave";
+      }
+
+
+      #tc-clock {
+
+        justify-self:
+          center;
+      }
+
+
+      #tc-leave {
+
+        justify-content:
+          center;
       }
 
 
@@ -2323,7 +2293,7 @@
 
 
   /* =========================================================
-     HTML
+     12. HTML
   ========================================================= */
 
   const root =
@@ -2393,15 +2363,15 @@
           </div>
 
 
-          <div class="tc-current-meta">
+          <div class="tc-info-row">
 
-            <span class="tc-meta-label">
+            <span class="tc-info-label">
               START
             </span>
 
             <span
               id="tc-start"
-              class="tc-meta-value">
+              class="tc-info-value">
               --:--
             </span>
 
@@ -2413,15 +2383,15 @@
           </div>
 
 
-          <div class="tc-current-meta">
+          <div class="tc-info-row">
 
-            <span class="tc-meta-label">
+            <span class="tc-info-label">
               ELAPSED
             </span>
 
             <span
               id="tc-elapsed"
-              class="tc-meta-value">
+              class="tc-info-value">
               --:--:--
             </span>
 
@@ -2441,18 +2411,17 @@
 
             <div class="tc-task-row">
 
-              <div
+              <span
                 id="tc-prev-time"
-                class="tc-row-time">
+                class="tc-side-time">
                 —
-              </div>
+              </span>
 
-
-              <div
+              <span
                 id="tc-prev-task"
-                class="tc-row-task">
+                class="tc-side-task">
                 —
-              </div>
+              </span>
 
             </div>
 
@@ -2466,58 +2435,8 @@
             </div>
 
 
-            <div id="tc-next-list">
-
-              <div class="tc-task-row">
-
-                <div
-                  id="tc-next-time-0"
-                  class="tc-row-time">
-                  —
-                </div>
-
-                <div
-                  id="tc-next-task-0"
-                  class="tc-row-task">
-                  —
-                </div>
-
-              </div>
-
-
-              <div class="tc-task-row">
-
-                <div
-                  id="tc-next-time-1"
-                  class="tc-row-time">
-                  —
-                </div>
-
-                <div
-                  id="tc-next-task-1"
-                  class="tc-row-task">
-                  —
-                </div>
-
-              </div>
-
-
-              <div class="tc-task-row">
-
-                <div
-                  id="tc-next-time-2"
-                  class="tc-row-time">
-                  —
-                </div>
-
-                <div
-                  id="tc-next-task-2"
-                  class="tc-row-task">
-                  —
-                </div>
-
-              </div>
-
+            <div
+              id="tc-next-list">
             </div>
 
           </section>
@@ -2540,6 +2459,10 @@
   );
 
 
+  /* =========================================================
+     13. RENDER
+  ========================================================= */
+
   const $ =
     id =>
       document.getElementById(
@@ -2547,9 +2470,80 @@
       );
 
 
-  /* =========================================================
-     RENDER
-  ========================================================= */
+  function renderNextList() {
+
+    const container =
+      $('tc-next-list');
+
+
+    if (!container)
+      return;
+
+
+    container.innerHTML =
+      '';
+
+
+    for (
+      let i = 0;
+      i < 3;
+      i++
+    ) {
+
+      const item =
+        state.next[i] || null;
+
+
+      const row =
+        document.createElement(
+          'div'
+        );
+
+
+      row.className =
+        'tc-task-row';
+
+
+      const time =
+        document.createElement(
+          'span'
+        );
+
+
+      time.className =
+        'tc-side-time';
+
+
+      time.textContent =
+        item?.time || '—';
+
+
+      const task =
+        document.createElement(
+          'span'
+        );
+
+
+      task.className =
+        'tc-side-task';
+
+
+      task.textContent =
+        item?.task || '—';
+
+
+      row.append(
+        time,
+        task
+      );
+
+
+      container.appendChild(
+        row
+      );
+    }
+  }
+
 
   function render() {
 
@@ -2557,20 +2551,16 @@
       new Date();
 
 
-    /* CURRENT CLOCK */
+    /* 時計 */
 
     $('tc-clock')
       .textContent =
-        pad(
-          now.getHours()
-        ) +
+        pad(now.getHours()) +
         ':' +
-        pad(
-          now.getMinutes()
-        );
+        pad(now.getMinutes());
 
 
-    /* CURRENT TASK */
+    /* current */
 
     $('tc-task')
       .textContent =
@@ -2578,19 +2568,23 @@
         'タスクを取得できません';
 
 
-    $('tc-start')
-      .textContent =
-        getStartTime();
+    const elapsed =
+      currentElapsedSeconds();
 
 
     $('tc-elapsed')
       .textContent =
         secondsToHMS(
-          getCurrentElapsedSeconds()
+          elapsed
         );
 
 
-    /* PREVIOUS */
+    $('tc-start')
+      .textContent =
+        startTimeText();
+
+
+    /* previous */
 
     $('tc-prev-time')
       .textContent =
@@ -2604,32 +2598,12 @@
         '—';
 
 
-    /* NEXT x3 */
+    /* next 3 */
 
-    for (
-      let i = 0;
-      i < 3;
-      i++
-    ) {
-
-      const row =
-        state.next[i];
+    renderNextList();
 
 
-      $(
-        'tc-next-time-' + i
-      ).textContent =
-        row?.time || '—';
-
-
-      $(
-        'tc-next-task-' + i
-      ).textContent =
-        row?.task || '—';
-    }
-
-
-    /* LEAVE */
+    /* leave */
 
     $('tc-leave-time')
       .textContent =
@@ -2637,9 +2611,7 @@
         '--:--';
 
 
-    if (
-      !state.leaveTime
-    ) {
+    if (!state.leaveTime) {
 
       $('tc-leave-label')
         .textContent =
@@ -2664,7 +2636,7 @@
         .map(Number);
 
 
-    const leave =
+    const leaveDate =
       new Date(
         now.getFullYear(),
         now.getMonth(),
@@ -2678,23 +2650,21 @@
     let diff =
       Math.floor(
         (
-          leave -
+          leaveDate -
           now
         ) / 1000
       );
 
 
-    if (
-      diff >= 0
-    ) {
+    if (diff >= 0) {
 
-      const hours =
+      const h =
         Math.floor(
           diff / 3600
         );
 
 
-      const minutes =
+      const m =
         Math.floor(
           (
             diff % 3600
@@ -2709,9 +2679,9 @@
 
       $('tc-leave-count')
         .textContent =
-          pad(hours) +
+          pad(h) +
           ':' +
-          pad(minutes);
+          pad(m);
 
     } else {
 
@@ -2721,13 +2691,13 @@
         );
 
 
-      const hours =
+      const h =
         Math.floor(
           diff / 3600
         );
 
 
-      const minutes =
+      const m =
         Math.floor(
           (
             diff % 3600
@@ -2735,7 +2705,7 @@
         );
 
 
-      const seconds =
+      const s =
         diff % 60;
 
 
@@ -2746,22 +2716,21 @@
 
       $('tc-leave-count')
         .textContent =
-          pad(hours) +
+          pad(h) +
           ':' +
-          pad(minutes) +
+          pad(m) +
           ':' +
-          pad(seconds);
+          pad(s);
     }
   }
 
 
   /* =========================================================
-     START
-  ========================================================= */
+     14. START
 
-  /*
-    NOW表示直後にまず同期。
-  */
+     最初の同期は、
+     NOWを表示する前に行う。
+  ========================================================= */
 
   syncFromTaskChute();
 
@@ -2769,20 +2738,16 @@
   render();
 
 
-  /*
-    表示：1秒
-  */
+  /* 1秒表示 */
 
   window.tcNowRenderTimer =
     setInterval(
       render,
-      RENDER_INTERVAL
+      UI_INTERVAL
     );
 
 
-  /*
-    TaskChute DOM：5秒
-  */
+  /* 5秒DOM同期 */
 
   window.tcNowSyncTimer =
     setInterval(
