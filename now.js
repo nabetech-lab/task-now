@@ -3,10 +3,10 @@
 
   /* =========================================================
      NOW
-     iOS Edition v3.7.3-iOS5
+     iOS Edition v3.7.3-iOS6
   ========================================================= */
 
-  const VERSION = '3.7.3-iOS5';
+  const VERSION = '3.7.3-iOS6';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -24,29 +24,20 @@
       .replace(/\s+/g, ' ')
       .trim();
 
-
   const pad = n =>
     String(n).padStart(2, '0');
-
 
   const text = el =>
     clean(el?.textContent);
 
-
   const isInsideNow = el =>
     !!el?.closest?.('#' + ROOT_ID);
 
-
   const isHM = value =>
-    /^\d{1,2}:\d{2}$/.test(
-      clean(value)
-    );
-
+    /^\d{1,2}:\d{2}$/.test(clean(value));
 
   const isHMS = value =>
-    /^\d{2}:\d{2}:\d{2}$/.test(
-      clean(value)
-    );
+    /^\d{2}:\d{2}:\d{2}$/.test(clean(value));
 
 
   function hmsToSeconds(value) {
@@ -101,9 +92,7 @@
       );
 
     const h =
-      Math.floor(
-        seconds / 3600
-      );
+      Math.floor(seconds / 3600);
 
     const m =
       Math.floor(
@@ -140,9 +129,7 @@
       );
 
     const h =
-      Math.floor(
-        seconds / 3600
-      );
+      Math.floor(seconds / 3600);
 
     const m =
       Math.floor(
@@ -278,9 +265,7 @@
         .filter(el => {
 
           if (
-            isInsideNow(
-              el
-            )
+            isInsideNow(el)
           ) {
             return false;
           }
@@ -397,9 +382,7 @@
       .filter(el => {
 
         if (
-          isInsideNow(
-            el
-          )
+          isInsideNow(el)
         ) {
           return false;
         }
@@ -539,10 +522,8 @@
     let start =
       null;
 
-
     let finish =
       null;
-
 
     let planned =
       null;
@@ -706,18 +687,14 @@
       let start =
         null;
 
-
       let finish =
         null;
-
 
       let actualDuration =
         null;
 
-
       let planned =
         null;
-
 
       let scheduleTime =
         null;
@@ -856,9 +833,7 @@
         );
 
 
-      if (
-        !duplicate
-      ) {
+      if (!duplicate) {
 
         unique.push(
           row
@@ -915,7 +890,7 @@
       next:
         rows.slice(
           index + 1,
-          index + 4
+          index + 6
         )
     };
   }
@@ -1007,13 +982,6 @@
     if (
       state.currentTask
     ) {
-
-      /*
-        現在タスク固有値を毎回クリア。
-
-        PLANNED未入力の場合に
-        前タスクの値を引き継がない。
-      */
 
       state.currentStart =
         null;
@@ -1256,6 +1224,7 @@
       --text:#f5f5f7;
       --muted:#858a96;
       --dim:#555a66;
+      --over:#ff6363;
 
       position:fixed;
       inset:0;
@@ -1310,7 +1279,7 @@
 
       grid-template-columns:
         minmax(170px,.85fr)
-        minmax(220px,1fr)
+        minmax(330px,1.4fr)
         minmax(130px,.7fr);
 
       align-items:center;
@@ -1336,6 +1305,13 @@
 
     #tc-leave {
 
+      display:flex;
+
+      align-items:center;
+
+      gap:
+        clamp(20px,3vw,48px);
+
       font-size:
         clamp(16px,2.5vw,29px);
 
@@ -1345,6 +1321,8 @@
 
       font-variant-numeric:
         tabular-nums;
+
+      white-space:nowrap;
     }
 
 
@@ -1551,15 +1529,10 @@
     }
 
 
-    /*
-      OVER
-      PC版と同じ赤系
-    */
-
     #tc-status-label.tc-over,
     #tc-status-value.tc-over {
 
-      color:#ff6363;
+      color:var(--over);
     }
 
 
@@ -1584,6 +1557,18 @@
 
       gap:
         clamp(10px,2vh,20px);
+    }
+
+
+    /* 横では NEXT を上、PREVIOUSを下 */
+
+    #tc-next-card {
+      grid-row:1;
+    }
+
+
+    #tc-prev-card {
+      grid-row:2;
     }
 
 
@@ -1726,6 +1711,17 @@
     }
 
 
+    /*
+      横ではNEXT 3件
+    */
+
+    #tc-next-list
+    .tc-next-row:nth-child(n+4) {
+
+      display:none;
+    }
+
+
     .tc-next-time,
     .tc-next-task {
 
@@ -1811,6 +1807,15 @@
       }
 
 
+      #tc-header {
+
+        grid-template-columns:
+          minmax(100px,.7fr)
+          minmax(300px,1.4fr)
+          auto;
+      }
+
+
       #tc-brand {
 
         font-size:
@@ -1819,6 +1824,9 @@
 
 
       #tc-leave {
+
+        gap:
+          clamp(14px,2vw,28px);
 
         font-size:
           clamp(12px,4dvh,20px);
@@ -1985,6 +1993,9 @@
 
     /* =====================================================
        PORTRAIT
+       CURRENT TASK
+       NEXT 5
+       PREVIOUS
     ===================================================== */
 
     @media
@@ -2082,6 +2093,11 @@
       }
 
 
+      /*
+        CURRENT TASKを少し縮め、
+        NEXT/PREVIOUS側を広くする
+      */
+
       #tc-main {
 
         display:grid;
@@ -2089,8 +2105,8 @@
         grid-template-columns:1fr;
 
         grid-template-rows:
-          minmax(0,1.55fr)
-          minmax(0,1fr);
+          minmax(0,1.15fr)
+          minmax(0,1.35fr);
 
         gap:8px;
 
@@ -2110,17 +2126,23 @@
       }
 
 
-      #tc-side > .tc-card:first-child {
+      /*
+        縦ではNEXT上、PREVIOUS下
+      */
 
-        order:2;
+      #tc-next-card {
 
-        flex:1 1 0;
+        order:1;
       }
 
 
-      #tc-side > .tc-card:last-child {
+      #tc-prev-card {
 
-        order:1;
+        order:2;
+      }
+
+
+      #tc-side > .tc-card {
 
         flex:1 1 0;
       }
@@ -2131,7 +2153,7 @@
         justify-content:flex-start;
 
         padding:
-          14px 18px;
+          11px 18px;
 
         border-radius:20px;
       }
@@ -2145,14 +2167,14 @@
 
       #tc-now-badge {
 
-        font-size:12px;
+        font-size:11px;
 
         padding:
-          6px 13px;
+          5px 12px;
 
-        margin-bottom:9px;
+        margin-bottom:6px;
 
-        border-radius:12px;
+        border-radius:11px;
 
         letter-spacing:.11em;
       }
@@ -2171,7 +2193,7 @@
       .tc-now-label {
 
         font-size:
-          clamp(11px,3.3vw,14px);
+          clamp(10px,3.1vw,13px);
 
         letter-spacing:.14em;
       }
@@ -2180,21 +2202,21 @@
       .tc-now-value {
 
         font-size:
-          clamp(22px,6.3vw,29px);
+          clamp(20px,5.8vw,27px);
 
-        line-height:1.05;
+        line-height:1.02;
       }
 
 
       #tc-task {
 
         margin:
-          7px 0 9px;
+          5px 0 6px;
 
         font-size:
-          clamp(30px,9vw,40px);
+          clamp(27px,8.2vw,37px);
 
-        line-height:1.05;
+        line-height:1.02;
 
         white-space:nowrap;
 
@@ -2206,20 +2228,20 @@
 
       #tc-progress {
 
-        gap:3px;
+        gap:2px;
       }
 
 
       #tc-status-row {
 
-        margin-top:1px;
+        margin-top:0;
       }
 
 
       .tc-card {
 
         padding:
-          10px 14px;
+          9px 14px;
 
         border-radius:16px;
 
@@ -2230,17 +2252,28 @@
       .tc-card-title {
 
         font-size:
-          clamp(11px,3.3vw,14px);
+          clamp(10px,3.1vw,13px);
 
         letter-spacing:.16em;
 
-        margin-bottom:5px;
+        margin-bottom:4px;
       }
 
 
       #tc-next-list {
 
-        gap:4px;
+        gap:3px;
+      }
+
+
+      /*
+        縦ではNEXTを5件すべて表示
+      */
+
+      #tc-next-list
+      .tc-next-row:nth-child(n+4) {
+
+        display:grid;
       }
 
 
@@ -2258,22 +2291,22 @@
       .tc-next-task {
 
         font-size:
-          clamp(16px,4.8vw,21px);
+          clamp(15px,4.4vw,20px);
 
-        line-height:1.15;
+        line-height:1.1;
       }
 
 
       #tc-prev-task {
 
         font-size:
-          clamp(17px,5.2vw,22px);
+          clamp(16px,4.8vw,21px);
 
-        line-height:1.1;
+        line-height:1.05;
 
         margin-top:0;
 
-        margin-bottom:5px;
+        margin-bottom:4px;
 
         white-space:nowrap;
 
@@ -2298,7 +2331,7 @@
       .tc-prev-label {
 
         font-size:
-          clamp(9px,2.9vw,12px);
+          clamp(9px,2.7vw,11px);
 
         letter-spacing:.13em;
       }
@@ -2307,9 +2340,9 @@
       .tc-prev-value {
 
         font-size:
-          clamp(15px,4.5vw,19px);
+          clamp(14px,4.2vw,18px);
 
-        line-height:1.1;
+        line-height:1.05;
       }
 
 
@@ -2322,9 +2355,7 @@
 
 
   document.head
-    .appendChild(
-      style
-    );
+    .appendChild(style);
 
 
   /* =========================================================
@@ -2563,53 +2594,28 @@
             <div id="tc-next-list">
 
               <div class="tc-next-row">
-
-                <span
-                  id="tc-next-time-0"
-                  class="tc-next-time">
-                  —
-                </span>
-
-                <span
-                  id="tc-next-task-0"
-                  class="tc-next-task">
-                  —
-                </span>
-
+                <span id="tc-next-time-0" class="tc-next-time">—</span>
+                <span id="tc-next-task-0" class="tc-next-task">—</span>
               </div>
 
-
               <div class="tc-next-row">
-
-                <span
-                  id="tc-next-time-1"
-                  class="tc-next-time">
-                  —
-                </span>
-
-                <span
-                  id="tc-next-task-1"
-                  class="tc-next-task">
-                  —
-                </span>
-
+                <span id="tc-next-time-1" class="tc-next-time">—</span>
+                <span id="tc-next-task-1" class="tc-next-task">—</span>
               </div>
 
+              <div class="tc-next-row">
+                <span id="tc-next-time-2" class="tc-next-time">—</span>
+                <span id="tc-next-task-2" class="tc-next-task">—</span>
+              </div>
 
               <div class="tc-next-row">
+                <span id="tc-next-time-3" class="tc-next-time">—</span>
+                <span id="tc-next-task-3" class="tc-next-task">—</span>
+              </div>
 
-                <span
-                  id="tc-next-time-2"
-                  class="tc-next-time">
-                  —
-                </span>
-
-                <span
-                  id="tc-next-task-2"
-                  class="tc-next-task">
-                  —
-                </span>
-
+              <div class="tc-next-row">
+                <span id="tc-next-time-4" class="tc-next-time">—</span>
+                <span id="tc-next-task-4" class="tc-next-task">—</span>
               </div>
 
             </div>
@@ -2630,9 +2636,7 @@
 
 
   document.body
-    .appendChild(
-      root
-    );
+    .appendChild(root);
 
 
   /* =========================================================
@@ -2641,9 +2645,7 @@
 
   const $ =
     id =>
-      document.getElementById(
-        id
-      );
+      document.getElementById(id);
 
 
   function render() {
@@ -2652,20 +2654,12 @@
       new Date();
 
 
-    /* CLOCK */
-
     $('tc-clock')
       .textContent =
-        pad(
-          now.getHours()
-        ) +
+        pad(now.getHours()) +
         ':' +
-        pad(
-          now.getMinutes()
-        );
+        pad(now.getMinutes());
 
-
-    /* CURRENT TASK */
 
     $('tc-task')
       .textContent =
@@ -2673,15 +2667,11 @@
         'タスクを取得できません';
 
 
-    /* START */
-
     $('tc-start')
       .textContent =
         state.currentStart ||
         '--:--';
 
-
-    /* PLANNED */
 
     $('tc-planned')
       .textContent =
@@ -2690,14 +2680,10 @@
         );
 
 
-    /* PLANNED END */
-
     $('tc-planned-end')
       .textContent =
         getPlannedEnd();
 
-
-    /* ELAPSED */
 
     const elapsed =
       getElapsedSeconds();
@@ -2705,12 +2691,8 @@
 
     $('tc-elapsed')
       .textContent =
-        secondsToHMS(
-          elapsed
-        );
+        secondsToHMS(elapsed);
 
-
-    /* REMAINING / OVER */
 
     const statusLabel =
       $('tc-status-label');
@@ -2741,23 +2723,17 @@
 
         statusValue
           .textContent =
-            secondsToHMS(
-              diff
-            );
+            secondsToHMS(diff);
 
 
         statusLabel
           .classList
-          .remove(
-            'tc-over'
-          );
+          .remove('tc-over');
 
 
         statusValue
           .classList
-          .remove(
-            'tc-over'
-          );
+          .remove('tc-over');
 
       } else {
 
@@ -2769,24 +2745,18 @@
         statusValue
           .textContent =
             secondsToHMS(
-              Math.abs(
-                diff
-              )
+              Math.abs(diff)
             );
 
 
         statusLabel
           .classList
-          .add(
-            'tc-over'
-          );
+          .add('tc-over');
 
 
         statusValue
           .classList
-          .add(
-            'tc-over'
-          );
+          .add('tc-over');
       }
 
     } else {
@@ -2803,20 +2773,14 @@
 
       statusLabel
         .classList
-        .remove(
-          'tc-over'
-        );
+        .remove('tc-over');
 
 
       statusValue
         .classList
-        .remove(
-          'tc-over'
-        );
+        .remove('tc-over');
     }
 
-
-    /* PREVIOUS */
 
     const prev =
       state.previous;
@@ -2873,9 +2837,7 @@
       ) {
 
         prevElapsed =
-          secondsToHMS(
-            sec
-          );
+          secondsToHMS(sec);
       }
     }
 
@@ -2885,11 +2847,9 @@
         prevElapsed;
 
 
-    /* NEXT */
-
     for (
       let i = 0;
-      i < 3;
+      i < 5;
       i++
     ) {
 
@@ -2913,8 +2873,6 @@
           '—';
     }
 
-
-    /* LEAVE */
 
     $('tc-leave-time')
       .textContent =
@@ -3002,9 +2960,7 @@
     } else {
 
       diff =
-        Math.abs(
-          diff
-        );
+        Math.abs(diff);
 
 
       $('tc-leave-label')
@@ -3014,9 +2970,7 @@
 
       $('tc-leave-count')
         .textContent =
-          secondsToHMS(
-            diff
-          );
+          secondsToHMS(diff);
     }
   }
 
