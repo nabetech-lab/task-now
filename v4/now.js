@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.4
+     v4.5.6
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.5';
+  const VERSION = '4.5.6';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -389,9 +389,9 @@ function parseSectionName(value) {
   /*
     先頭の時間帯を削除
     例:
-    18:00-23:30 夜 5 / 18 4h -3h45m1s
+    18:00-23:30 夜 5 / 18 4h -3h53m12s
     ↓
-    夜 5 / 18 4h -3h45m1s
+    夜 5 / 18 4h -3h53m12s
   */
   let stripped =
     v.replace(
@@ -401,34 +401,28 @@ function parseSectionName(value) {
 
 
   /*
-    末尾の差分を削除
-    例: -3h45m1s
+    件数表示が始まったところから後ろを全部削除。
+
+    5 / 18
+    5/
+    5 ／ 18
+
+    のようにDOM側で途中分割されても対応する。
   */
   stripped =
     stripped.replace(
-      /\s*[+\-−]\s*(?:\d+\s*h)?(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?\s*$/,
+      /\s+\d{1,3}\s*[\/／].*$/,
       ''
     );
 
 
   /*
-    末尾のセクション時間を削除
-    例: 4h / 4h30m / 30m
+    件数が取れないDOM構造だった場合の保険。
+    時間・差分が直接続いていたらそこから削除。
   */
   stripped =
     stripped.replace(
-      /\s*(?:\d+\s*h(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?|\d+\s*m(?:\s*\d+\s*s)?|\d+\s*s)\s*$/,
-      ''
-    );
-
-
-  /*
-    末尾のタスク件数を削除
-    例: 5 / 18
-  */
-  stripped =
-    stripped.replace(
-      /\s*\d{1,3}\s*\/\s*\d{1,3}\s*$/,
+      /\s+[+\-−]?\d+\s*h.*$/,
       ''
     );
 
