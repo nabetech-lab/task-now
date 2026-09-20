@@ -4,7 +4,7 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.3.0
+     v4.4.0
 
      iOS Safari
      Android Firefox / Violentmonkey
@@ -13,7 +13,7 @@
      GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.3.2';
+  const VERSION = '4.4.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -21,32 +21,41 @@
   const SYNC_INTERVAL = 5000;
   const RENDER_INTERVAL = 1000;
 
+  /* 固定勤務時間 */
+  const WORK_START = '08:30';
+  const REGULAR_END = '17:25';
+
 
   /* =========================================================
      ENVIRONMENT
   ========================================================= */
 
-const UA =
-  navigator.userAgent || '';
+  const UA =
+    navigator.userAgent || '';
 
-const IS_IOS =
-  /iPhone|iPad|iPod/i.test(UA);
+  const IS_IOS =
+    /iPhone|iPad|iPod/i.test(UA);
 
-const IS_FIREFOX =
-  /Firefox|FxiOS/i.test(UA);
+  const IS_FIREFOX =
+    /Firefox|FxiOS/i.test(UA);
 
-const IS_ANDROID =
-  /Android/i.test(UA) ||
-  (
-    IS_FIREFOX &&
-    !IS_IOS &&
-    navigator.maxTouchPoints > 0 &&
-    /Linux/i.test(
-      navigator.platform ||
-      UA
-    )
-  );
-  
+  /*
+    Android Firefoxのデスクトップサイト表示でも
+    Androidとして扱えるようにする。
+  */
+  const IS_ANDROID =
+    /Android/i.test(UA) ||
+    (
+      IS_FIREFOX &&
+      !IS_IOS &&
+      navigator.maxTouchPoints > 0 &&
+      /Linux/i.test(
+        navigator.platform ||
+        UA
+      )
+    );
+
+
   /* =========================================================
      UTIL
   ========================================================= */
@@ -131,6 +140,47 @@ const IS_ANDROID =
     return (
       Number(m[1]) * 3600 +
       Number(m[2]) * 60
+    );
+  }
+
+
+  function hmToMinutes(
+    value
+  ) {
+
+    const m =
+      clean(value)
+        .match(
+          /^(\d{1,2}):(\d{2})$/
+        );
+
+
+    if (!m) {
+      return null;
+    }
+
+
+    const h =
+      Number(m[1]);
+
+    const min =
+      Number(m[2]);
+
+
+    if (
+      h < 0 ||
+      h > 23 ||
+      min < 0 ||
+      min > 59
+    ) {
+
+      return null;
+    }
+
+
+    return (
+      h * 60 +
+      min
     );
   }
 
@@ -437,7 +487,7 @@ const IS_ANDROID =
 
 
     return (
-      /^\d{1,2}:\d{2}\s*[-–—〜~]\s*\d{1,2}:\d{2}/
+      /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}/
         .test(t)
     );
   }
@@ -1506,35 +1556,21 @@ const IS_ANDROID =
           player.row
         );
 
-  } else {
+    } else {
 
-  /*
-    実行中タスクがない場合は
-    CURRENTだけをクリアする。
-  */
-
-  clearCurrentState();
-
-
-  /*
-    PREVIOUSは現在時刻基準で
-    直近完了タスクを再取得。
-  */
-
-  state.previous =
-    getPreviousTask(
-      rows,
-      new Date()
-    );
+      /*
+        CURRENTだけクリア。
+        NEXTは停止直前の5件を保持する。
+      */
+      clearCurrentState();
 
 
-  /*
-    NEXTは消さない。
-
-    CURRENT停止直前に表示していた
-    後続タスクをそのまま保持する。
-  */
-}
+      state.previous =
+        getPreviousTask(
+          rows,
+          new Date()
+        );
+    }
 
 
     state.leaveTime =
@@ -1728,9 +1764,7 @@ const IS_ANDROID =
 
     #${ROOT_ID},
     #${ROOT_ID} * {
-
-      box-sizing:
-        border-box;
+      box-sizing:border-box;
     }
 
 
@@ -1744,32 +1778,25 @@ const IS_ANDROID =
       --dim:#555a66;
       --over:#ff6363;
 
-      position:
-        fixed;
+      --timeline:#66aef2;
+      --timeline-track:#262d36;
+      --timeline-overtime:#d99a3e;
 
-      top:
-        0;
+      --card-radius:10px;
 
-      left:
-        0;
+      position:fixed;
+      top:0;
+      left:0;
 
-      z-index:
-        2147483647;
+      z-index:2147483647;
 
-      width:
-        100%;
+      width:100%;
+      height:100%;
 
-      height:
-        100%;
+      overflow:hidden;
 
-      overflow:
-        hidden;
-
-      background:
-        var(--bg);
-
-      color:
-        var(--text);
+      background:var(--bg);
+      color:var(--text);
 
       font-family:
         -apple-system,
@@ -1781,56 +1808,30 @@ const IS_ANDROID =
         sans-serif;
 
       padding:
-        max(
-          8px,
-          env(
-            safe-area-inset-top
-          )
-        )
-        max(
-          12px,
-          env(
-            safe-area-inset-right
-          )
-        )
-        max(
-          8px,
-          env(
-            safe-area-inset-bottom
-          )
-        )
-        max(
-          12px,
-          env(
-            safe-area-inset-left
-          )
-        );
+        max(8px,env(safe-area-inset-top))
+        max(12px,env(safe-area-inset-right))
+        max(8px,env(safe-area-inset-bottom))
+        max(12px,env(safe-area-inset-left));
     }
 
 
     #tc-layout {
 
-      width:
-        100%;
+      width:100%;
+      height:100%;
 
-      height:
-        100%;
-
-      display:
-        grid;
+      display:grid;
 
       grid-template-rows:
         auto
-        minmax(
-          0,
-          1fr
-        );
+        auto
+        minmax(0,1fr);
 
       gap:
         clamp(
-          10px,
-          2.5vh,
-          26px
+          7px,
+          1.6vh,
+          16px
         );
     }
 
@@ -1841,130 +1842,355 @@ const IS_ANDROID =
 
     #tc-header {
 
-      display:
-        grid;
+      display:grid;
 
       grid-template-columns:
-        minmax(
-          170px,
-          .85fr
-        )
-        minmax(
-          330px,
-          1.4fr
-        )
-        minmax(
-          130px,
-          .7fr
-        );
+        minmax(120px,.7fr)
+        minmax(290px,1.2fr)
+        minmax(300px,1.05fr);
 
-      align-items:
-        center;
+      align-items:center;
 
-      gap:
-        2vw;
+      gap:2vw;
     }
 
 
     #tc-brand {
 
-      color:
-        var(--muted);
+      color:var(--muted);
 
       font-size:
         clamp(
           14px,
-          2.2vw,
-          28px
+          2.1vw,
+          27px
         );
 
-      font-weight:
-        800;
+      font-weight:800;
+      letter-spacing:.13em;
 
-      letter-spacing:
-        .13em;
-
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
 
     #tc-leave {
 
-      display:
-        flex;
+      display:flex;
 
-      align-items:
-        center;
+      align-items:center;
 
       gap:
         clamp(
-          20px,
-          3vw,
-          48px
+          18px,
+          2.7vw,
+          44px
         );
 
       font-size:
         clamp(
           16px,
-          2.5vw,
-          29px
+          2.3vw,
+          28px
         );
 
-      font-weight:
-        800;
-
-      line-height:
-        1.32;
+      font-weight:800;
+      line-height:1.25;
 
       font-variant-numeric:
         tabular-nums;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
 
     .tc-leave-row {
 
-      display:
-        grid;
+      display:grid;
 
       grid-template-columns:
         3.1em
         max-content;
 
-      column-gap:
-        .45em;
+      column-gap:.45em;
     }
 
 
     #tc-clock {
 
-      justify-self:
-        end;
+      justify-self:end;
+
+      display:flex;
+      align-items:baseline;
+      justify-content:flex-end;
+
+      gap:
+        clamp(
+          10px,
+          1.3vw,
+          22px
+        );
+
+      white-space:nowrap;
+    }
+
+
+    #tc-date {
+
+      color:#9da3af;
+
+      font-size:
+        clamp(
+          12px,
+          1.6vw,
+          24px
+        );
+
+      font-weight:500;
+
+      font-variant-numeric:
+        tabular-nums;
+    }
+
+
+    #tc-clock-time {
 
       font-size:
         clamp(
           40px,
-          6.7vw,
-          78px
+          6.2vw,
+          76px
         );
 
-      font-weight:
-        800;
+      font-weight:800;
+      line-height:1;
 
-      line-height:
-        1;
+      letter-spacing:-.04em;
 
-      letter-spacing:
-        -.04em;
+      font-variant-numeric:
+        tabular-nums;
+    }
+
+
+    /* =====================================================
+       WORK TIMELINE
+    ===================================================== */
+
+    #tc-work-timeline {
+
+      position:relative;
+
+      min-height:
+        clamp(
+          42px,
+          8vh,
+          82px
+        );
+
+      margin:
+        0
+        clamp(
+          8px,
+          2vw,
+          24px
+        );
+    }
+
+
+    #tc-timeline-track {
+
+      position:absolute;
+
+      left:0;
+      right:0;
+
+      top:
+        clamp(
+          18px,
+          3.6vh,
+          35px
+        );
+
+      height:
+        clamp(
+          5px,
+          .8vh,
+          9px
+        );
+
+      border-radius:999px;
+
+      background:
+        var(--timeline-track);
+
+      overflow:visible;
+    }
+
+
+    #tc-timeline-normal {
+
+      position:absolute;
+
+      left:0;
+      top:0;
+      bottom:0;
+
+      border-radius:
+        999px 0 0 999px;
+
+      background:
+        var(--timeline);
+    }
+
+
+    #tc-timeline-overtime {
+
+      position:absolute;
+
+      top:0;
+      bottom:0;
+
+      background:
+        var(--timeline-overtime);
+
+      border-radius:
+        0 999px 999px 0;
+    }
+
+
+    .tc-timeline-label {
+
+      position:absolute;
+
+      top:
+        calc(
+          clamp(
+            18px,
+            3.6vh,
+            35px
+          ) - 24px
+        );
+
+      color:#d2d4da;
+
+      font-size:
+        clamp(
+          11px,
+          1.5vw,
+          20px
+        );
+
+      line-height:1;
 
       font-variant-numeric:
         tabular-nums;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
+    }
+
+
+    #tc-timeline-start-label {
+
+      left:0;
+      transform:none;
+    }
+
+
+    #tc-timeline-regular-label {
+
+      transform:
+        translateX(-50%);
+    }
+
+
+    #tc-timeline-end-label {
+
+      right:0;
+      transform:none;
+    }
+
+
+    #tc-timeline-regular-marker {
+
+      position:absolute;
+
+      top:-8px;
+
+      width:1px;
+      height:24px;
+
+      background:#f2f3f5;
+
+      transform:
+        translateX(-50%);
+
+      opacity:.9;
+    }
+
+
+    #tc-timeline-current {
+
+      position:absolute;
+
+      top:
+        calc(
+          clamp(
+            18px,
+            3.6vh,
+            35px
+          ) - 1px
+        );
+
+      transform:
+        translateX(-50%);
+
+      z-index:2;
+    }
+
+
+    #tc-timeline-current::before {
+
+      content:"";
+
+      display:block;
+
+      width:0;
+      height:0;
+
+      margin:auto;
+
+      border-left:7px solid transparent;
+      border-right:7px solid transparent;
+      border-bottom:0;
+      border-top:14px solid #f2f3f5;
+    }
+
+
+    #tc-timeline-current.is-overtime::before {
+
+      border-top-color:
+        var(--timeline-overtime);
+    }
+
+
+    #tc-timeline-current-text {
+
+      margin-top:3px;
+
+      color:#e5e7eb;
+
+      font-size:
+        clamp(
+          10px,
+          1.4vw,
+          18px
+        );
+
+      font-weight:600;
+
+      white-space:nowrap;
+
+      transform:
+        translateX(-37%);
     }
 
 
@@ -1974,30 +2200,27 @@ const IS_ANDROID =
 
     #tc-main {
 
-      min-width:
-        0;
+      min-width:0;
+      min-height:0;
 
-      min-height:
-        0;
+      display:grid;
 
-      display:
-        grid;
+      /*
+        v4.4.0
+
+        右側を少し広げて
+        NEXTの可読性を上げる。
+      */
 
       grid-template-columns:
-        minmax(
-          0,
-          1.65fr
-        )
-        minmax(
-          250px,
-          .9fr
-        );
+        minmax(0,1.5fr)
+        minmax(300px,1fr);
 
       gap:
         clamp(
-          12px,
-          2.4vw,
-          30px
+          10px,
+          1.7vw,
+          22px
         );
     }
 
@@ -2008,27 +2231,21 @@ const IS_ANDROID =
 
     #tc-now {
 
-      position:
-        relative;
+      position:relative;
 
-      min-width:
-        0;
+      min-width:0;
+      min-height:0;
 
-      min-height:
-        0;
+      overflow:hidden;
 
-      overflow:
-        hidden;
-
-      background:
-        var(--panel);
+      background:var(--panel);
 
       border-radius:
-        clamp(
-          18px,
-          3.5vw,
-          46px
-        );
+        var(--card-radius);
+
+      border:
+        1px solid
+        rgba(255,255,255,.07);
 
       padding:
         clamp(
@@ -2042,56 +2259,40 @@ const IS_ANDROID =
           60px
         );
 
-      display:
-        flex;
+      display:flex;
+      flex-direction:column;
 
-      flex-direction:
-        column;
-
-      justify-content:
-        center;
+      justify-content:center;
     }
 
 
     #tc-now::before {
 
-      content:
-        "";
+      content:"";
 
-      position:
-        absolute;
+      position:absolute;
 
-      top:
-        0;
-
-      bottom:
-        0;
-
-      left:
-        0;
+      top:0;
+      bottom:0;
+      left:0;
 
       width:
         clamp(
-          7px,
-          .8vw,
-          13px
+          5px,
+          .55vw,
+          9px
         );
 
-      background:
-        white;
+      background:white;
     }
 
 
     #tc-now-badge {
 
-      align-self:
-        flex-start;
+      align-self:flex-start;
 
-      background:
-        white;
-
-      color:
-        #101218;
+      background:white;
+      color:#101218;
 
       font-size:
         clamp(
@@ -2100,14 +2301,10 @@ const IS_ANDROID =
           25px
         );
 
-      font-weight:
-        900;
+      font-weight:900;
+      letter-spacing:.14em;
 
-      letter-spacing:
-        .14em;
-
-      border-radius:
-        18px;
+      border-radius:999px;
 
       padding:
         9px 20px;
@@ -2119,15 +2316,13 @@ const IS_ANDROID =
           30px
         );
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
 
     .tc-now-metric {
 
-      display:
-        grid;
+      display:grid;
 
       grid-template-columns:
         clamp(
@@ -2135,13 +2330,9 @@ const IS_ANDROID =
           15vw,
           210px
         )
-        minmax(
-          0,
-          1fr
-        );
+        minmax(0,1fr);
 
-      align-items:
-        baseline;
+      align-items:baseline;
 
       column-gap:
         clamp(
@@ -2150,15 +2341,13 @@ const IS_ANDROID =
           24px
         );
 
-      min-width:
-        0;
+      min-width:0;
     }
 
 
     .tc-now-label {
 
-      color:
-        var(--muted);
+      color:var(--muted);
 
       font-size:
         clamp(
@@ -2167,21 +2356,17 @@ const IS_ANDROID =
           20px
         );
 
-      font-weight:
-        900;
+      font-weight:900;
 
-      letter-spacing:
-        .2em;
+      letter-spacing:.2em;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
 
     .tc-now-value {
 
-      color:
-        #c7cad2;
+      color:#c7cad2;
 
       font-size:
         clamp(
@@ -2190,14 +2375,12 @@ const IS_ANDROID =
           42px
         );
 
-      font-weight:
-        500;
+      font-weight:500;
 
       font-variant-numeric:
         tabular-nums;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
 
@@ -2218,21 +2401,16 @@ const IS_ANDROID =
           66px
         );
 
-      font-weight:
-        900;
+      font-weight:900;
+      line-height:1.08;
 
-      line-height:
-        1.08;
-
-      overflow-wrap:
-        anywhere;
+      overflow-wrap:anywhere;
     }
 
 
     #tc-progress {
 
-      display:
-        grid;
+      display:grid;
 
       gap:
         clamp(
@@ -2264,8 +2442,7 @@ const IS_ANDROID =
 
     #tc-status-value.tc-over {
 
-      font-weight:
-        700;
+      font-weight:700;
     }
 
 
@@ -2275,103 +2452,73 @@ const IS_ANDROID =
 
     #tc-side {
 
-      min-width:
-        0;
+      min-width:0;
+      min-height:0;
 
-      min-height:
-        0;
-
-      display:
-        grid;
-
-      /*
-        v4.3.0
-
-        NEXTを広く、
-        PREVIOUSをコンパクトに。
-      */
+      display:grid;
 
       grid-template-rows:
-        minmax(
-          0,
-          1.45fr
-        )
-        minmax(
-          0,
-          .55fr
-        );
+        minmax(0,1.55fr)
+        minmax(0,.45fr);
 
       gap:
         clamp(
-          10px,
-          2vh,
-          20px
+          8px,
+          1.3vh,
+          14px
         );
     }
 
 
     #tc-next-card {
-
-      grid-row:
-        1;
+      grid-row:1;
     }
 
 
     #tc-prev-card {
-
-      grid-row:
-        2;
+      grid-row:2;
     }
 
 
     .tc-card {
 
-      min-width:
-        0;
+      min-width:0;
+      min-height:0;
 
-      min-height:
-        0;
-
-      overflow:
-        hidden;
+      overflow:hidden;
 
       background:
         var(--panel2);
 
+      border:
+        1px solid
+        rgba(255,255,255,.07);
+
       border-radius:
-        clamp(
-          16px,
-          2.8vw,
-          30px
-        );
+        var(--card-radius);
 
       padding:
         clamp(
-          14px,
-          3vh,
-          28px
+          12px,
+          2.2vh,
+          23px
         )
         clamp(
-          18px,
-          2.5vw,
-          32px
+          16px,
+          2vw,
+          27px
         );
 
-      display:
-        flex;
+      display:flex;
+      flex-direction:column;
 
-      flex-direction:
-        column;
-
-      justify-content:
-        flex-start;
+      justify-content:flex-start;
     }
 
 
     .tc-card-title {
 
-      color:
-        var(--dim);
+      color:var(--dim);
 
       font-size:
         clamp(
@@ -2380,21 +2527,18 @@ const IS_ANDROID =
           20px
         );
 
-      font-weight:
-        900;
+      font-weight:900;
 
-      letter-spacing:
-        .18em;
+      letter-spacing:.18em;
 
       margin-bottom:
         clamp(
-          7px,
-          1.1vh,
-          12px
+          6px,
+          .8vh,
+          10px
         );
 
-      flex-shrink:
-        0;
+      flex-shrink:0;
     }
 
 
@@ -2404,110 +2548,89 @@ const IS_ANDROID =
 
     #tc-prev-task {
 
-      color:
-        #767b86;
+      color:#767b86;
 
       font-size:
         clamp(
-          18px,
-          2.6vw,
-          32px
+          16px,
+          2vw,
+          27px
         );
 
-      font-weight:
-        800;
+      font-weight:800;
 
-      line-height:
-        1.15;
+      line-height:1.1;
 
-      margin-top:
-        2px;
+      margin-top:1px;
 
       margin-bottom:
         clamp(
-          8px,
-          1.4vh,
-          14px
+          4px,
+          .8vh,
+          8px
         );
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
+      overflow:hidden;
 
-      overflow:
-        hidden;
+      text-overflow:ellipsis;
 
-      text-overflow:
-        ellipsis;
-
-      flex-shrink:
-        0;
+      flex-shrink:0;
     }
 
 
     .tc-prev-metric {
 
-      display:
-        grid;
+      display:grid;
 
       grid-template-columns:
         clamp(
-          85px,
-          8vw,
-          120px
+          74px,
+          6.5vw,
+          100px
         )
-        minmax(
-          0,
-          1fr
-        );
+        minmax(0,1fr);
 
-      align-items:
-        baseline;
+      align-items:baseline;
 
-      column-gap:
-        12px;
+      column-gap:10px;
 
-      margin:
-        1px 0;
+      margin:0;
     }
 
 
     .tc-prev-label {
 
-      color:
-        #555a66;
+      color:#555a66;
 
       font-size:
         clamp(
-          11px,
-          1.45vw,
-          18px
+          9px,
+          1.15vw,
+          15px
         );
 
-      font-weight:
-        900;
+      font-weight:900;
 
-      letter-spacing:
-        .18em;
+      letter-spacing:.16em;
     }
 
 
     .tc-prev-value {
 
-      color:
-        #747985;
+      color:#747985;
 
       font-size:
         clamp(
-          18px,
-          2.6vw,
-          32px
+          15px,
+          2vw,
+          26px
         );
 
       font-variant-numeric:
         tabular-nums;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
 
@@ -2517,67 +2640,54 @@ const IS_ANDROID =
 
     #tc-next-list {
 
-      display:
-        grid;
+      display:grid;
 
       gap:
         clamp(
           5px,
-          .8vh,
-          10px
+          .85vh,
+          11px
         );
     }
 
 
     .tc-next-row {
 
-      display:
-        grid;
+      display:grid;
 
       grid-template-columns:
         max-content
-        minmax(
-          0,
-          1fr
-        );
+        minmax(0,1fr);
 
       column-gap:
         clamp(
-          10px,
-          1.4vw,
-          18px
+          14px,
+          1.7vw,
+          24px
         );
 
-      align-items:
-        baseline;
-    }
-
-
-    /*
-      v4.3.0
-      横・縦ともNEXTは最大5件表示。
-    */
-
-    #tc-next-list
-    .tc-next-row {
-
-      display:
-        grid;
+      align-items:baseline;
     }
 
 
     .tc-next-time,
     .tc-next-task {
 
-      color:
-        #747985;
+      color:#8a909d;
+
+      /*
+        v4.4.0
+        NEXTを明確に大型化。
+      */
 
       font-size:
         clamp(
-          18px,
-          2.7vw,
-          33px
+          21px,
+          2.9vw,
+          38px
         );
+
+      line-height:1.12;
     }
 
 
@@ -2586,147 +2696,23 @@ const IS_ANDROID =
       font-variant-numeric:
         tabular-nums;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
+
+      font-weight:400;
     }
 
 
     .tc-next-task {
 
-      min-width:
-        0;
+      min-width:0;
 
-      font-weight:
-        700;
+      font-weight:700;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
 
-      overflow:
-        hidden;
+      overflow:hidden;
 
-      text-overflow:
-        ellipsis;
-    }
-
-
-    /* =====================================================
-       LANDSCAPE PREVIOUS COMPACT
-    ===================================================== */
-
-    #${ROOT_ID}.layout-landscape
-    #tc-prev-card {
-
-      padding:
-        clamp(
-          8px,
-          1.5vh,
-          14px
-        )
-        clamp(
-          14px,
-          1.8vw,
-          24px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-landscape
-    #tc-prev-card
-    .tc-card-title {
-
-      font-size:
-        clamp(
-          9px,
-          1.1vw,
-          14px
-        );
-
-      margin-bottom:
-        clamp(
-          3px,
-          .5vh,
-          6px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-landscape
-    #tc-prev-task {
-
-      font-size:
-        clamp(
-          14px,
-          1.65vw,
-          23px
-        );
-
-      line-height:
-        1.05;
-
-      margin:
-        0 0
-        clamp(
-          3px,
-          .5vh,
-          6px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-landscape
-    .tc-prev-metric {
-
-      grid-template-columns:
-        clamp(
-          58px,
-          5.8vw,
-          85px
-        )
-        minmax(
-          0,
-          1fr
-        );
-
-      column-gap:
-        clamp(
-          6px,
-          .8vw,
-          10px
-        );
-
-      margin:
-        0;
-    }
-
-
-    #${ROOT_ID}.layout-landscape
-    .tc-prev-label {
-
-      font-size:
-        clamp(
-          8px,
-          .9vw,
-          12px
-        );
-
-      letter-spacing:
-        .13em;
-    }
-
-
-    #${ROOT_ID}.layout-landscape
-    .tc-prev-value {
-
-      font-size:
-        clamp(
-          13px,
-          1.45vw,
-          20px
-        );
-
-      line-height:
-        1.05;
+      text-overflow:ellipsis;
     }
 
 
@@ -2736,108 +2722,78 @@ const IS_ANDROID =
 
     #tc-task-toggle {
 
-      display:
-        none;
+      display:none;
 
-      position:
-        absolute;
+      position:absolute;
 
       left:
         max(
           12px,
-          env(
-            safe-area-inset-left
-          )
+          env(safe-area-inset-left)
         );
 
       bottom:
         max(
           8px,
-          env(
-            safe-area-inset-bottom
-          )
+          env(safe-area-inset-bottom)
         );
 
-      z-index:
-        5;
+      z-index:5;
 
-      appearance:
-        none;
+      appearance:none;
 
       border:
         1px solid #3b414d;
 
-      border-radius:
-        999px;
+      border-radius:999px;
 
-      background:
-        #11151c;
+      background:#11151c;
 
-      color:
-        #9da3af;
+      color:#9da3af;
 
-      font:
-        inherit;
+      font:inherit;
 
-      font-size:
-        10px;
+      font-size:10px;
+      font-weight:900;
 
-      font-weight:
-        900;
+      letter-spacing:.12em;
 
-      letter-spacing:
-        .12em;
+      line-height:1;
 
-      line-height:
-        1;
+      padding:7px 10px;
 
-      padding:
-        7px 10px;
-
-      opacity:
-        .88;
+      opacity:.88;
     }
 
 
     #${ROOT_ID}.platform-android
     #tc-task-toggle {
 
-      display:
-        block;
+      display:block;
     }
 
 
     #tc-now-return-button {
 
-      display:
-        none;
+      display:none;
 
-      position:
-        fixed;
+      position:fixed;
 
-      right:
-        10px;
+      right:10px;
+      bottom:10px;
 
-      bottom:
-        10px;
+      z-index:2147483647;
 
-      z-index:
-        2147483647;
-
-      appearance:
-        none;
+      appearance:none;
 
       border:
         1px solid #3b414d;
 
-      border-radius:
-        999px;
+      border-radius:999px;
 
-      background:
-        #11151c;
+      background:#11151c;
 
-      color:
-        #f5f5f7;
+      color:#f5f5f7;
 
       font-family:
         -apple-system,
@@ -2848,20 +2804,14 @@ const IS_ANDROID =
         "Yu Gothic",
         sans-serif;
 
-      font-size:
-        11px;
+      font-size:11px;
+      font-weight:900;
 
-      font-weight:
-        900;
+      letter-spacing:.12em;
 
-      letter-spacing:
-        .12em;
+      line-height:1;
 
-      line-height:
-        1;
-
-      padding:
-        9px 12px;
+      padding:9px 12px;
 
       box-shadow:
         0 2px 10px
@@ -2876,33 +2826,25 @@ const IS_ANDROID =
 
     #tc-version {
 
-      position:
-        absolute;
+      position:absolute;
 
       right:
         max(
           11px,
-          env(
-            safe-area-inset-right
-          )
+          env(safe-area-inset-right)
         );
 
       bottom:
         max(
           4px,
-          env(
-            safe-area-inset-bottom
-          )
+          env(safe-area-inset-bottom)
         );
 
-      color:
-        #41454f;
+      color:#41454f;
 
-      font-size:
-        10px;
+      font-size:10px;
 
-      font-weight:
-        700;
+      font-weight:700;
     }
 
 
@@ -2915,27 +2857,19 @@ const IS_ANDROID =
       padding:
         max(
           8px,
-          env(
-            safe-area-inset-top
-          )
+          env(safe-area-inset-top)
         )
         max(
           10px,
-          env(
-            safe-area-inset-right
-          )
+          env(safe-area-inset-right)
         )
         max(
           8px,
-          env(
-            safe-area-inset-bottom
-          )
+          env(safe-area-inset-bottom)
         )
         max(
           10px,
-          env(
-            safe-area-inset-left
-          )
+          env(safe-area-inset-left)
         );
     }
 
@@ -2945,13 +2879,10 @@ const IS_ANDROID =
 
       grid-template-rows:
         auto
-        minmax(
-          0,
-          1fr
-        );
+        auto
+        minmax(0,1fr);
 
-      gap:
-        8px;
+      gap:6px;
     }
 
 
@@ -2959,175 +2890,203 @@ const IS_ANDROID =
     #tc-header {
 
       grid-template-columns:
-        minmax(
-          0,
-          1fr
-        )
+        minmax(0,1fr)
         auto;
 
       grid-template-areas:
         "brand clock"
         "leave leave";
 
-      align-items:
-        center;
-
-      column-gap:
-        10px;
-
-      row-gap:
-        4px;
+      column-gap:8px;
+      row-gap:3px;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-brand {
 
-      grid-area:
-        brand;
+      grid-area:brand;
 
       font-size:
         clamp(
-          15px,
-          4.5vw,
-          20px
+          14px,
+          4vw,
+          19px
         );
-
-      letter-spacing:
-        .11em;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-clock {
 
-      grid-area:
-        clock;
+      grid-area:clock;
 
-      justify-self:
-        end;
+      gap:7px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-date {
 
       font-size:
         clamp(
-          40px,
-          12vw,
-          54px
+          9px,
+          2.7vw,
+          12px
         );
+    }
 
-      line-height:
-        .95;
+
+    #${ROOT_ID}.layout-portrait
+    #tc-clock-time {
+
+      font-size:
+        clamp(
+          30px,
+          8.8vw,
+          42px
+        );
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-leave {
 
-      grid-area:
-        leave;
-
-      display:
-        flex;
-
-      align-items:
-        center;
+      grid-area:leave;
 
       gap:
         clamp(
-          18px,
-          6vw,
-          32px
+          15px,
+          5vw,
+          26px
         );
 
       font-size:
         clamp(
-          14px,
-          4.1vw,
-          18px
+          13px,
+          3.8vw,
+          17px
         );
-
-      line-height:
-        1.1;
     }
 
 
     #${ROOT_ID}.layout-portrait
     .tc-leave-row {
 
-      display:
-        grid;
-
       grid-template-columns:
         max-content
         max-content;
+    }
 
-      column-gap:
-        .45em;
+
+    #${ROOT_ID}.layout-portrait
+    #tc-work-timeline {
+
+      min-height:38px;
+
+      margin:
+        0 5px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-timeline-track {
+
+      top:16px;
+      height:5px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    .tc-timeline-label {
+
+      top:-1px;
+
+      font-size:
+        clamp(
+          8px,
+          2.4vw,
+          11px
+        );
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-timeline-regular-marker {
+
+      top:-5px;
+      height:17px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-timeline-current {
+
+      top:15px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-timeline-current::before {
+
+      border-left-width:5px;
+      border-right-width:5px;
+
+      border-top-width:10px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-timeline-current-text {
+
+      font-size:
+        clamp(
+          8px,
+          2.3vw,
+          10px
+        );
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-main {
 
-      display:
-        grid;
-
-      grid-template-columns:
-        1fr;
+      grid-template-columns:1fr;
 
       grid-template-rows:
-        minmax(
-          0,
-          1.15fr
-        )
-        minmax(
-          0,
-          1.35fr
-        );
+        minmax(0,1.15fr)
+        minmax(0,1.35fr);
 
-      gap:
-        8px;
-
-      min-height:
-        0;
+      gap:6px;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-side {
 
-      display:
-        flex;
+      display:flex;
 
-      flex-direction:
-        column;
+      flex-direction:column;
 
-      gap:
-        7px;
+      gap:5px;
 
-      min-height:
-        0;
+      min-height:0;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-next-card {
 
-      order:
-        1;
-
-      grid-row:
-        auto;
+      order:1;
+      grid-row:auto;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-prev-card {
 
-      order:
-        2;
-
-      grid-row:
-        auto;
+      order:2;
+      grid-row:auto;
     }
 
 
@@ -3135,52 +3094,40 @@ const IS_ANDROID =
     #tc-side
     > .tc-card {
 
-      flex:
-        1 1 0;
+      flex:1 1 0;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-now {
 
-      justify-content:
-        flex-start;
+      justify-content:flex-start;
 
       padding:
-        11px
-        18px;
+        10px
+        17px;
 
       border-radius:
-        20px;
+        var(--card-radius);
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-now::before {
 
-      width:
-        6px;
+      width:5px;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-now-badge {
 
-      font-size:
-        11px;
+      font-size:10px;
 
       padding:
-        5px
-        12px;
+        5px 11px;
 
-      margin-bottom:
-        6px;
-
-      border-radius:
-        11px;
-
-      letter-spacing:
-        .11em;
+      margin-bottom:5px;
     }
 
 
@@ -3188,14 +3135,10 @@ const IS_ANDROID =
     .tc-now-metric {
 
       grid-template-columns:
-        122px
-        minmax(
-          0,
-          1fr
-        );
+        118px
+        minmax(0,1fr);
 
-      column-gap:
-        10px;
+      column-gap:9px;
     }
 
 
@@ -3204,13 +3147,12 @@ const IS_ANDROID =
 
       font-size:
         clamp(
-          10px,
-          3.1vw,
-          13px
+          9px,
+          2.9vw,
+          12px
         );
 
-      letter-spacing:
-        .14em;
+      letter-spacing:.14em;
     }
 
 
@@ -3219,13 +3161,10 @@ const IS_ANDROID =
 
       font-size:
         clamp(
-          20px,
-          5.8vw,
-          27px
+          18px,
+          5.2vw,
+          24px
         );
-
-      line-height:
-        1.02;
     }
 
 
@@ -3233,44 +3172,38 @@ const IS_ANDROID =
     #tc-task {
 
       margin:
-        5px
+        4px
         0
-        6px;
+        5px;
 
       font-size:
         clamp(
-          27px,
-          8.2vw,
-          37px
+          25px,
+          7.6vw,
+          35px
         );
 
-      line-height:
-        1.02;
+      line-height:1.02;
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
 
-      overflow:
-        hidden;
+      overflow:hidden;
 
-      text-overflow:
-        ellipsis;
+      text-overflow:ellipsis;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-progress {
 
-      gap:
-        2px;
+      gap:1px;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-status-row {
 
-      margin-top:
-        0;
+      margin-top:0;
     }
 
 
@@ -3278,14 +3211,11 @@ const IS_ANDROID =
     .tc-card {
 
       padding:
-        9px
-        14px;
+        8px
+        13px;
 
       border-radius:
-        16px;
-
-      justify-content:
-        flex-start;
+        var(--card-radius);
     }
 
 
@@ -3294,33 +3224,19 @@ const IS_ANDROID =
 
       font-size:
         clamp(
-          10px,
-          3.1vw,
-          13px
+          9px,
+          2.9vw,
+          12px
         );
 
-      letter-spacing:
-        .16em;
-
-      margin-bottom:
-        4px;
+      margin-bottom:3px;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-next-list {
 
-      gap:
-        3px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-next-list
-    .tc-next-row {
-
-      display:
-        grid;
+      gap:2px;
     }
 
 
@@ -3328,14 +3244,10 @@ const IS_ANDROID =
     .tc-next-row {
 
       grid-template-columns:
-        60px
-        minmax(
-          0,
-          1fr
-        );
+        58px
+        minmax(0,1fr);
 
-      column-gap:
-        9px;
+      column-gap:8px;
     }
 
 
@@ -3347,12 +3259,9 @@ const IS_ANDROID =
       font-size:
         clamp(
           15px,
-          4.4vw,
-          20px
+          4.3vw,
+          19px
         );
-
-      line-height:
-        1.1;
     }
 
 
@@ -3361,28 +3270,10 @@ const IS_ANDROID =
 
       font-size:
         clamp(
-          16px,
-          4.8vw,
-          21px
+          15px,
+          4.5vw,
+          20px
         );
-
-      line-height:
-        1.05;
-
-      margin-top:
-        0;
-
-      margin-bottom:
-        4px;
-
-      white-space:
-        nowrap;
-
-      overflow:
-        hidden;
-
-      text-overflow:
-        ellipsis;
     }
 
 
@@ -3390,17 +3281,10 @@ const IS_ANDROID =
     .tc-prev-metric {
 
       grid-template-columns:
-        76px
-        minmax(
-          0,
-          1fr
-        );
+        72px
+        minmax(0,1fr);
 
-      column-gap:
-        9px;
-
-      margin:
-        0;
+      column-gap:8px;
     }
 
 
@@ -3409,13 +3293,10 @@ const IS_ANDROID =
 
       font-size:
         clamp(
-          9px,
-          2.7vw,
-          11px
+          8px,
+          2.5vw,
+          10px
         );
-
-      letter-spacing:
-        .13em;
     }
 
 
@@ -3424,21 +3305,17 @@ const IS_ANDROID =
 
       font-size:
         clamp(
-          14px,
-          4.2vw,
-          18px
+          13px,
+          3.9vw,
+          17px
         );
-
-      line-height:
-        1.05;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-version {
 
-      font-size:
-        8px;
+      font-size:8px;
     }
 
 
@@ -3454,27 +3331,19 @@ const IS_ANDROID =
         padding:
           max(
             4px,
-            env(
-              safe-area-inset-top
-            )
+            env(safe-area-inset-top)
           )
           max(
             8px,
-            env(
-              safe-area-inset-right
-            )
+            env(safe-area-inset-right)
           )
           max(
             4px,
-            env(
-              safe-area-inset-bottom
-            )
+            env(safe-area-inset-bottom)
           )
           max(
             8px,
-            env(
-              safe-area-inset-left
-            )
+            env(safe-area-inset-left)
           );
       }
 
@@ -3483,14 +3352,11 @@ const IS_ANDROID =
       #tc-layout {
 
         grid-template-rows:
-          17dvh
-          minmax(
-            0,
-            1fr
-          );
+          15dvh
+          10dvh
+          minmax(0,1fr);
 
-        gap:
-          1.8dvh;
+        gap:1.2dvh;
       }
 
 
@@ -3498,15 +3364,11 @@ const IS_ANDROID =
       #tc-header {
 
         grid-template-columns:
-          minmax(
-            100px,
-            .7fr
-          )
-          minmax(
-            300px,
-            1.4fr
-          )
-          auto;
+          minmax(90px,.55fr)
+          minmax(260px,1.05fr)
+          minmax(270px,1fr);
+
+        gap:10px;
       }
 
 
@@ -3516,8 +3378,8 @@ const IS_ANDROID =
         font-size:
           clamp(
             10px,
-            3.2dvh,
-            17px
+            3dvh,
+            16px
           );
       }
 
@@ -3525,30 +3387,112 @@ const IS_ANDROID =
       #${ROOT_ID}.layout-landscape
       #tc-leave {
 
-        gap:
-          clamp(
-            14px,
-            2vw,
-            28px
-          );
-
         font-size:
           clamp(
             12px,
-            4dvh,
-            20px
+            3.8dvh,
+            19px
           );
       }
 
 
       #${ROOT_ID}.layout-landscape
-      #tc-clock {
+      #tc-date {
 
         font-size:
           clamp(
-            29px,
-            11.5dvh,
-            58px
+            9px,
+            2.8dvh,
+            14px
+          );
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-clock-time {
+
+        font-size:
+          clamp(
+            28px,
+            10.2dvh,
+            52px
+          );
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-work-timeline {
+
+        min-height:0;
+
+        margin:
+          0 2vw;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-track {
+
+        top:3.5dvh;
+
+        height:
+          clamp(
+            4px,
+            1.4dvh,
+            7px
+          );
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      .tc-timeline-label {
+
+        top:0;
+
+        font-size:
+          clamp(
+            8px,
+            2.6dvh,
+            13px
+          );
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-regular-marker {
+
+        top:-5px;
+        height:18px;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-current {
+
+        top:
+          calc(
+            3.5dvh - 1px
+          );
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-current::before {
+
+        border-left-width:5px;
+        border-right-width:5px;
+        border-top-width:10px;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-current-text {
+
+        font-size:
+          clamp(
+            8px,
+            2.4dvh,
+            12px
           );
       }
 
@@ -3557,17 +3501,10 @@ const IS_ANDROID =
       #tc-main {
 
         grid-template-columns:
-          minmax(
-            0,
-            1.65fr
-          )
-          minmax(
-            190px,
-            .9fr
-          );
+          minmax(0,1.45fr)
+          minmax(240px,1fr);
 
-        gap:
-          1.6vw;
+        gap:1.2vw;
       }
 
 
@@ -3575,15 +3512,8 @@ const IS_ANDROID =
       #tc-now {
 
         padding:
-          2.2dvh
-          3vw;
-
-        border-radius:
-          clamp(
-            13px,
-            5dvh,
-            25px
-          );
+          1.7dvh
+          2.6vw;
       }
 
 
@@ -3592,17 +3522,17 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            10px,
-            3.2dvh,
-            16px
+            9px,
+            2.8dvh,
+            14px
           );
 
         padding:
-          1.2dvh
-          1.4vw;
+          1dvh
+          1.2vw;
 
         margin-bottom:
-          1.7dvh;
+          1.2dvh;
       }
 
 
@@ -3611,17 +3541,11 @@ const IS_ANDROID =
 
         grid-template-columns:
           clamp(
-            100px,
-            12vw,
-            145px
+            95px,
+            10vw,
+            135px
           )
-          minmax(
-            0,
-            1fr
-          );
-
-        column-gap:
-          1.2vw;
+          minmax(0,1fr);
       }
 
 
@@ -3630,9 +3554,9 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            9px,
-            2.9dvh,
-            14px
+            8px,
+            2.6dvh,
+            13px
           );
       }
 
@@ -3642,9 +3566,9 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            16px,
-            5dvh,
-            25px
+            15px,
+            4.6dvh,
+            23px
           );
       }
 
@@ -3654,32 +3578,27 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            22px,
-            7.4dvh,
-            39px
+            21px,
+            6.8dvh,
+            35px
           );
 
         margin:
-          1.2dvh 0;
-
-        line-height:
-          1;
+          1dvh 0;
       }
 
 
       #${ROOT_ID}.layout-landscape
       #tc-progress {
 
-        gap:
-          .4dvh;
+        gap:.2dvh;
       }
 
 
       #${ROOT_ID}.layout-landscape
       #tc-side {
 
-        gap:
-          1.3dvh;
+        gap:1dvh;
       }
 
 
@@ -3687,8 +3606,8 @@ const IS_ANDROID =
       #tc-next-card {
 
         padding:
-          1.3dvh
-          1.4vw;
+          1.15dvh
+          1.3vw;
       }
 
 
@@ -3699,12 +3618,11 @@ const IS_ANDROID =
         font-size:
           clamp(
             9px,
-            2.8dvh,
-            14px
+            2.6dvh,
+            13px
           );
 
-        margin-bottom:
-          .4dvh;
+        margin-bottom:.3dvh;
       }
 
 
@@ -3715,9 +3633,9 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            12px,
-            3.6dvh,
-            19px
+            15px,
+            4.1dvh,
+            22px
           );
       }
 
@@ -3725,8 +3643,7 @@ const IS_ANDROID =
       #${ROOT_ID}.layout-landscape
       #tc-next-list {
 
-        gap:
-          .35dvh;
+        gap:.3dvh;
       }
 
 
@@ -3734,8 +3651,8 @@ const IS_ANDROID =
       #tc-prev-card {
 
         padding:
-          .8dvh
-          1.4vw;
+          .6dvh
+          1.3vw;
       }
 
 
@@ -3745,13 +3662,12 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            8px,
-            2.4dvh,
-            12px
+            7px,
+            2.1dvh,
+            11px
           );
 
-        margin-bottom:
-          .2dvh;
+        margin-bottom:.1dvh;
       }
 
 
@@ -3760,13 +3676,13 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            12px,
-            3.3dvh,
-            18px
+            11px,
+            3dvh,
+            17px
           );
 
         margin:
-          0 0 .2dvh;
+          0 0 .1dvh;
       }
 
 
@@ -3775,14 +3691,11 @@ const IS_ANDROID =
 
         grid-template-columns:
           clamp(
-            55px,
-            6vw,
-            78px
+            52px,
+            5vw,
+            72px
           )
           1fr;
-
-        margin:
-          0;
       }
 
 
@@ -3792,8 +3705,8 @@ const IS_ANDROID =
         font-size:
           clamp(
             7px,
-            2.2dvh,
-            11px
+            2dvh,
+            10px
           );
       }
 
@@ -3803,9 +3716,9 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            11px,
-            3dvh,
-            17px
+            10px,
+            2.8dvh,
+            16px
           );
       }
     }
@@ -3821,8 +3734,7 @@ const IS_ANDROID =
 
       #${ROOT_ID}.browser-firefox.layout-landscape {
 
-        padding:
-          10px;
+        padding:10px;
       }
 
 
@@ -3830,14 +3742,11 @@ const IS_ANDROID =
       #tc-layout {
 
         grid-template-rows:
-          65px
-          minmax(
-            0,
-            1fr
-          );
+          61px
+          46px
+          minmax(0,1fr);
 
-        gap:
-          9px;
+        gap:7px;
       }
 
 
@@ -3845,49 +3754,78 @@ const IS_ANDROID =
       #tc-header {
 
         grid-template-columns:
-          minmax(
-            120px,
-            .6fr
-          )
-          minmax(
-            280px,
-            1.3fr
-          )
-          auto;
+          minmax(100px,.5fr)
+          minmax(250px,1fr)
+          minmax(300px,1fr);
 
-        gap:
-          12px;
+        gap:10px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-brand {
 
-        font-size:
-          15px;
+        font-size:14px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-leave {
 
-        gap:
-          clamp(
-            14px,
-            2vw,
-            28px
-          );
-
-        font-size:
-          14px;
+        font-size:14px;
+        gap:18px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-clock {
+      #tc-date {
 
-        font-size:
-          44px;
+        font-size:13px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-clock-time {
+
+        font-size:42px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-work-timeline {
+
+        margin:
+          0 14px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-timeline-track {
+
+        top:20px;
+        height:6px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      .tc-timeline-label {
+
+        top:1px;
+        font-size:11px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-timeline-current {
+
+        top:19px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-timeline-current-text {
+
+        font-size:10px;
       }
 
 
@@ -3895,17 +3833,10 @@ const IS_ANDROID =
       #tc-main {
 
         grid-template-columns:
-          minmax(
-            0,
-            1.68fr
-          )
-          minmax(
-            260px,
-            .95fr
-          );
+          minmax(0,1.45fr)
+          minmax(300px,1fr);
 
-        gap:
-          9px;
+        gap:8px;
       }
 
 
@@ -3913,19 +3844,16 @@ const IS_ANDROID =
       #tc-now {
 
         padding:
-          20px
-          26px;
+          18px
+          24px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-now-badge {
 
-        font-size:
-          14px;
-
-        margin-bottom:
-          13px;
+        font-size:13px;
+        margin-bottom:10px;
       }
 
 
@@ -3933,54 +3861,44 @@ const IS_ANDROID =
       .tc-now-metric {
 
         grid-template-columns:
-          125px
+          116px
           1fr;
-
-        column-gap:
-          12px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       .tc-now-label {
 
-        font-size:
-          11px;
+        font-size:10px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       .tc-now-value {
 
-        font-size:
-          21px;
+        font-size:19px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-task {
 
-        font-size:
-          32px;
-
-        margin:
-          7px 0;
+        font-size:29px;
+        margin:5px 0;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-progress {
 
-        gap:
-          3px;
+        gap:2px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-side {
 
-        gap:
-          7px;
+        gap:6px;
       }
 
 
@@ -3988,8 +3906,8 @@ const IS_ANDROID =
       #tc-next-card {
 
         padding:
-          11px
-          17px;
+          10px
+          16px;
       }
 
 
@@ -3997,11 +3915,8 @@ const IS_ANDROID =
       #tc-next-card
       .tc-card-title {
 
-        font-size:
-          10px;
-
-        margin-bottom:
-          4px;
+        font-size:10px;
+        margin-bottom:3px;
       }
 
 
@@ -4010,16 +3925,14 @@ const IS_ANDROID =
       #${ROOT_ID}.browser-firefox.layout-landscape
       .tc-next-task {
 
-        font-size:
-          15px;
+        font-size:19px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-next-list {
 
-        gap:
-          3px;
+        gap:3px;
       }
 
 
@@ -4027,8 +3940,8 @@ const IS_ANDROID =
       #tc-prev-card {
 
         padding:
-          7px
-          17px;
+          6px
+          16px;
       }
 
 
@@ -4036,22 +3949,16 @@ const IS_ANDROID =
       #tc-prev-card
       .tc-card-title {
 
-        font-size:
-          9px;
-
-        margin-bottom:
-          2px;
+        font-size:8px;
+        margin-bottom:1px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-prev-task {
 
-        font-size:
-          15px;
-
-        margin-bottom:
-          2px;
+        font-size:14px;
+        margin-bottom:1px;
       }
 
 
@@ -4059,27 +3966,24 @@ const IS_ANDROID =
       .tc-prev-metric {
 
         grid-template-columns:
-          62px
+          58px
           1fr;
 
-        column-gap:
-          7px;
+        column-gap:6px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       .tc-prev-label {
 
-        font-size:
-          8px;
+        font-size:7px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       .tc-prev-value {
 
-        font-size:
-          13px;
+        font-size:12px;
       }
     }
 
@@ -4093,120 +3997,21 @@ const IS_ANDROID =
 
       #${ROOT_ID}.platform-android.layout-portrait {
 
-        padding:
-          7px;
+        padding:7px;
       }
 
 
       #${ROOT_ID}.platform-android.layout-portrait
-      #tc-layout {
+      #tc-date {
 
-        gap:
-          6px;
+        font-size:9px;
       }
 
 
       #${ROOT_ID}.platform-android.layout-portrait
-      #tc-brand {
+      #tc-clock-time {
 
-        font-size:
-          14px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-clock {
-
-        font-size:
-          38px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-leave {
-
-        gap:
-          16px;
-
-        font-size:
-          13px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-main {
-
-        grid-template-rows:
-          minmax(
-            0,
-            1.1fr
-          )
-          minmax(
-            0,
-            1.4fr
-          );
-
-        gap:
-          6px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-side {
-
-        gap:
-          5px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-now {
-
-        padding:
-          10px
-          14px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-now-badge {
-
-        font-size:
-          10px;
-
-        margin-bottom:
-          5px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-now-metric {
-
-        grid-template-columns:
-          106px
-          minmax(
-            0,
-            1fr
-          );
-
-        column-gap:
-          7px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-now-label {
-
-        font-size:
-          9px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-now-value {
-
-        font-size:
-          18px;
+        font-size:34px;
       }
 
 
@@ -4215,102 +4020,10 @@ const IS_ANDROID =
 
         font-size:
           clamp(
-            25px,
-            7.4vw,
-            35px
+            24px,
+            7vw,
+            33px
           );
-
-        margin:
-          4px
-          0
-          5px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-card {
-
-        padding:
-          7px
-          11px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-card-title {
-
-        font-size:
-          9px;
-
-        margin-bottom:
-          3px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-next-row {
-
-        grid-template-columns:
-          54px
-          minmax(
-            0,
-            1fr
-          );
-
-        column-gap:
-          7px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-next-time,
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-next-task {
-
-        font-size:
-          14px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-prev-task {
-
-        font-size:
-          15px;
-
-        margin-bottom:
-          3px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-prev-metric {
-
-        grid-template-columns:
-          65px
-          minmax(
-            0,
-            1fr
-          );
-
-        column-gap:
-          7px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-prev-label {
-
-        font-size:
-          8px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      .tc-prev-value {
-
-        font-size:
-          14px;
       }
     }
   `;
@@ -4408,10 +4121,63 @@ const IS_ANDROID =
 
 
         <div id="tc-clock">
-          --:--
+
+          <span id="tc-date">
+            ----/--/-- (---)
+          </span>
+
+          <span id="tc-clock-time">
+            --:--
+          </span>
+
         </div>
 
       </header>
+
+
+      <section id="tc-work-timeline">
+
+        <div
+          id="tc-timeline-start-label"
+          class="tc-timeline-label">
+          08:30
+        </div>
+
+
+        <div
+          id="tc-timeline-regular-label"
+          class="tc-timeline-label">
+          17:25
+        </div>
+
+
+        <div
+          id="tc-timeline-end-label"
+          class="tc-timeline-label">
+          17:25
+        </div>
+
+
+        <div id="tc-timeline-track">
+
+          <div id="tc-timeline-normal"></div>
+
+          <div id="tc-timeline-overtime"></div>
+
+          <div id="tc-timeline-regular-marker"></div>
+
+        </div>
+
+
+        <div id="tc-timeline-current">
+
+          <div id="tc-timeline-current-text">
+            現在 --:--
+          </div>
+
+        </div>
+
+      </section>
 
 
       <main id="tc-main">
@@ -4663,7 +4429,7 @@ const IS_ANDROID =
 
 
   /* =========================================================
-     VIEWPORT / WINDOW RESIZE
+     VIEWPORT
   ========================================================= */
 
   function getCurrentViewportSize() {
@@ -4753,9 +4519,7 @@ const IS_ANDROID =
           viewportRAF =
             null;
 
-
           applyViewportLayout();
-
 
           render();
         }
@@ -4770,8 +4534,7 @@ const IS_ANDROID =
     'resize',
     scheduleViewportUpdate,
     {
-      passive:
-        true
+      passive:true
     }
   );
 
@@ -4780,8 +4543,7 @@ const IS_ANDROID =
     'orientationchange',
     scheduleViewportUpdate,
     {
-      passive:
-        true
+      passive:true
     }
   );
 
@@ -4795,8 +4557,7 @@ const IS_ANDROID =
         'resize',
         scheduleViewportUpdate,
         {
-          passive:
-            true
+          passive:true
         }
       );
 
@@ -4806,8 +4567,7 @@ const IS_ANDROID =
         'scroll',
         scheduleViewportUpdate,
         {
-          passive:
-            true
+          passive:true
         }
       );
   }
@@ -4854,7 +4614,6 @@ const IS_ANDROID =
         cancelAnimationFrame(
           viewportRAF
         );
-
 
         viewportRAF =
           null;
@@ -4908,7 +4667,6 @@ const IS_ANDROID =
           root.style.display =
             'none';
 
-
           returnButton.style.display =
             'block';
         }
@@ -4922,15 +4680,12 @@ const IS_ANDROID =
 
           applyViewportLayout();
 
-
           sync();
 
           render();
 
-
           root.style.display =
             'block';
-
 
           returnButton.style.display =
             'none';
@@ -4952,7 +4707,7 @@ const IS_ANDROID =
 
 
   /* =========================================================
-     RENDER
+     RENDER HELPERS
   ========================================================= */
 
   const $ =
@@ -4963,13 +4718,231 @@ const IS_ANDROID =
         );
 
 
+  const WEEKDAYS = [
+    'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat'
+  ];
+
+
+  function renderTimeline(
+    now
+  ) {
+
+    const start =
+      hmToMinutes(
+        WORK_START
+      );
+
+
+    const regular =
+      hmToMinutes(
+        REGULAR_END
+      );
+
+
+    let leave =
+      hmToMinutes(
+        state.leaveTime
+      );
+
+
+    if (
+      leave === null
+    ) {
+
+      leave =
+        regular;
+    }
+
+
+    /*
+      退勤予定が17:25より前でも
+      バーは17:25までは必ず表示する。
+    */
+    const end =
+      Math.max(
+        regular,
+        leave
+      );
+
+
+    const span =
+      Math.max(
+        1,
+        end - start
+      );
+
+
+    const regularPercent =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          (
+            (regular - start) /
+            span
+          ) *
+          100
+        )
+      );
+
+
+    const overtimePercent =
+      Math.max(
+        0,
+        100 -
+        regularPercent
+      );
+
+
+    const currentMinutes =
+      (
+        now.getHours() *
+        60
+      ) +
+      now.getMinutes() +
+      (
+        now.getSeconds() /
+        60
+      );
+
+
+    /*
+      表示範囲外では端に固定。
+    */
+    const visibleCurrent =
+      Math.max(
+        start,
+        Math.min(
+          end,
+          currentMinutes
+        )
+      );
+
+
+    const currentPercent =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          (
+            (visibleCurrent - start) /
+            span
+          ) *
+          100
+        )
+      );
+
+
+    $('tc-timeline-normal')
+      .style.width =
+        `${regularPercent}%`;
+
+
+    $('tc-timeline-overtime')
+      .style.left =
+        `${regularPercent}%`;
+
+
+    $('tc-timeline-overtime')
+      .style.width =
+        `${overtimePercent}%`;
+
+
+    $('tc-timeline-regular-marker')
+      .style.left =
+        `${regularPercent}%`;
+
+
+    $('tc-timeline-regular-label')
+      .style.left =
+        `${regularPercent}%`;
+
+
+    /*
+      右端ラベルは
+      退勤予定が17:25を超えたときだけ
+      実際の退勤予定を表示。
+    */
+    $('tc-timeline-end-label')
+      .textContent =
+        end > regular
+          ? state.leaveTime
+          : REGULAR_END;
+
+
+    /*
+      17:25と右端が同じ場合、
+      ラベル重複を避ける。
+    */
+    $('tc-timeline-end-label')
+      .style.display =
+        end > regular
+          ? 'block'
+          : 'none';
+
+
+    $('tc-timeline-current')
+      .style.left =
+        `${currentPercent}%`;
+
+
+    $('tc-timeline-current')
+      .classList
+      .toggle(
+        'is-overtime',
+        currentMinutes >
+          regular
+      );
+
+
+    $('tc-timeline-current-text')
+      .textContent =
+        '現在 ' +
+        pad(
+          now.getHours()
+        ) +
+        ':' +
+        pad(
+          now.getMinutes()
+        );
+  }
+
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   function render() {
 
     const now =
       new Date();
 
 
-    $('tc-clock')
+    $('tc-date')
+      .textContent =
+        now.getFullYear() +
+        '/' +
+        pad(
+          now.getMonth() + 1
+        ) +
+        '/' +
+        pad(
+          now.getDate()
+        ) +
+        ' (' +
+        WEEKDAYS[
+          now.getDay()
+        ] +
+        ')';
+
+
+    $('tc-clock-time')
       .textContent =
         pad(
           now.getHours()
@@ -4979,6 +4952,13 @@ const IS_ANDROID =
           now.getMinutes()
         );
 
+
+    renderTimeline(
+      now
+    );
+
+
+    /* CURRENT */
 
     $('tc-task')
       .textContent =
