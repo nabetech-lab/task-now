@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.9
+     v4.5.10
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.9';
+  const VERSION = '4.5.10';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -5086,19 +5086,19 @@
 
       #${ROOT_ID}.layout-landscape
       #tc-prev-data
-      .tc-prev-metric:nth-of-type(1) {
+      .tc-prev-metric:nth-of-type(2) {
         grid-area:start;
       }
 
       #${ROOT_ID}.layout-landscape
       #tc-prev-data
-      .tc-prev-metric:nth-of-type(2) {
+      .tc-prev-metric:nth-of-type(3) {
         grid-area:finish;
       }
 
       #${ROOT_ID}.layout-landscape
       #tc-prev-data
-      .tc-prev-metric:nth-of-type(3) {
+      .tc-prev-metric:nth-of-type(4) {
         grid-area:elapsed;
       }
 
@@ -5564,19 +5564,19 @@
 
       #${ROOT_ID}.layout-portrait
       #tc-prev-data
-      .tc-prev-metric:nth-of-type(1) {
+      .tc-prev-metric:nth-of-type(2) {
         grid-area:start;
       }
 
       #${ROOT_ID}.layout-portrait
       #tc-prev-data
-      .tc-prev-metric:nth-of-type(2) {
+      .tc-prev-metric:nth-of-type(3) {
         grid-area:finish;
       }
 
       #${ROOT_ID}.layout-portrait
       #tc-prev-data
-      .tc-prev-metric:nth-of-type(3) {
+      .tc-prev-metric:nth-of-type(4) {
         grid-area:elapsed;
       }
 
