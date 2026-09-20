@@ -4,7 +4,7 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.4.0
+     v4.4.1
 
      iOS Safari
      Android Firefox / Violentmonkey
@@ -13,7 +13,7 @@
      GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.4.0';
+  const VERSION = '4.4.1';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -1846,8 +1846,8 @@
 
       grid-template-columns:
         minmax(120px,.7fr)
-        minmax(290px,1.2fr)
-        minmax(300px,1.05fr);
+        minmax(320px,1.25fr)
+        minmax(360px,1.15fr);
 
       align-items:center;
 
@@ -1881,20 +1881,20 @@
 
       gap:
         clamp(
-          18px,
-          2.7vw,
-          44px
+          24px,
+          3vw,
+          48px
         );
 
       font-size:
         clamp(
-          16px,
-          2.3vw,
-          28px
+          19px,
+          2.7vw,
+          34px
         );
 
       font-weight:800;
-      line-height:1.25;
+      line-height:1.15;
 
       font-variant-numeric:
         tabular-nums;
@@ -1925,9 +1925,9 @@
 
       gap:
         clamp(
-          10px,
-          1.3vw,
-          22px
+          14px,
+          1.6vw,
+          26px
         );
 
       white-space:nowrap;
@@ -1936,19 +1936,22 @@
 
     #tc-date {
 
-      color:#9da3af;
+      color:#b2b6c0;
 
       font-size:
         clamp(
-          12px,
-          1.6vw,
-          24px
+          19px,
+          2.7vw,
+          34px
         );
 
-      font-weight:500;
+      font-weight:700;
+      line-height:1;
 
       font-variant-numeric:
         tabular-nums;
+
+      white-space:nowrap;
     }
 
 
@@ -2127,6 +2130,11 @@
     }
 
 
+    /*
+      v4.4.1
+      現在位置マーカーはバーの下に置く。
+      文字は表示せず、白い上向き三角形だけ表示。
+    */
     #tc-timeline-current {
 
       position:absolute;
@@ -2137,60 +2145,62 @@
             18px,
             3.6vh,
             35px
-          ) - 1px
+          ) +
+          clamp(
+            5px,
+            .8vh,
+            9px
+          ) +
+          6px
         );
 
       transform:
         translateX(-50%);
 
       z-index:2;
+
+      width:auto;
+      height:auto;
+
+      line-height:1;
     }
 
 
     #tc-timeline-current::before {
 
-      content:"";
+      content:"▲";
 
       display:block;
 
-      width:0;
-      height:0;
+      color:#f2f3f5;
 
-      margin:auto;
+      font-size:
+        clamp(
+          12px,
+          1.5vw,
+          18px
+        );
 
-      border-left:7px solid transparent;
-      border-right:7px solid transparent;
-      border-bottom:0;
-      border-top:14px solid #f2f3f5;
+      line-height:1;
+
+      width:auto;
+      height:auto;
+
+      border:none;
+
+      margin:0;
     }
 
 
     #tc-timeline-current.is-overtime::before {
 
-      border-top-color:
-        var(--timeline-overtime);
+      color:#f2f3f5;
     }
 
 
     #tc-timeline-current-text {
 
-      margin-top:3px;
-
-      color:#e5e7eb;
-
-      font-size:
-        clamp(
-          10px,
-          1.4vw,
-          18px
-        );
-
-      font-weight:600;
-
-      white-space:nowrap;
-
-      transform:
-        translateX(-37%);
+      display:none;
     }
 
 
@@ -2204,13 +2214,6 @@
       min-height:0;
 
       display:grid;
-
-      /*
-        v4.4.0
-
-        右側を少し広げて
-        NEXTの可読性を上げる。
-      */
 
       grid-template-columns:
         minmax(0,1.5fr)
@@ -2457,9 +2460,13 @@
 
       display:grid;
 
+      /*
+        NEXTは少し縮め、
+        PREVIOUSに十分な縦スペースを与える。
+      */
       grid-template-rows:
-        minmax(0,1.55fr)
-        minmax(0,.45fr);
+        minmax(0,1.28fr)
+        minmax(0,.72fr);
 
       gap:
         clamp(
@@ -2674,11 +2681,6 @@
     .tc-next-task {
 
       color:#8a909d;
-
-      /*
-        v4.4.0
-        NEXTを明確に大型化。
-      */
 
       font-size:
         clamp(
@@ -2930,10 +2932,12 @@
 
       font-size:
         clamp(
-          9px,
-          2.7vw,
-          12px
+          12px,
+          3.3vw,
+          15px
         );
+
+      font-weight:700;
     }
 
 
@@ -2956,16 +2960,16 @@
 
       gap:
         clamp(
-          15px,
-          5vw,
-          26px
+          18px,
+          5.5vw,
+          30px
         );
 
       font-size:
         clamp(
-          13px,
-          3.8vw,
-          17px
+          15px,
+          4.2vw,
+          19px
         );
     }
 
@@ -3022,29 +3026,41 @@
     #${ROOT_ID}.layout-portrait
     #tc-timeline-current {
 
-      top:15px;
+      top:27px;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-timeline-current::before {
 
-      border-left-width:5px;
-      border-right-width:5px;
+      content:"▲";
 
-      border-top-width:10px;
+      display:block;
+
+      color:#f2f3f5;
+
+      font-size:
+        clamp(
+          10px,
+          2.6vw,
+          13px
+        );
+
+      line-height:1;
+
+      border:none;
+
+      width:auto;
+      height:auto;
+
+      margin:0;
     }
 
 
     #${ROOT_ID}.layout-portrait
     #tc-timeline-current-text {
 
-      font-size:
-        clamp(
-          8px,
-          2.3vw,
-          10px
-        );
+      display:none;
     }
 
 
@@ -3364,9 +3380,9 @@
       #tc-header {
 
         grid-template-columns:
-          minmax(90px,.55fr)
-          minmax(260px,1.05fr)
-          minmax(270px,1fr);
+          minmax(90px,.5fr)
+          minmax(300px,1.08fr)
+          minmax(320px,1.08fr);
 
         gap:10px;
       }
@@ -3389,9 +3405,16 @@
 
         font-size:
           clamp(
-            12px,
-            3.8dvh,
-            19px
+            15px,
+            4.4dvh,
+            23px
+          );
+
+        gap:
+          clamp(
+            18px,
+            2.5vw,
+            34px
           );
       }
 
@@ -3401,10 +3424,12 @@
 
         font-size:
           clamp(
-            9px,
-            2.8dvh,
-            14px
+            14px,
+            4.1dvh,
+            22px
           );
+
+        font-weight:700;
       }
 
 
@@ -3471,7 +3496,13 @@
 
         top:
           calc(
-            3.5dvh - 1px
+            3.5dvh +
+            clamp(
+              4px,
+              1.4dvh,
+              7px
+            ) +
+            4px
           );
       }
 
@@ -3479,21 +3510,34 @@
       #${ROOT_ID}.layout-landscape
       #tc-timeline-current::before {
 
-        border-left-width:5px;
-        border-right-width:5px;
-        border-top-width:10px;
+        content:"▲";
+
+        display:block;
+
+        color:#f2f3f5;
+
+        font-size:
+          clamp(
+            10px,
+            2.8dvh,
+            14px
+          );
+
+        line-height:1;
+
+        border:none;
+
+        width:auto;
+        height:auto;
+
+        margin:0;
       }
 
 
       #${ROOT_ID}.layout-landscape
       #tc-timeline-current-text {
 
-        font-size:
-          clamp(
-            8px,
-            2.4dvh,
-            12px
-          );
+        display:none;
       }
 
 
@@ -3598,6 +3642,10 @@
       #${ROOT_ID}.layout-landscape
       #tc-side {
 
+        grid-template-rows:
+          minmax(0,1.22fr)
+          minmax(0,.78fr);
+
         gap:1dvh;
       }
 
@@ -3606,7 +3654,7 @@
       #tc-next-card {
 
         padding:
-          1.15dvh
+          1.05dvh
           1.3vw;
       }
 
@@ -3622,7 +3670,7 @@
             13px
           );
 
-        margin-bottom:.3dvh;
+        margin-bottom:.25dvh;
       }
 
 
@@ -3643,7 +3691,7 @@
       #${ROOT_ID}.layout-landscape
       #tc-next-list {
 
-        gap:.3dvh;
+        gap:.25dvh;
       }
 
 
@@ -3651,7 +3699,7 @@
       #tc-prev-card {
 
         padding:
-          .6dvh
+          .8dvh
           1.3vw;
       }
 
@@ -3662,12 +3710,12 @@
 
         font-size:
           clamp(
-            7px,
-            2.1dvh,
-            11px
+            8px,
+            2.2dvh,
+            12px
           );
 
-        margin-bottom:.1dvh;
+        margin-bottom:.15dvh;
       }
 
 
@@ -3676,13 +3724,13 @@
 
         font-size:
           clamp(
-            11px,
-            3dvh,
-            17px
+            12px,
+            3.2dvh,
+            18px
           );
 
         margin:
-          0 0 .1dvh;
+          0 0 .15dvh;
       }
 
 
@@ -3691,9 +3739,9 @@
 
         grid-template-columns:
           clamp(
-            52px,
-            5vw,
-            72px
+            54px,
+            5.2vw,
+            74px
           )
           1fr;
       }
@@ -3705,8 +3753,8 @@
         font-size:
           clamp(
             7px,
-            2dvh,
-            10px
+            2.1dvh,
+            11px
           );
       }
 
@@ -3716,9 +3764,9 @@
 
         font-size:
           clamp(
-            10px,
-            2.8dvh,
-            16px
+            11px,
+            3dvh,
+            17px
           );
       }
     }
@@ -3754,9 +3802,9 @@
       #tc-header {
 
         grid-template-columns:
-          minmax(100px,.5fr)
-          minmax(250px,1fr)
-          minmax(300px,1fr);
+          minmax(100px,.45fr)
+          minmax(300px,1.05fr)
+          minmax(350px,1.1fr);
 
         gap:10px;
       }
@@ -3772,15 +3820,16 @@
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-leave {
 
-        font-size:14px;
-        gap:18px;
+        font-size:18px;
+        gap:24px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-date {
 
-        font-size:13px;
+        font-size:18px;
+        font-weight:700;
       }
 
 
@@ -3818,14 +3867,36 @@
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-timeline-current {
 
-        top:19px;
+        top:30px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-timeline-current::before {
+
+        content:"▲";
+
+        display:block;
+
+        color:#f2f3f5;
+
+        font-size:12px;
+
+        line-height:1;
+
+        border:none;
+
+        width:auto;
+        height:auto;
+
+        margin:0;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-timeline-current-text {
 
-        font-size:10px;
+        display:none;
       }
 
 
@@ -3898,6 +3969,10 @@
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-side {
 
+        grid-template-rows:
+          minmax(0,1.24fr)
+          minmax(0,.76fr);
+
         gap:6px;
       }
 
@@ -3906,7 +3981,7 @@
       #tc-next-card {
 
         padding:
-          10px
+          9px
           16px;
       }
 
@@ -3932,7 +4007,7 @@
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-next-list {
 
-        gap:3px;
+        gap:2px;
       }
 
 
@@ -3940,7 +4015,7 @@
       #tc-prev-card {
 
         padding:
-          6px
+          8px
           16px;
       }
 
@@ -3949,16 +4024,16 @@
       #tc-prev-card
       .tc-card-title {
 
-        font-size:8px;
-        margin-bottom:1px;
+        font-size:9px;
+        margin-bottom:2px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       #tc-prev-task {
 
-        font-size:14px;
-        margin-bottom:1px;
+        font-size:15px;
+        margin-bottom:2px;
       }
 
 
@@ -3966,7 +4041,7 @@
       .tc-prev-metric {
 
         grid-template-columns:
-          58px
+          60px
           1fr;
 
         column-gap:6px;
@@ -3976,14 +4051,14 @@
       #${ROOT_ID}.browser-firefox.layout-landscape
       .tc-prev-label {
 
-        font-size:7px;
+        font-size:8px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
       .tc-prev-value {
 
-        font-size:12px;
+        font-size:13px;
       }
     }
 
@@ -4004,7 +4079,7 @@
       #${ROOT_ID}.platform-android.layout-portrait
       #tc-date {
 
-        font-size:9px;
+        font-size:11px;
       }
 
 
@@ -4012,6 +4087,13 @@
       #tc-clock-time {
 
         font-size:34px;
+      }
+
+
+      #${ROOT_ID}.platform-android.layout-portrait
+      #tc-leave {
+
+        font-size:14px;
       }
 
 
@@ -4170,11 +4252,7 @@
 
 
         <div id="tc-timeline-current">
-
-          <div id="tc-timeline-current-text">
-            現在 --:--
-          </div>
-
+          <div id="tc-timeline-current-text"></div>
         </div>
 
       </section>
@@ -4864,11 +4942,6 @@
         `${regularPercent}%`;
 
 
-    /*
-      右端ラベルは
-      退勤予定が17:25を超えたときだけ
-      実際の退勤予定を表示。
-    */
     $('tc-timeline-end-label')
       .textContent =
         end > regular
@@ -4876,10 +4949,6 @@
           : REGULAR_END;
 
 
-    /*
-      17:25と右端が同じ場合、
-      ラベル重複を避ける。
-    */
     $('tc-timeline-end-label')
       .style.display =
         end > regular
@@ -4899,18 +4968,6 @@
         currentMinutes >
           regular
       );
-
-
-    $('tc-timeline-current-text')
-      .textContent =
-        '現在 ' +
-        pad(
-          now.getHours()
-        ) +
-        ':' +
-        pad(
-          now.getMinutes()
-        );
   }
 
 
