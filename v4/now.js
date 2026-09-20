@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.3
+     v4.5.4
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.3';
+  const VERSION = '4.5.4';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -352,6 +352,26 @@
     );
   }
 
+  function parseSectionRange(value) {
+    const v = clean(value);
+
+    const m =
+      v.match(
+        /^(\d{1,2}:\d{2})\s*[-–—−ー~〜～－]\s*(\d{1,2}:\d{2})/
+      );
+
+    if (!m) {
+      return null;
+    }
+
+    return (
+      m[1] +
+      '-' +
+      m[2]
+    );
+  }
+
+
   function parseSectionName(value) {
     const v = clean(value);
 
@@ -402,7 +422,10 @@
     currentProject: null,
     currentMode: null,
     currentSection: null,
+    currentSectionRange: null,
     currentSectionCount: null,
+    currentSectionDuration: null,
+    currentSectionBalance: null,
 
     previous: null,
     next: [],
@@ -502,24 +525,19 @@
      SECTION
   ========================================================= */
 
-  function findExactSectionCount(
+  function getSectionAncestorLeaves(
     sectionEl
   ) {
     if (!sectionEl) {
-      return null;
+      return [];
     }
 
     let node =
       sectionEl;
 
-    /*
-      Only accept an exact "N / N" leaf.
-      This avoids accidentally treating duration text
-      such as "10s0s" as the section count.
-    */
     for (
       let depth = 0;
-      depth < 6 && node;
+      depth < 7 && node;
       depth++
     ) {
       const leaves =
@@ -534,33 +552,121 @@
           )
           .filter(Boolean);
 
-      const exact =
-        leaves.find(value =>
+      const hasCount =
+        leaves.some(value =>
           /^\d{1,3}\s*\/\s*\d{1,3}$/
             .test(value)
         );
 
-      if (exact) {
-        const m =
-          exact.match(
-            /^(\d{1,3})\s*\/\s*(\d{1,3})$/
-          );
+      const hasDuration =
+        leaves.some(value =>
+          /^(?:\d+\s*h(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?|\d+\s*m(?:\s*\d+\s*s)?|\d+\s*s)$/
+            .test(value)
+        );
 
-        if (m) {
-          return (
-            m[1] +
-            ' / ' +
-            m[2]
-          );
-        }
+      const hasBalance =
+        leaves.some(value =>
+          /^[+\-−]\s*(?:\d+\s*h)?(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?$/
+            .test(value)
+        );
+
+      if (
+        hasCount ||
+        hasDuration ||
+        hasBalance
+      ) {
+        return leaves;
       }
 
       node =
         node.parentElement;
     }
 
-    return null;
+    return [];
   }
+
+
+  function normalizeCompactDuration(
+    value
+  ) {
+    if (!value) {
+      return null;
+    }
+
+    return clean(value)
+      .replace(/\s+/g, '')
+      .replace(/−/g, '-');
+  }
+
+
+  function getSectionStats(
+    sectionEl
+  ) {
+    const leaves =
+      getSectionAncestorLeaves(
+        sectionEl
+      );
+
+    let count = null;
+    let duration = null;
+    let balance = null;
+
+    for (
+      const value
+      of leaves
+    ) {
+      if (
+        !count &&
+        /^\d{1,3}\s*\/\s*\d{1,3}$/
+          .test(value)
+      ) {
+        const m =
+          value.match(
+            /^(\d{1,3})\s*\/\s*(\d{1,3})$/
+          );
+
+        if (m) {
+          count =
+            m[1] +
+            ' / ' +
+            m[2];
+        }
+
+        continue;
+      }
+
+      if (
+        !balance &&
+        /^[+\-−]\s*(?:\d+\s*h)?(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?$/
+          .test(value)
+      ) {
+        balance =
+          normalizeCompactDuration(
+            value
+          );
+
+        continue;
+      }
+
+      if (
+        !duration &&
+        /^(?:\d+\s*h(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?|\d+\s*m(?:\s*\d+\s*s)?|\d+\s*s)$/
+          .test(value)
+      ) {
+        duration =
+          normalizeCompactDuration(
+            value
+          );
+      }
+    }
+
+    return {
+      count,
+      duration,
+      balance
+    };
+  }
+
 
   function getSectionMarkers() {
     const markers = [];
@@ -581,13 +687,33 @@
       const rect =
         el.getBoundingClientRect();
 
+      const stats =
+        getSectionStats(
+          el
+        );
+
       markers.push({
-        top: rect.top,
+        top:
+          rect.top,
+
+        range:
+          parseSectionRange(
+            raw
+          ),
+
         name:
-          parseSectionName(raw),
+          parseSectionName(
+            raw
+          ),
 
         count:
-          findExactSectionCount(el)
+          stats.count,
+
+        duration:
+          stats.duration,
+
+        balance:
+          stats.balance
       });
     }
 
@@ -598,6 +724,7 @@
 
     return markers;
   }
+
 
   /* =========================================================
      SCHEDULE LIST
@@ -726,7 +853,10 @@
           attributes.mode,
 
         section: null,
+        sectionRange: null,
         sectionCount: null,
+        sectionDuration: null,
+        sectionBalance: null,
 
         top: rect.top,
         taskEl,
@@ -766,10 +896,25 @@
             sectionIndex
           ].name;
 
+        row.sectionRange =
+          sectionMarkers[
+            sectionIndex
+          ].range;
+
         row.sectionCount =
           sectionMarkers[
             sectionIndex
           ].count;
+
+        row.sectionDuration =
+          sectionMarkers[
+            sectionIndex
+          ].duration;
+
+        row.sectionBalance =
+          sectionMarkers[
+            sectionIndex
+          ].balance;
       }
     }
 
@@ -1172,7 +1317,10 @@
     state.currentProject = null;
     state.currentMode = null;
     state.currentSection = null;
+    state.currentSectionRange = null;
     state.currentSectionCount = null;
+    state.currentSectionDuration = null;
+    state.currentSectionBalance = null;
   }
 
   /* =========================================================
@@ -1213,8 +1361,20 @@
         player.row?.section ||
         null;
 
+      state.currentSectionRange =
+        player.row?.sectionRange ||
+        null;
+
       state.currentSectionCount =
         player.row?.sectionCount ||
+        null;
+
+      state.currentSectionDuration =
+        player.row?.sectionDuration ||
+        null;
+
+      state.currentSectionBalance =
+        player.row?.sectionBalance ||
         null;
 
       state.currentStart = null;
@@ -2186,17 +2346,8 @@
       text-overflow:ellipsis;
     }
 
-    #tc-current-section-row {
+    #tc-current-section-panel {
       display:none;
-
-      align-items:baseline;
-
-      gap:
-        clamp(
-          8px,
-          1vw,
-          14px
-        );
 
       min-width:0;
 
@@ -2204,20 +2355,44 @@
 
       margin-bottom:
         clamp(
-          5px,
-          .9vh,
-          9px
+          4px,
+          .75vh,
+          8px
         );
 
-      color:#c9cdd5;
+      color:#cbd0d8;
     }
 
-    #tc-current-section-row.is-visible {
+    #tc-current-section-panel.is-visible {
+      display:grid;
+
+      gap:
+        clamp(
+          2px,
+          .35vh,
+          4px
+        );
+    }
+
+    .tc-section-line {
+      display:none;
+
+      align-items:center;
+
+      min-width:0;
+    }
+
+    .tc-section-line.is-visible {
       display:flex;
     }
 
-    #tc-current-section {
-      min-width:0;
+    #tc-section-primary {
+      gap:
+        clamp(
+          5px,
+          .55vw,
+          8px
+        );
 
       font-size:
         clamp(
@@ -2228,6 +2403,12 @@
 
       font-weight:700;
 
+      line-height:1.15;
+    }
+
+    #tc-current-section {
+      min-width:0;
+
       white-space:nowrap;
 
       overflow:hidden;
@@ -2235,10 +2416,28 @@
       text-overflow:ellipsis;
     }
 
-    #tc-section-count {
-      flex:0 0 auto;
+    #tc-section-stats {
+      gap:
+        clamp(
+          11px,
+          1.25vw,
+          18px
+        );
+    }
 
-      color:#9da2ad;
+    .tc-section-stat {
+      display:none;
+
+      align-items:center;
+
+      gap:
+        clamp(
+          4px,
+          .45vw,
+          6px
+        );
+
+      color:#9fa5b0;
 
       font-size:
         clamp(
@@ -2249,10 +2448,43 @@
 
       font-weight:700;
 
-      font-variant-numeric:
-        tabular-nums;
+      line-height:1;
 
       white-space:nowrap;
+
+      font-variant-numeric:
+        tabular-nums;
+    }
+
+    .tc-section-stat.is-visible {
+      display:flex;
+    }
+
+    .tc-section-icon {
+      width:
+        clamp(
+          12px,
+          1.15vw,
+          15px
+        );
+
+      height:
+        clamp(
+          12px,
+          1.15vw,
+          15px
+        );
+
+      flex:0 0 auto;
+
+      color:#cbd0d8;
+    }
+
+    .tc-section-icon svg {
+      display:block;
+
+      width:100%;
+      height:100%;
     }
 
     #tc-progress {
@@ -3172,20 +3404,38 @@
     }
 
     #${ROOT_ID}.layout-landscape
-    #tc-current-section-row {
-      gap:7px;
-
-      margin-bottom:4px;
+    #tc-current-section-panel {
+      margin-bottom:3px;
     }
 
     #${ROOT_ID}.layout-landscape
-    #tc-current-section {
-      font-size:9px;
+    #tc-current-section-panel.is-visible {
+      gap:1px;
     }
 
     #${ROOT_ID}.layout-landscape
-    #tc-section-count {
-      font-size:8px;
+    #tc-section-primary {
+      gap:4px;
+
+      font-size:8.5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-section-stats {
+      gap:10px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-section-stat {
+      gap:3px;
+
+      font-size:7.5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-section-icon {
+      width:10px;
+      height:10px;
     }
 
     #${ROOT_ID}.layout-landscape
@@ -3539,28 +3789,48 @@
     }
 
     #${ROOT_ID}.layout-portrait
-    #tc-current-section-row {
-      margin-bottom:4px;
+    #tc-current-section-panel {
+      margin-bottom:3px;
     }
 
     #${ROOT_ID}.layout-portrait
-    #tc-current-section {
-      font-size:
-        clamp(
-          9px,
-          2.8vw,
-          12px
-        );
+    #tc-current-section-panel.is-visible {
+      gap:1px;
     }
 
     #${ROOT_ID}.layout-portrait
-    #tc-section-count {
+    #tc-section-primary {
+      gap:4px;
+
       font-size:
         clamp(
           8px,
-          2.4vw,
+          2.5vw,
           10px
         );
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-section-stats {
+      gap:8px;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    .tc-section-stat {
+      gap:3px;
+
+      font-size:
+        clamp(
+          7px,
+          2.1vw,
+          9px
+        );
+    }
+
+    #${ROOT_ID}.layout-portrait
+    .tc-section-icon {
+      width:9px;
+      height:9px;
     }
 
     #${ROOT_ID}.layout-portrait
@@ -3620,6 +3890,709 @@
           18px
         );
     }
+
+    /* =====================================================
+       LOW-RESOLUTION / NARROW VIEWPORT
+       Generic breakpoints, not device-specific.
+    ===================================================== */
+
+    @media
+      (orientation:landscape)
+      and (max-width:820px)
+      and (max-height:430px) {
+
+      #${ROOT_ID}.layout-landscape {
+        padding:
+          max(3px,env(safe-area-inset-top))
+          max(6px,env(safe-area-inset-right))
+          max(3px,env(safe-area-inset-bottom))
+          max(6px,env(safe-area-inset-left));
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-layout {
+        grid-template-rows:
+          44px
+          37px
+          minmax(0,1fr);
+
+        gap:2px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-header {
+        grid-template-columns:
+          minmax(58px,.34fr)
+          minmax(212px,1fr)
+          minmax(245px,1.02fr);
+
+        gap:6px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-brand {
+        font-size:10px;
+
+        padding-right:9px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-leave {
+        font-size:14px;
+
+        gap:10px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-leave-row:first-child {
+        padding-right:10px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-date {
+        font-size:12px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-clock {
+        gap:7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-clock-time {
+        font-size:31px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-work-timeline {
+        height:37px;
+
+        min-height:0;
+
+        margin:0 7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-track {
+        top:13px;
+
+        height:4px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-timeline-label {
+        font-size:8px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-regular-marker {
+        top:-4px;
+
+        height:13px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-current {
+        top:21px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-current::before {
+        font-size:8px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-work-timeline::before,
+      #${ROOT_ID}.layout-landscape
+      #tc-work-timeline::after {
+        top:8px;
+
+        height:18px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-caption-start,
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-caption-end {
+        top:23px;
+
+        font-size:6px;
+
+        letter-spacing:.14em;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-main {
+        grid-template-columns:
+          minmax(0,1.18fr)
+          minmax(278px,1fr);
+
+        gap:5px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-now {
+        padding:
+          5px
+          10px
+          4px
+          15px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-topline {
+        min-height:18px;
+
+        gap:5px;
+
+        margin-bottom:0;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-now-badge {
+        font-size:7px;
+
+        padding:
+          3px
+          7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-attributes {
+        gap:5px;
+
+        font-size:7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-current-attr {
+        max-width:104px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-current-attr-icon {
+        width:9px;
+        height:9px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-task {
+        margin:
+          5px
+          0
+          4px;
+
+        font-size:
+          clamp(
+            20px,
+            3.55vw,
+            26px
+          );
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-section-panel {
+        margin-bottom:2px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-section-primary {
+        font-size:7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-section-stats {
+        gap:7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-section-stat {
+        font-size:6.3px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-section-icon {
+        width:8px;
+        height:8px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-now-metric {
+        grid-template-columns:
+          16px
+          88px
+          minmax(0,1fr);
+
+        column-gap:5px;
+
+        padding:0;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-metric-icon {
+        width:13px;
+        height:13px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-now-label {
+        font-size:8px;
+
+        letter-spacing:.13em;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-now-value {
+        font-size:
+          clamp(
+            13px,
+            2.2vw,
+            16px
+          );
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-side {
+        grid-template-rows:
+          minmax(0,1.55fr)
+          minmax(76px,.68fr);
+
+        gap:4px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-next-card {
+        padding:
+          3px
+          6px
+          4px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-next-card
+      .tc-card-title {
+        font-size:8px;
+
+        margin-bottom:1px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-row {
+        grid-template-columns:
+          48px
+          minmax(0,1fr)
+          9px;
+
+        column-gap:5px;
+
+        padding:0 2px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-row:first-child {
+        padding-left:6px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-time,
+      #${ROOT_ID}.layout-landscape
+      .tc-next-task {
+        font-size:
+          clamp(
+            10.5px,
+            1.75vw,
+            13px
+          );
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-arrow {
+        font-size:11px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card {
+        padding:
+          3px
+          6px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card
+      .tc-card-title {
+        font-size:7px;
+
+        margin-bottom:1px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-content {
+        grid-template-columns:
+          minmax(0,1fr)
+          20px;
+
+        gap:4px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-task {
+        font-size:10px;
+
+        margin-bottom:1px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-metric {
+        grid-template-columns:
+          42px
+          minmax(0,1fr);
+
+        column-gap:4px;
+
+        min-height:11px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-label {
+        font-size:5.7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-value {
+        font-size:8.2px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-check {
+        width:19px;
+        height:19px;
+
+        font-size:10px;
+      }
+    }
+
+
+    @media
+      (orientation:portrait)
+      and (max-width:380px)
+      and (max-height:740px) {
+
+      #${ROOT_ID}.layout-portrait {
+        padding:
+          max(4px,env(safe-area-inset-top))
+          6px
+          max(4px,env(safe-area-inset-bottom));
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-layout {
+        grid-template-rows:
+          64px
+          34px
+          minmax(0,1fr);
+
+        gap:3px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-header {
+        row-gap:1px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-brand {
+        font-size:10px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-date {
+        font-size:8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-clock-time {
+        font-size:29px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-leave {
+        gap:12px;
+
+        font-size:12px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-work-timeline {
+        min-height:34px;
+
+        height:34px;
+
+        margin:0 4px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-track {
+        top:13px;
+
+        height:4px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-timeline-label {
+        font-size:7px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-current {
+        top:21px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-current::before {
+        font-size:8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-work-timeline::before,
+      #${ROOT_ID}.layout-portrait
+      #tc-work-timeline::after {
+        top:8px;
+
+        height:18px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-caption-start,
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-caption-end {
+        top:23px;
+
+        font-size:5.5px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-main {
+        grid-template-rows:
+          244px
+          minmax(0,1fr);
+
+        gap:4px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-now {
+        padding:
+          6px
+          10px
+          5px
+          14px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-current-topline {
+        gap:5px;
+
+        margin-bottom:0;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-now-badge {
+        font-size:7px;
+
+        padding:
+          4px
+          7px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-current-attributes {
+        gap:5px;
+
+        font-size:6.5px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-current-attr {
+        max-width:86px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-current-attr-icon {
+        width:8px;
+        height:8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-task {
+        margin:
+          5px
+          0
+          4px;
+
+        font-size:
+          clamp(
+            21px,
+            6.7vw,
+            25px
+          );
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-current-section-panel {
+        margin-bottom:2px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-section-primary {
+        font-size:7px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-section-stats {
+        gap:7px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-section-stat {
+        font-size:6px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-section-icon {
+        width:8px;
+        height:8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-now-metric {
+        grid-template-columns:
+          16px
+          88px
+          minmax(0,1fr);
+
+        column-gap:5px;
+
+        padding:0;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-metric-icon {
+        width:13px;
+        height:13px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-now-label {
+        font-size:8px;
+
+        letter-spacing:.13em;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-now-value {
+        font-size:
+          clamp(
+            15px,
+            4.8vw,
+            18px
+          );
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-side {
+        gap:4px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-next-card {
+        flex:1.28 1 0;
+
+        padding:
+          4px
+          7px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-card {
+        flex:.72 1 0;
+
+        padding:
+          4px
+          7px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-card-title {
+        font-size:8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-next-row {
+        grid-template-columns:
+          46px
+          minmax(0,1fr)
+          9px;
+
+        column-gap:5px;
+
+        padding:0 2px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-next-time,
+      #${ROOT_ID}.layout-portrait
+      .tc-next-task {
+        font-size:
+          clamp(
+            11px,
+            3.5vw,
+            13px
+          );
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-next-arrow {
+        font-size:10px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-task {
+        font-size:11px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-prev-metric {
+        grid-template-columns:
+          44px
+          minmax(0,1fr);
+
+        min-height:12px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-prev-label {
+        font-size:6px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-prev-value {
+        font-size:9px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-check {
+        width:21px;
+        height:21px;
+
+        font-size:11px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-version {
+        font-size:6px;
+      }
+    }
+
   `;
 
   document.head.appendChild(
@@ -3787,11 +4760,76 @@
             タスクを取得できません
           </div>
 
-          <div id="tc-current-section-row">
+          <div id="tc-current-section-panel">
 
-            <span id="tc-current-section"></span>
+            <div
+              id="tc-section-primary"
+              class="tc-section-line">
 
-            <span id="tc-section-count"></span>
+              <span class="tc-section-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <rect x="4" y="5" width="6" height="6" rx="1"/>
+                  <rect x="14" y="5" width="6" height="6" rx="1"/>
+                  <rect x="4" y="15" width="6" height="4" rx="1"/>
+                  <rect x="14" y="15" width="6" height="4" rx="1"/>
+                </svg>
+              </span>
+
+              <span id="tc-current-section"></span>
+
+            </div>
+
+
+            <div
+              id="tc-section-stats"
+              class="tc-section-line">
+
+              <span
+                id="tc-section-count-wrap"
+                class="tc-section-stat">
+
+                <span class="tc-section-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="13" r="7"/>
+                    <path d="M9 3h6M12 6v2M12 13V9"/>
+                  </svg>
+                </span>
+
+                <span id="tc-section-count"></span>
+
+              </span>
+
+
+              <span
+                id="tc-section-duration-wrap"
+                class="tc-section-stat">
+
+                <span class="tc-section-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M7 3h10M7 21h10M8 3c0 4 1.5 5.5 4 7-2.5 1.5-4 3-4 7M16 3c0 4-1.5 5.5-4 7 2.5 1.5 4 3 4 7"/>
+                  </svg>
+                </span>
+
+                <span id="tc-section-duration"></span>
+
+              </span>
+
+
+              <span
+                id="tc-section-balance-wrap"
+                class="tc-section-stat">
+
+                <span class="tc-section-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M12 3v17M6 6h12M8 6l-4 7h8zM16 6l-4 7h8zM8 20h8"/>
+                  </svg>
+                </span>
+
+                <span id="tc-section-balance"></span>
+
+              </span>
+
+            </div>
 
           </div>
 
@@ -4433,31 +5471,101 @@
         !!state.currentMode
       );
 
-    const sectionRow =
-      $('tc-current-section-row');
+    const sectionPanel =
+      $('tc-current-section-panel');
+
+    const sectionPrimary =
+      $('tc-section-primary');
+
+    const sectionStats =
+      $('tc-section-stats');
 
     const sectionName =
       state.currentSection ||
+      '';
+
+    const sectionRange =
+      state.currentSectionRange ||
       '';
 
     const sectionCount =
       state.currentSectionCount ||
       '';
 
+    const sectionDuration =
+      state.currentSectionDuration ||
+      '';
+
+    const sectionBalance =
+      state.currentSectionBalance ||
+      '';
+
+    const sectionPrimaryText =
+      [
+        sectionRange,
+        sectionName
+      ]
+        .filter(Boolean)
+        .join(' ');
+
     $('tc-current-section')
       .textContent =
-        sectionName;
+        sectionPrimaryText;
 
     $('tc-section-count')
       .textContent =
         sectionCount;
 
-    sectionRow
+    $('tc-section-duration')
+      .textContent =
+        sectionDuration;
+
+    $('tc-section-balance')
+      .textContent =
+        sectionBalance;
+
+    $('tc-section-count-wrap')
+      .classList.toggle(
+        'is-visible',
+        !!sectionCount
+      );
+
+    $('tc-section-duration-wrap')
+      .classList.toggle(
+        'is-visible',
+        !!sectionDuration
+      );
+
+    $('tc-section-balance-wrap')
+      .classList.toggle(
+        'is-visible',
+        !!sectionBalance
+      );
+
+    sectionPrimary
+      .classList.toggle(
+        'is-visible',
+        !!sectionPrimaryText
+      );
+
+    sectionStats
       .classList.toggle(
         'is-visible',
         !!(
-          sectionName ||
-          sectionCount
+          sectionCount ||
+          sectionDuration ||
+          sectionBalance
+        )
+      );
+
+    sectionPanel
+      .classList.toggle(
+        'is-visible',
+        !!(
+          sectionPrimaryText ||
+          sectionCount ||
+          sectionDuration ||
+          sectionBalance
         )
       );
 
