@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.7
+     v4.5.8
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.7';
+  const VERSION = '4.5.8';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -372,120 +372,112 @@
   }
 
 
-function parseSectionName(value) {
+  function parseSectionName(value) {
+    const v =
+      clean(value);
 
-  const v =
-    clean(value);
-
-
-  if (
-    !isSectionName(v)
-  ) {
-
-    return null;
-  }
-
-
-  /*
-    先頭の時間帯を削除
-
-    18:00-23:30 夜5 / 18 4h -3h53m12s
-    ↓
-    夜5 / 18 4h -3h53m12s
-  */
-  let stripped =
-    v.replace(
-      /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}\s*/,
-      ''
-    );
-
-
-  /*
-    件数の "/" を探す。
-
-    夜5 /
-    夜 5 /
-    夜5／
-    夜 5 ／
-
-    すべて対応。
-  */
-  const slashIndex =
-    stripped.search(
-      /[\/／⁄]/
-    );
-
-
-  if (
-    slashIndex >= 0
-  ) {
-
-    let cut =
-      slashIndex;
-
-
-    /*
-      "/" の直前の空白を戻る
-    */
-    while (
-      cut > 0 &&
-      /\s/.test(
-        stripped[
-          cut - 1
-        ]
-      )
+    if (
+      !isSectionName(v)
     ) {
-
-      cut--;
+      return null;
     }
 
-
     /*
-      "/" の直前の件数数字を戻る
-      例: 5 / の「5」
+      Remove the leading section time range.
+
+      Example:
+      18:00-23:30 夜5 / 18 4h -3h53m12s
+      -> 夜5 / 18 4h -3h53m12s
     */
-    while (
-      cut > 0 &&
-      /\d/.test(
-        stripped[
-          cut - 1
-        ]
-      )
-    ) {
-
-      cut--;
-    }
-
-
-    /*
-      数字の前に空白があれば削除
-    */
-    while (
-      cut > 0 &&
-      /\s/.test(
-        stripped[
-          cut - 1
-        ]
-      )
-    ) {
-
-      cut--;
-    }
-
-
-    stripped =
-      stripped.slice(
-        0,
-        cut
+    let stripped =
+      v.replace(
+        /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}\s*/,
+        ''
       );
+
+    /*
+      If a count separator exists, cut from the digits
+      immediately before the slash.
+
+      Handles:
+      夜5 /
+      夜 5 /
+      夜5/18
+      夜 5／18
+      夜5⁄18
+    */
+    const slashIndex =
+      stripped.search(
+        /[\/／⁄]/
+      );
+
+    if (
+      slashIndex >= 0
+    ) {
+      let cut =
+        slashIndex;
+
+      while (
+        cut > 0 &&
+        /\s/.test(
+          stripped[
+            cut - 1
+          ]
+        )
+      ) {
+        cut--;
+      }
+
+      while (
+        cut > 0 &&
+        /\d/.test(
+          stripped[
+            cut - 1
+          ]
+        )
+      ) {
+        cut--;
+      }
+
+      while (
+        cut > 0 &&
+        /\s/.test(
+          stripped[
+            cut - 1
+          ]
+        )
+      ) {
+        cut--;
+      }
+
+      stripped =
+        stripped.slice(
+          0,
+          cut
+        );
+    }
+
+    /*
+      Fallback when TaskChute's DOM does not expose the
+      slash/count in the same text node.
+      Remove trailing duration / balance fragments.
+    */
+    stripped =
+      stripped
+        .replace(
+          /\s*[+\-−]\s*(?:\d+\s*h)?(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?\s*$/,
+          ''
+        )
+        .replace(
+          /\s*(?:\d+\s*h(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?|\d+\s*m(?:\s*\d+\s*s)?|\d+\s*s)\s*$/,
+          ''
+        );
+
+    return (
+      clean(stripped) ||
+      null
+    );
   }
-
-
-  return (
-    clean(stripped) ||
-    null
-  );
-}
 
   function normalizeOptionalAttribute(
     value,
@@ -4687,6 +4679,108 @@ function parseSectionName(value) {
       #${ROOT_ID}.layout-portrait
       #tc-version {
         font-size:6px;
+      }
+    }
+
+
+    /* =====================================================
+       TABLET LANDSCAPE
+       Prevent vertical stretching on wide/tall tablets.
+       Smartphone layouts are excluded by min-width/min-height.
+    ===================================================== */
+
+    @media
+      (orientation: landscape)
+      and (min-width: 900px)
+      and (min-height: 600px) {
+
+      /*
+        CURRENT:
+        do not distribute all spare card height across
+        the five metric rows.
+      */
+      #${ROOT_ID}.layout-landscape
+      #tc-progress {
+        grid-template-rows:
+          repeat(5, 58px);
+
+        align-content:start;
+
+        flex:0 0 auto;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-now-metric {
+        min-height:58px;
+
+        padding:
+          6px
+          0;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-task {
+        margin:
+          11px
+          0
+          9px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-section-panel {
+        margin-bottom:8px;
+      }
+
+      /*
+        NEXT:
+        keep a calm, fixed row rhythm rather than
+        stretching five rows to fill the whole card.
+      */
+      #${ROOT_ID}.layout-landscape
+      #tc-next-list {
+        grid-template-rows:
+          repeat(5, 56px);
+
+        align-content:start;
+
+        flex:0 0 auto;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-row {
+        min-height:56px;
+      }
+
+      /*
+        PREVIOUS:
+        keep content grouped near the top.
+      */
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-content {
+        align-items:start;
+
+        padding-top:8px;
+      }
+
+      /*
+        Slightly reduce the amount of vertical space
+        assigned to NEXT/PREVIOUS cards as a whole,
+        while keeping their widths unchanged.
+      */
+      #${ROOT_ID}.layout-landscape
+      #tc-side {
+        grid-template-rows:
+          minmax(318px, auto)
+          minmax(150px, auto);
+
+        align-content:start;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-next-card,
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card {
+        height:auto;
       }
     }
 
