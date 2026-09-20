@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.10
+     v4.5.11
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.10';
+  const VERSION = '4.5.11';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -4664,7 +4664,7 @@
         padding:
           max(8px,env(safe-area-inset-top))
           max(12px,env(safe-area-inset-right))
-          max(8px,env(safe-area-inset-bottom))
+          max(26px,env(safe-area-inset-bottom))
           max(12px,env(safe-area-inset-left));
       }
 
@@ -4788,6 +4788,9 @@
           minmax(0,1fr);
 
         gap:14px;
+
+        min-height:0;
+        height:100%;
       }
 
       /* CURRENT */
@@ -4950,10 +4953,21 @@
       #${ROOT_ID}.layout-landscape
       #tc-side {
         grid-template-rows:
-          minmax(350px,1.55fr)
-          minmax(190px,.85fr);
+          minmax(0,1.52fr)
+          minmax(0,.72fr);
 
         gap:14px;
+
+        min-height:0;
+        height:100%;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-next-card,
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card {
+        min-height:0;
+        height:auto;
       }
 
       #${ROOT_ID}.layout-landscape
@@ -5028,8 +5042,9 @@
       #${ROOT_ID}.layout-landscape
       #tc-prev-card {
         padding:
-          18px
-          20px;
+          14px
+          20px
+          12px;
       }
 
       #${ROOT_ID}.layout-landscape
@@ -5055,9 +5070,9 @@
 
       #${ROOT_ID}.layout-landscape
       #tc-prev-task {
-        font-size:23px;
+        font-size:22px;
 
-        margin-bottom:14px;
+        margin-bottom:10px;
       }
 
       /*
