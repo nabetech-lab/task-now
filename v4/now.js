@@ -13,7 +13,7 @@
      GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.3.1';
+  const VERSION = '4.3.2';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -1506,21 +1506,35 @@ const IS_ANDROID =
           player.row
         );
 
-    } else {
+  } else {
 
-      clearCurrentState();
+  /*
+    実行中タスクがない場合は
+    CURRENTだけをクリアする。
+  */
 
-
-      state.previous =
-        getPreviousTask(
-          rows,
-          new Date()
-        );
+  clearCurrentState();
 
 
-      state.next =
-        [];
-    }
+  /*
+    PREVIOUSは現在時刻基準で
+    直近完了タスクを再取得。
+  */
+
+  state.previous =
+    getPreviousTask(
+      rows,
+      new Date()
+    );
+
+
+  /*
+    NEXTは消さない。
+
+    CURRENT停止直前に表示していた
+    後続タスクをそのまま保持する。
+  */
+}
 
 
     state.leaveTime =
