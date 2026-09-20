@@ -4,16 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.2
+     v4.5.3
 
      iOS Safari
      Android Firefox / Violentmonkey
-
-     Common source:
-     GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.5.2';
+  const VERSION = '4.5.3';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -21,17 +18,14 @@
   const SYNC_INTERVAL = 5000;
   const RENDER_INTERVAL = 1000;
 
-  /* 固定勤務時間 */
   const WORK_START = '08:30';
   const REGULAR_END = '17:25';
-
 
   /* =========================================================
      ENVIRONMENT
   ========================================================= */
 
-  const UA =
-    navigator.userAgent || '';
+  const UA = navigator.userAgent || '';
 
   const IS_IOS =
     /iPhone|iPad|iPod/i.test(UA);
@@ -39,10 +33,6 @@
   const IS_FIREFOX =
     /Firefox|FxiOS/i.test(UA);
 
-  /*
-    Android Firefoxのデスクトップサイト表示でも
-    Androidとして扱えるようにする。
-  */
   const IS_ANDROID =
     /Android/i.test(UA) ||
     (
@@ -50,11 +40,9 @@
       !IS_IOS &&
       navigator.maxTouchPoints > 0 &&
       /Linux/i.test(
-        navigator.platform ||
-        UA
+        navigator.platform || UA
       )
     );
-
 
   /* =========================================================
      UTIL
@@ -65,53 +53,33 @@
       .replace(/\s+/g, ' ')
       .trim();
 
-
   const pad = n =>
-    String(n)
-      .padStart(2, '0');
-
+    String(n).padStart(2, '0');
 
   const text = el =>
-    clean(
-      el?.textContent
-    );
-
+    clean(el?.textContent);
 
   const isInsideNow = el =>
-    !!el?.closest?.(
-      '#' + ROOT_ID
-    );
-
+    !!el?.closest?.('#' + ROOT_ID);
 
   const isHM = value =>
-    /^\d{1,2}:\d{2}$/
-      .test(
-        clean(value)
-      );
-
+    /^\d{1,2}:\d{2}$/.test(clean(value));
 
   const isHMS = value =>
-    /^\d{2}:\d{2}:\d{2}$/
-      .test(
-        clean(value)
-      );
+    /^\d{1,2}:\d{2}:\d{2}$/.test(clean(value));
 
+  const clamp = (value, min, max) =>
+    Math.max(min, Math.min(max, value));
 
-  function hmsToSeconds(
-    value
-  ) {
-
+  function hmsToSeconds(value) {
     const m =
-      clean(value)
-        .match(
-          /^(\d{1,2}):(\d{2}):(\d{2})$/
-        );
-
+      clean(value).match(
+        /^(\d{1,2}):(\d{2}):(\d{2})$/
+      );
 
     if (!m) {
       return null;
     }
-
 
     return (
       Number(m[1]) * 3600 +
@@ -120,22 +88,15 @@
     );
   }
 
-
-  function durationToSeconds(
-    value
-  ) {
-
+  function durationToSeconds(value) {
     const m =
-      clean(value)
-        .match(
-          /^(\d{1,2}):(\d{2})$/
-        );
-
+      clean(value).match(
+        /^(\d{1,2}):(\d{2})$/
+      );
 
     if (!m) {
       return null;
     }
-
 
     return (
       Number(m[1]) * 3600 +
@@ -143,61 +104,14 @@
     );
   }
 
-
-  function hmToMinutes(
-    value
-  ) {
-
-    const m =
-      clean(value)
-        .match(
-          /^(\d{1,2}):(\d{2})$/
-        );
-
-
-    if (!m) {
-      return null;
-    }
-
-
-    const h =
-      Number(m[1]);
-
-    const min =
-      Number(m[2]);
-
-
-    if (
-      h < 0 ||
-      h > 23 ||
-      min < 0 ||
-      min > 59
-    ) {
-
-      return null;
-    }
-
-
-    return (
-      h * 60 +
-      min
-    );
-  }
-
-
-  function secondsToHMS(
-    seconds
-  ) {
-
+  function secondsToHMS(seconds) {
     if (
       seconds === null ||
       seconds === undefined ||
       Number.isNaN(seconds)
     ) {
-
       return '--:--:--';
     }
-
 
     seconds =
       Math.max(
@@ -205,22 +119,16 @@
         Math.floor(seconds)
       );
 
-
     const h =
-      Math.floor(
-        seconds / 3600
-      );
-
+      Math.floor(seconds / 3600);
 
     const m =
       Math.floor(
         (seconds % 3600) / 60
       );
 
-
     const s =
       seconds % 60;
-
 
     return (
       pad(h) +
@@ -231,20 +139,14 @@
     );
   }
 
-
-  function secondsToHM(
-    seconds
-  ) {
-
+  function secondsToHM(seconds) {
     if (
       seconds === null ||
       seconds === undefined ||
       Number.isNaN(seconds)
     ) {
-
       return '--:--';
     }
-
 
     seconds =
       Math.max(
@@ -252,18 +154,13 @@
         Math.floor(seconds)
       );
 
-
     const h =
-      Math.floor(
-        seconds / 3600
-      );
-
+      Math.floor(seconds / 3600);
 
     const m =
       Math.floor(
         (seconds % 3600) / 60
       );
-
 
     return (
       pad(h) +
@@ -272,22 +169,15 @@
     );
   }
 
-
-  function clockToSecondsOfDay(
-    value
-  ) {
-
+  function hmToMinutes(value) {
     const m =
-      clean(value)
-        .match(
-          /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
-        );
-
+      clean(value).match(
+        /^(\d{1,2}):(\d{2})$/
+      );
 
     if (!m) {
       return null;
     }
-
 
     const h =
       Number(m[1]);
@@ -295,11 +185,31 @@
     const min =
       Number(m[2]);
 
-    const sec =
-      Number(
-        m[3] || 0
+    if (
+      h < 0 ||
+      h > 23 ||
+      min < 0 ||
+      min > 59
+    ) {
+      return null;
+    }
+
+    return h * 60 + min;
+  }
+
+  function clockToSecondsOfDay(value) {
+    const m =
+      clean(value).match(
+        /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
       );
 
+    if (!m) {
+      return null;
+    }
+
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    const sec = Number(m[3] || 0);
 
     if (
       h < 0 ||
@@ -309,10 +219,8 @@
       sec < 0 ||
       sec > 59
     ) {
-
       return null;
     }
-
 
     return (
       h * 3600 +
@@ -321,25 +229,18 @@
     );
   }
 
-
   function resolveClockAtOrBefore(
     value,
     referenceDate
   ) {
-
     const secondsOfDay =
-      clockToSecondsOfDay(
-        value
-      );
-
+      clockToSecondsOfDay(value);
 
     if (
       secondsOfDay === null
     ) {
-
       return null;
     }
-
 
     const reference =
       referenceDate instanceof Date
@@ -347,7 +248,6 @@
             referenceDate.getTime()
           )
         : new Date();
-
 
     const result =
       new Date(
@@ -360,60 +260,47 @@
         0
       );
 
-
     result.setSeconds(
       secondsOfDay
     );
-
 
     if (
       result.getTime() >
       reference.getTime()
     ) {
-
       result.setDate(
         result.getDate() - 1
       );
     }
 
-
     return result;
   }
-
 
   function addDurationToTime(
     startTime,
     seconds
   ) {
-
     if (
       !startTime ||
       seconds === null
     ) {
-
       return '--:--';
     }
-
 
     const parts =
       startTime
         .split(':')
         .map(Number);
 
-
     if (
       parts.length !== 2 ||
       Number.isNaN(parts[0]) ||
       Number.isNaN(parts[1])
     ) {
-
       return '--:--';
     }
 
-
-    const d =
-      new Date();
-
+    const d = new Date();
 
     d.setHours(
       parts[0],
@@ -422,12 +309,10 @@
       0
     );
 
-
     d.setSeconds(
       d.getSeconds() +
       seconds
     );
-
 
     return (
       pad(d.getHours()) +
@@ -436,133 +321,113 @@
     );
   }
 
-
-  function validTaskName(
-    value
-  ) {
-
-    const t =
-      clean(value);
-
+  function validTaskName(value) {
+    const t = clean(value);
 
     if (!t) {
       return false;
     }
-
 
     if (
       t.length > 150 ||
       isHM(t) ||
       isHMS(t)
     ) {
-
       return false;
     }
-
 
     if (
-      /^[-\d\s:./]+$/
-        .test(t)
+      /^[-\d\s:./]+$/.test(t)
     ) {
-
       return false;
     }
-
 
     return true;
   }
 
-
-  function isSectionName(
-    value
-  ) {
-
-    const t =
-      clean(value);
-
-
-    if (!t) {
-      return false;
-    }
-
-
+  function isSectionName(value) {
     return (
       /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}/
-        .test(t)
+        .test(clean(value))
     );
   }
 
+  function parseSectionName(value) {
+    const v = clean(value);
+
+    if (
+      !isSectionName(v)
+    ) {
+      return null;
+    }
+
+    const stripped =
+      v.replace(
+        /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}\s*/,
+        ''
+      );
+
+    return clean(stripped) || null;
+  }
+
+  function normalizeOptionalAttribute(
+    value,
+    placeholder
+  ) {
+    const v = clean(value);
+
+    if (
+      !v ||
+      v === placeholder ||
+      v === '未設定' ||
+      v === '-'
+    ) {
+      return null;
+    }
+
+    return v;
+  }
 
   /* =========================================================
      STATE
   ========================================================= */
 
   const state = {
+    currentTask: null,
+    currentStart: null,
+    plannedSeconds: null,
+    elapsedBase: null,
+    elapsedCapturedAt: null,
 
-    currentTask:
-      null,
+    currentProject: null,
+    currentMode: null,
+    currentSection: null,
+    currentSectionCount: null,
 
-    currentStart:
-      null,
-
-    plannedSeconds:
-      null,
-
-    elapsedBase:
-      null,
-
-    elapsedCapturedAt:
-      null,
-
-    previous:
-      null,
-
-    next:
-      [],
-
-    leaveTime:
-      null,
-
-    currentProject:
-      null,
-
-    currentMode:
-      null,
-
-    currentSection:
-      null,
-
-    currentSectionCount:
-      null
+    previous: null,
+    next: [],
+    leaveTime: null
   };
-
 
   /* =========================================================
      TASK ROWS
   ========================================================= */
 
   function getTaskRowElements() {
-
     return [
-      ...document
-        .querySelectorAll(
-          'div.MuiBox-root.my-0'
-        )
+      ...document.querySelectorAll(
+        'div.MuiBox-root.my-0'
+      )
     ]
       .filter(el => {
-
         if (
           isInsideNow(el)
         ) {
-
           return false;
         }
 
-
         const r =
-          el
-            .getBoundingClientRect();
-
+          el.getBoundingClientRect();
 
         return (
           r.left >= -20 &&
@@ -570,98 +435,26 @@
           r.width >= 250 &&
           r.width <= 1800 &&
           r.height >= 22 &&
-          r.height <= 48
+          r.height <= 52
         );
       });
   }
 
-
-  function findScheduleRow(
-    taskName
-  ) {
-
-    if (!taskName) {
-      return null;
-    }
-
-
-    const candidates =
-      getTaskRowElements()
-        .filter(el =>
-          clean(
-            el.textContent
-          ) ===
-          taskName
-        );
-
-
-    for (
-      const taskEl
-      of candidates
-    ) {
-
-      const row =
-        taskEl
-          .parentElement;
-
-
-      if (!row) {
-        continue;
-      }
-
-
-      const rowText =
-        clean(
-          row.textContent
-        );
-
-
-      if (
-        rowText.length >
-        taskName.length
-      ) {
-
-        return {
-
-          taskEl,
-
-          row
-        };
-      }
-    }
-
-
-    return null;
-  }
-
-
-  function getRowLeafValues(
-    row
-  ) {
-
+  function getRowLeafValues(row) {
     if (!row) {
       return [];
     }
 
-
     return [
-      ...row
-        .querySelectorAll(
-          '*'
-        )
+      ...row.querySelectorAll('*')
     ]
       .filter(el =>
         el.children.length === 0 &&
-        clean(
-          el.textContent
-        )
+        clean(el.textContent)
       )
       .map(el => ({
-
         value:
-          clean(
-            el.textContent
-          ),
+          clean(el.textContent),
 
         tag:
           el.tagName,
@@ -670,47 +463,21 @@
       }));
   }
 
-
-  function normalizeOptionalAttribute(
-    value,
-    placeholder
-  ) {
-
-    const v =
-      clean(value);
-
-
-    if (
-      !v ||
-      v === placeholder ||
-      v === '未設定' ||
-      v === '-'
-    ) {
-
-      return null;
-    }
-
-
-    return v;
-  }
-
-
   function getProjectModeFromLeaves(
     leaves
   ) {
-
     /*
-      TaskChute Cloudの現行行構造では、
-      0: task
-      1: start
-      2: finish
-      3: project
-      4: mode
-      5: elapsed
-      6: planned
-      の順で取得できる。
+      Current TaskChute row structure:
+      0 task
+      1 start
+      2 finish
+      3 project
+      4 mode
+      5 elapsed
+      6 planned
 
-      DOM構造が異なる場合は無理に表示せず null にする。
+      When the DOM differs, placeholders are rejected
+      rather than showing incorrect data.
     */
 
     const project =
@@ -719,13 +486,11 @@
         'プロジェクト'
       );
 
-
     const mode =
       normalizeOptionalAttribute(
         leaves?.[4]?.value,
         'モード'
       );
-
 
     return {
       project,
@@ -733,339 +498,225 @@
     };
   }
 
+  /* =========================================================
+     SECTION
+  ========================================================= */
 
-  function parseSectionName(
-    value
-  ) {
-
-    const v =
-      clean(value);
-
-
-    if (
-      !isSectionName(
-        v
-      )
-    ) {
-
-      return null;
-    }
-
-
-    const stripped =
-      v.replace(
-        /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}\s*/,
-        ''
-      );
-
-
-    return (
-      clean(stripped) ||
-      null
-    );
-  }
-
-
-  function findSectionCountNear(
+  function findExactSectionCount(
     sectionEl
   ) {
-
     if (!sectionEl) {
       return null;
     }
 
-
     let node =
       sectionEl;
 
-
+    /*
+      Only accept an exact "N / N" leaf.
+      This avoids accidentally treating duration text
+      such as "10s0s" as the section count.
+    */
     for (
       let depth = 0;
-      depth < 5 && node;
+      depth < 6 && node;
       depth++
     ) {
+      const leaves =
+        [
+          ...node.querySelectorAll('*')
+        ]
+          .filter(el =>
+            el.children.length === 0
+          )
+          .map(el =>
+            clean(el.textContent)
+          )
+          .filter(Boolean);
 
-      const value =
-        clean(
-          node.textContent
+      const exact =
+        leaves.find(value =>
+          /^\d{1,3}\s*\/\s*\d{1,3}$/
+            .test(value)
         );
 
+      if (exact) {
+        const m =
+          exact.match(
+            /^(\d{1,3})\s*\/\s*(\d{1,3})$/
+          );
 
-      const m =
-        value.match(
-          /(?:^|\s)(\d{1,3})\s*\/\s*(\d{1,3})(?:\s|$)/
-        );
-
-
-      if (m) {
-
-        return (
-          m[1] +
-          ' / ' +
-          m[2]
-        );
+        if (m) {
+          return (
+            m[1] +
+            ' / ' +
+            m[2]
+          );
+        }
       }
-
 
       node =
         node.parentElement;
     }
 
-
     return null;
   }
 
-
   function getSectionMarkers() {
+    const markers = [];
 
-    return getTaskRowElements()
-      .map(el => {
+    for (
+      const el
+      of getTaskRowElements()
+    ) {
+      const raw =
+        clean(el.textContent);
 
-        const raw =
-          clean(
-            el.textContent
-          );
+      if (
+        !isSectionName(raw)
+      ) {
+        continue;
+      }
 
+      const rect =
+        el.getBoundingClientRect();
 
-        if (
-          !isSectionName(
-            raw
-          )
-        ) {
+      markers.push({
+        top: rect.top,
+        name:
+          parseSectionName(raw),
 
-          return null;
-        }
+        count:
+          findExactSectionCount(el)
+      });
+    }
 
+    markers.sort(
+      (a, b) =>
+        a.top - b.top
+    );
 
-        const rect =
-          el.getBoundingClientRect();
-
-
-        return {
-
-          top:
-            rect.top,
-
-          name:
-            parseSectionName(
-              raw
-            ),
-
-          count:
-            findSectionCountNear(
-              el
-            )
-        };
-      })
-      .filter(Boolean)
-      .sort(
-        (a, b) =>
-          a.top -
-          b.top
-      );
+    return markers;
   }
-
 
   /* =========================================================
      SCHEDULE LIST
   ========================================================= */
 
   function getScheduleRows() {
-
-    const rows =
-      [];
+    const rows = [];
 
     const sectionMarkers =
       getSectionMarkers();
-
 
     for (
       const taskEl
       of getTaskRowElements()
     ) {
-
       const task =
-        clean(
-          taskEl.textContent
-        );
-
+        clean(taskEl.textContent);
 
       if (
-        !validTaskName(
-          task
-        )
+        !validTaskName(task) ||
+        isSectionName(task)
       ) {
-
         continue;
       }
-
-
-      if (
-        isSectionName(
-          task
-        )
-      ) {
-
-        continue;
-      }
-
 
       const row =
-        taskEl
-          .parentElement;
-
+        taskEl.parentElement;
 
       if (!row) {
         continue;
       }
 
-
       const rowText =
-        clean(
-          row.textContent
-        );
-
+        clean(row.textContent);
 
       if (
         rowText === task ||
         rowText.length <
           task.length + 3
       ) {
-
         continue;
       }
 
-
       const rect =
-        taskEl
-          .getBoundingClientRect();
-
+        taskEl.getBoundingClientRect();
 
       const leaves =
-        getRowLeafValues(
-          row
-        );
-
+        getRowLeafValues(row);
 
       const attributes =
         getProjectModeFromLeaves(
           leaves
         );
 
-
-      let start =
-        null;
-
-      let finish =
-        null;
-
-      let actualDuration =
-        null;
-
-      let planned =
-        null;
-
-      let scheduleTime =
-        null;
-
+      let start = null;
+      let finish = null;
+      let actualDuration = null;
+      let planned = null;
+      let scheduleTime = null;
 
       if (
         leaves[1] &&
-        isHM(
-          leaves[1].value
-        )
+        isHM(leaves[1].value)
       ) {
-
         start =
           leaves[1].value;
       }
 
-
       if (
         leaves[2] &&
         (
-          isHM(
-            leaves[2].value
-          ) ||
-          isHMS(
-            leaves[2].value
-          )
+          isHM(leaves[2].value) ||
+          isHMS(leaves[2].value)
         )
       ) {
-
         finish =
           leaves[2].value;
       }
 
-
       if (
         leaves[5] &&
-        isHM(
-          leaves[5].value
-        )
+        isHM(leaves[5].value)
       ) {
-
         actualDuration =
           leaves[5].value;
       }
 
-
       if (
         leaves[6] &&
-        isHM(
-          leaves[6].value
-        )
+        isHM(leaves[6].value)
       ) {
-
         planned =
           leaves[6].value;
       }
 
-
       const HMvalues =
         leaves
-          .map(
-            x =>
-              x.value
-          )
-          .filter(
-            isHM
-          );
-
+          .map(x => x.value)
+          .filter(isHM);
 
       if (!start) {
-
         const last =
           HMvalues[
             HMvalues.length - 1
           ];
 
-
         if (last) {
-
-          scheduleTime =
-            last;
+          scheduleTime = last;
         }
-
       } else {
-
-        scheduleTime =
-          start;
+        scheduleTime = start;
       }
 
-
       rows.push({
-
         task,
-
         start,
-
         finish,
-
         actualDuration,
-
         planned,
-
         scheduleTime,
 
         project:
@@ -1074,211 +725,140 @@
         mode:
           attributes.mode,
 
-        section:
-          null,
+        section: null,
+        sectionCount: null,
 
-        sectionCount:
-          null,
-
-        top:
-          rect.top,
-
+        top: rect.top,
         taskEl,
-
-        rowEl:
-          row
+        rowEl: row
       });
     }
 
-
     rows.sort(
       (a, b) =>
-        a.top -
-        b.top
+        a.top - b.top
     );
 
-
-    let markerIndex =
-      -1;
-
+    /*
+      Map each task to the nearest section header above it.
+    */
+    let sectionIndex = -1;
 
     for (
       const row
       of rows
     ) {
-
       while (
-        markerIndex + 1 <
+        sectionIndex + 1 <
           sectionMarkers.length &&
         sectionMarkers[
-          markerIndex + 1
-        ].top <
-          row.top
+          sectionIndex + 1
+        ].top < row.top
       ) {
-
-        markerIndex++;
+        sectionIndex++;
       }
 
-
       if (
-        markerIndex >= 0
+        sectionIndex >= 0
       ) {
-
         row.section =
           sectionMarkers[
-            markerIndex
+            sectionIndex
           ].name;
 
         row.sectionCount =
           sectionMarkers[
-            markerIndex
+            sectionIndex
           ].count;
       }
     }
 
-
-    const unique =
-      [];
-
+    const unique = [];
 
     for (
       const row
       of rows
     ) {
-
       const duplicate =
         unique.some(
           x =>
-            x.task ===
-              row.task &&
+            x.task === row.task &&
             Math.abs(
-              x.top -
-              row.top
+              x.top - row.top
             ) < 3
         );
 
-
       if (!duplicate) {
-
-        unique.push(
-          row
-        );
+        unique.push(row);
       }
     }
-
 
     return unique;
   }
 
-
   /* =========================================================
-     CURRENT TASK INFO
+     CURRENT
   ========================================================= */
 
   function getCurrentScheduleInfo(
     currentTask,
     currentRow
   ) {
+    const row =
+      currentRow?.rowEl;
 
-    const found =
-      currentRow?.rowEl
-        ? {
-            taskEl:
-              currentRow.taskEl,
-
-            row:
-              currentRow.rowEl
-          }
-        : findScheduleRow(
-            currentTask
-          );
-
-
-    if (!found) {
+    if (!row) {
       return null;
     }
 
-
     const leaves =
-      getRowLeafValues(
-        found.row
-      );
+      getRowLeafValues(row);
 
-
-    let start =
-      null;
-
-    let finish =
-      null;
-
-    let planned =
-      null;
-
+    let start = null;
+    let finish = null;
+    let planned = null;
 
     if (
       leaves[1] &&
-      isHM(
-        leaves[1].value
-      )
+      isHM(leaves[1].value)
     ) {
-
       start =
         leaves[1].value;
     }
 
-
-    if (
-      leaves[2]
-    ) {
-
+    if (leaves[2]) {
       const v =
         leaves[2].value;
-
 
       if (
         isHM(v) ||
         isHMS(v)
       ) {
-
-        finish =
-          v;
+        finish = v;
       }
     }
 
-
     if (
       leaves[6] &&
-      isHM(
-        leaves[6].value
-      )
+      isHM(leaves[6].value)
     ) {
-
       planned =
         leaves[6].value;
     }
 
-
     if (!planned) {
-
       const buttonDurations =
         leaves
           .filter(
             x =>
               x.tag === 'BUTTON' &&
-              isHM(
-                x.value
-              )
+              isHM(x.value)
           )
-          .map(
-            x =>
-              x.value
-          );
-
+          .map(x => x.value);
 
       if (
         buttonDurations.length >= 2
       ) {
-
         planned =
           buttonDurations[
             buttonDurations.length - 1
@@ -1286,13 +866,9 @@
       }
     }
 
-
     return {
-
       start,
-
       finish,
-
       planned,
 
       plannedSeconds:
@@ -1304,18 +880,8 @@
     };
   }
 
-
-  /* =========================================================
-     CURRENT PLAYER
-  ========================================================= */
-
-  function findCurrentPlayer(
-    rows
-  ) {
-
-    const now =
-      new Date();
-
+  function findCurrentPlayer(rows) {
+    const now = new Date();
 
     const activeRows =
       rows
@@ -1326,7 +892,6 @@
         )
         .map(
           row => ({
-
             row,
 
             startDate:
@@ -1341,30 +906,23 @@
             item.startDate
         );
 
-
     if (
       !activeRows.length
     ) {
-
       return null;
     }
 
-
     activeRows.sort(
       (a, b) => {
-
         const byStart =
           b.startDate.getTime() -
           a.startDate.getTime();
 
-
         if (
           byStart !== 0
         ) {
-
           return byStart;
         }
-
 
         return (
           b.row.top -
@@ -1373,81 +931,60 @@
       }
     );
 
-
     const active =
       activeRows[0];
-
 
     const currentRow =
       active.row;
 
-
     const elapsedElements =
       [
-        ...document
-          .querySelectorAll(
-            'div, p, span'
-          )
+        ...document.querySelectorAll(
+          'div, p, span'
+        )
       ]
         .filter(el => {
-
           if (
             isInsideNow(el)
           ) {
-
             return false;
           }
-
 
           return isHMS(
             text(el)
           );
         });
 
-
-    const elapsedCandidates =
-      [];
-
+    const candidates = [];
 
     for (
       const elapsedEl
       of elapsedElements
     ) {
-
       const taskEl =
         elapsedEl
           ?.parentElement
           ?.parentElement
           ?.previousElementSibling;
 
-
       if (!taskEl) {
         continue;
       }
 
-
       const taskName =
-        clean(
-          taskEl.textContent
-        );
-
+        clean(taskEl.textContent);
 
       if (
         taskName !==
         currentRow.task
       ) {
-
         continue;
       }
 
-
       const rect =
-        elapsedEl
-          .getBoundingClientRect();
+        elapsedEl.getBoundingClientRect();
 
-
-      elapsedCandidates.push({
-
+      candidates.push({
         elapsed:
           clean(
             elapsedEl.textContent
@@ -1462,49 +999,35 @@
       });
     }
 
-
-    elapsedCandidates.sort(
+    candidates.sort(
       (a, b) => {
-
         if (
           a.visible !==
           b.visible
         ) {
-
           return a.visible
             ? -1
             : 1;
         }
 
-
-        return (
-          b.top -
-          a.top
-        );
+        return b.top - a.top;
       }
     );
 
-
-    let elapsedSeconds =
-      null;
-
+    let elapsedSeconds = null;
 
     if (
-      elapsedCandidates.length
+      candidates.length
     ) {
-
       elapsedSeconds =
         hmsToSeconds(
-          elapsedCandidates[0]
-            .elapsed
+          candidates[0].elapsed
         );
     }
-
 
     if (
       elapsedSeconds === null
     ) {
-
       elapsedSeconds =
         Math.max(
           0,
@@ -1518,9 +1041,7 @@
         );
     }
 
-
     return {
-
       task:
         currentRow.task,
 
@@ -1534,21 +1055,18 @@
     };
   }
 
-
   /* =========================================================
-     PREVIOUS
+     PREVIOUS / NEXT / LEAVE
   ========================================================= */
 
   function getPreviousTask(
     rows,
     referenceDate
   ) {
-
     const anchor =
       referenceDate instanceof Date
         ? referenceDate
         : new Date();
-
 
     const completed =
       rows
@@ -1559,7 +1077,6 @@
         )
         .map(
           row => ({
-
             row,
 
             finishDate:
@@ -1576,30 +1093,23 @@
               anchor.getTime()
         );
 
-
     if (
       !completed.length
     ) {
-
       return null;
     }
 
-
     completed.sort(
       (a, b) => {
-
         const byFinish =
           b.finishDate.getTime() -
           a.finishDate.getTime();
 
-
         if (
           byFinish !== 0
         ) {
-
           return byFinish;
         }
-
 
         return (
           b.row.top -
@@ -1608,38 +1118,25 @@
       }
     );
 
-
     return completed[0].row;
   }
-
-
-  /* =========================================================
-     NEXT
-  ========================================================= */
 
   function getNextTasks(
     rows,
     currentRow
   ) {
-
     if (!currentRow) {
       return [];
     }
 
-
     const index =
-      rows.indexOf(
-        currentRow
-      );
-
+      rows.indexOf(currentRow);
 
     if (
       index < 0
     ) {
-
       return [];
     }
-
 
     return rows.slice(
       index + 1,
@@ -1647,27 +1144,16 @@
     );
   }
 
-
-  /* =========================================================
-     LEAVE
-  ========================================================= */
-
-  function getLeaveTime(
-    rows
-  ) {
-
+  function getLeaveTime(rows) {
     const leave =
       rows.find(
         x =>
-          x.task ===
-          '退勤'
+          x.task === '退勤'
       );
-
 
     if (!leave) {
       return null;
     }
-
 
     return (
       leave.scheduleTime ||
@@ -1676,88 +1162,44 @@
     );
   }
 
-
-  /* =========================================================
-     CURRENT CLEAR
-  ========================================================= */
-
   function clearCurrentState() {
+    state.currentTask = null;
+    state.currentStart = null;
+    state.plannedSeconds = null;
+    state.elapsedBase = null;
+    state.elapsedCapturedAt = null;
 
-    state.currentTask =
-      null;
-
-    state.currentStart =
-      null;
-
-    state.plannedSeconds =
-      null;
-
-    state.elapsedBase =
-      null;
-
-    state.elapsedCapturedAt =
-      null;
-
-    state.currentProject =
-      null;
-
-    state.currentMode =
-      null;
-
-    state.currentSection =
-      null;
-
-    state.currentSectionCount =
-      null;
+    state.currentProject = null;
+    state.currentMode = null;
+    state.currentSection = null;
+    state.currentSectionCount = null;
   }
-
 
   /* =========================================================
      SYNC
   ========================================================= */
 
   function sync() {
-
     const rows =
       getScheduleRows();
 
-
     const player =
-      findCurrentPlayer(
-        rows
-      );
+      findCurrentPlayer(rows);
 
-
-    if (
-      player
-    ) {
-
+    if (player) {
       const taskChanged =
         state.currentTask !==
         player.task;
 
-
-      if (
-        taskChanged
-      ) {
-
-        state.currentStart =
-          null;
-
-        state.plannedSeconds =
-          null;
-
-        state.elapsedBase =
-          null;
-
-        state.elapsedCapturedAt =
-          null;
+      if (taskChanged) {
+        state.currentStart = null;
+        state.plannedSeconds = null;
+        state.elapsedBase = null;
+        state.elapsedCapturedAt = null;
       }
-
 
       state.currentTask =
         player.task;
-
 
       state.currentProject =
         player.row?.project ||
@@ -1775,13 +1217,8 @@
         player.row?.sectionCount ||
         null;
 
-
-      state.currentStart =
-        null;
-
-      state.plannedSeconds =
-        null;
-
+      state.currentStart = null;
+      state.plannedSeconds = null;
 
       const info =
         getCurrentScheduleInfo(
@@ -1789,40 +1226,28 @@
           player.row
         );
 
-
-      if (
-        info
-      ) {
-
-        if (
-          info.start
-        ) {
-
+      if (info) {
+        if (info.start) {
           state.currentStart =
             info.start;
         }
-
 
         if (
           info.plannedSeconds !==
           null
         ) {
-
           state.plannedSeconds =
             info.plannedSeconds;
         }
       }
 
-
       if (
         !state.currentStart &&
         player.row?.start
       ) {
-
         state.currentStart =
           player.row.start;
       }
-
 
       if (
         player.elapsedSeconds !==
@@ -1830,7 +1255,6 @@
         player.elapsedSeconds !==
         undefined
       ) {
-
         state.elapsedBase =
           player.elapsedSeconds;
 
@@ -1838,28 +1262,23 @@
           Date.now();
       }
 
-
       state.previous =
         getPreviousTask(
           rows,
           player.startDate
         );
 
-
       state.next =
         getNextTasks(
           rows,
           player.row
         );
-
     } else {
-
       /*
-        CURRENTだけクリア。
-        NEXTは停止直前の5件を保持する。
+        CURRENT clears when no task is running.
+        NEXT intentionally keeps the last 5 entries.
       */
       clearCurrentState();
-
 
       state.previous =
         getPreviousTask(
@@ -1868,29 +1287,22 @@
         );
     }
 
-
     state.leaveTime =
-      getLeaveTime(
-        rows
-      ) ||
+      getLeaveTime(rows) ||
       null;
   }
-
 
   /* =========================================================
      LIVE VALUES
   ========================================================= */
 
   function getElapsedSeconds() {
-
     if (
       state.elapsedBase === null ||
       state.elapsedCapturedAt === null
     ) {
-
       return null;
     }
-
 
     return (
       state.elapsedBase +
@@ -1904,24 +1316,19 @@
     );
   }
 
-
   function getPlannedEnd() {
-
     if (
       !state.currentStart ||
       state.plannedSeconds === null
     ) {
-
       return '--:--';
     }
-
 
     return addDurationToTime(
       state.currentStart,
       state.plannedSeconds
     );
   }
-
 
   /* =========================================================
      CLEANUP
@@ -1930,45 +1337,33 @@
   if (
     window.tcNowRenderTimer
   ) {
-
     clearInterval(
       window.tcNowRenderTimer
     );
   }
 
-
   if (
     window.tcNowSyncTimer
   ) {
-
     clearInterval(
       window.tcNowSyncTimer
     );
   }
 
-
   if (
     typeof window.tcNowViewportCleanup ===
     'function'
   ) {
-
     window.tcNowViewportCleanup();
   }
 
-
   document
-    .getElementById(
-      ROOT_ID
-    )
+    .getElementById(ROOT_ID)
     ?.remove();
 
-
   document
-    .getElementById(
-      STYLE_ID
-    )
+    .getElementById(STYLE_ID)
     ?.remove();
-
 
   document
     .getElementById(
@@ -1976,71 +1371,52 @@
     )
     ?.remove();
 
-
   /* =========================================================
      iOS VIEWPORT
   ========================================================= */
 
-  if (
-    IS_IOS
-  ) {
-
+  if (IS_IOS) {
     let viewport =
       document.querySelector(
         'meta[name="viewport"]'
       );
 
-
     if (!viewport) {
-
       viewport =
         document.createElement(
           'meta'
         );
 
-
       viewport.name =
         'viewport';
-
 
       viewport.content =
         'width=device-width,initial-scale=1,viewport-fit=cover';
 
-
-      document.head
-        .appendChild(
-          viewport
-        );
-
-    } else {
-
-      let content =
+      document.head.appendChild(
         viewport
-          .getAttribute(
-            'content'
-          ) ||
-        '';
-
+      );
+    } else {
+      let content =
+        viewport.getAttribute(
+          'content'
+        ) || '';
 
       if (
         !content.includes(
           'viewport-fit=cover'
         )
       ) {
-
         content +=
           ',viewport-fit=cover';
 
-
-        viewport
-          .setAttribute(
-            'content',
-            content
-          );
+        viewport.setAttribute(
+          'content',
+          content
+        );
       }
     }
   }
-
 
   /* =========================================================
      CSS
@@ -2051,10 +1427,8 @@
       'style'
     );
 
-
   style.id =
     STYLE_ID;
-
 
   style.textContent = `
 
@@ -2063,18 +1437,16 @@
       box-sizing:border-box;
     }
 
-
     #${ROOT_ID} {
-
       --bg:#07090d;
       --panel:#1a2029;
       --panel2:#0d1016;
       --text:#f5f5f7;
-      --muted:#858a96;
-      --dim:#555a66;
+      --muted:#8a8f9b;
+      --dim:#666b76;
       --over:#ff6363;
 
-      --timeline:#66aef2;
+      --timeline:#65aef2;
       --timeline-track:#262d36;
       --timeline-overtime:#d99a3e;
 
@@ -2083,7 +1455,6 @@
       position:fixed;
       top:0;
       left:0;
-
       z-index:2147483647;
 
       width:100%;
@@ -2104,15 +1475,13 @@
         sans-serif;
 
       padding:
-        max(8px,env(safe-area-inset-top))
-        max(12px,env(safe-area-inset-right))
-        max(8px,env(safe-area-inset-bottom))
-        max(12px,env(safe-area-inset-left));
+        max(5px,env(safe-area-inset-top))
+        max(8px,env(safe-area-inset-right))
+        max(5px,env(safe-area-inset-bottom))
+        max(8px,env(safe-area-inset-left));
     }
 
-
     #tc-layout {
-
       width:100%;
       height:100%;
 
@@ -2125,72 +1494,83 @@
 
       gap:
         clamp(
-          7px,
-          1.6vh,
-          16px
+          4px,
+          1vh,
+          9px
         );
     }
-
 
     /* =====================================================
        HEADER
     ===================================================== */
 
     #tc-header {
-
       display:grid;
 
       grid-template-columns:
-        minmax(120px,.7fr)
-        minmax(320px,1.25fr)
-        minmax(360px,1.15fr);
+        minmax(88px,.45fr)
+        minmax(300px,1.15fr)
+        minmax(335px,1.1fr);
 
       align-items:center;
 
-      gap:2vw;
+      gap:
+        clamp(
+          8px,
+          1.4vw,
+          20px
+        );
     }
 
-
     #tc-brand {
-
       color:var(--muted);
 
       font-size:
         clamp(
-          14px,
-          2.1vw,
-          27px
+          12px,
+          1.8vw,
+          21px
         );
 
       font-weight:800;
-      letter-spacing:.13em;
+      letter-spacing:.14em;
 
       white-space:nowrap;
+
+      position:relative;
+      padding-right:
+        clamp(
+          12px,
+          1.5vw,
+          22px
+        );
+
+      border-right:
+        1px solid
+        rgba(255,255,255,.22);
     }
 
-
     #tc-leave {
-
       display:flex;
 
       align-items:center;
 
       gap:
         clamp(
-          24px,
-          3vw,
-          48px
+          14px,
+          2vw,
+          28px
         );
 
       font-size:
         clamp(
-          19px,
-          2.7vw,
-          34px
+          17px,
+          2.25vw,
+          28px
         );
 
       font-weight:800;
-      line-height:1.15;
+      line-height:1;
 
       font-variant-numeric:
         tabular-nums;
@@ -2198,9 +1578,7 @@
       white-space:nowrap;
     }
 
-
     .tc-leave-row {
-
       display:grid;
 
       grid-template-columns:
@@ -2210,58 +1588,64 @@
       column-gap:.45em;
     }
 
+    .tc-leave-row:first-child {
+      padding-right:
+        clamp(
+          14px,
+          2vw,
+          28px
+        );
+
+      border-right:
+        1px solid
+        rgba(255,255,255,.22);
+    }
 
     #tc-clock {
-
       justify-self:end;
 
       display:flex;
+
       align-items:baseline;
+
       justify-content:flex-end;
 
       gap:
         clamp(
-          14px,
-          1.6vw,
-          26px
+          10px,
+          1.2vw,
+          18px
         );
 
       white-space:nowrap;
     }
 
-
     #tc-date {
-
-      color:#b2b6c0;
+      color:#b4b8c1;
 
       font-size:
         clamp(
-          19px,
-          2.7vw,
-          34px
+          15px,
+          2vw,
+          24px
         );
 
       font-weight:700;
-      line-height:1;
 
       font-variant-numeric:
         tabular-nums;
-
-      white-space:nowrap;
     }
 
-
     #tc-clock-time {
-
       font-size:
         clamp(
-          40px,
-          6.2vw,
-          76px
+          36px,
+          5.5vw,
+          66px
         );
 
       font-weight:800;
-      line-height:1;
+      line-height:.95;
 
       letter-spacing:-.04em;
 
@@ -2269,34 +1653,30 @@
         tabular-nums;
     }
 
-
     /* =====================================================
-       WORK TIMELINE
+       TIMELINE
     ===================================================== */
 
     #tc-work-timeline {
-
       position:relative;
 
       min-height:
         clamp(
-          42px,
-          8vh,
-          82px
+          39px,
+          7vh,
+          58px
         );
 
       margin:
         0
         clamp(
-          8px,
-          2vw,
-          24px
+          7px,
+          1.2vw,
+          16px
         );
     }
 
-
     #tc-timeline-track {
-
       position:absolute;
 
       left:0;
@@ -2304,45 +1684,39 @@
 
       top:
         clamp(
-          18px,
-          3.6vh,
-          35px
+          15px,
+          2.8vh,
+          22px
         );
 
       height:
         clamp(
-          5px,
-          .8vh,
-          9px
+          4px,
+          .7vh,
+          6px
         );
 
       border-radius:999px;
 
       background:
         var(--timeline-track);
-
-      overflow:visible;
     }
 
-
     #tc-timeline-normal {
-
       position:absolute;
 
       left:0;
       top:0;
       bottom:0;
 
-      border-radius:
-        999px 0 0 999px;
-
       background:
         var(--timeline);
+
+      border-radius:
+        999px 0 0 999px;
     }
 
-
     #tc-timeline-overtime {
-
       position:absolute;
 
       top:0;
@@ -2355,27 +1729,18 @@
         0 999px 999px 0;
     }
 
-
     .tc-timeline-label {
-
       position:absolute;
 
-      top:
-        calc(
-          clamp(
-            18px,
-            3.6vh,
-            35px
-          ) - 24px
-        );
+      top:0;
 
-      color:#d2d4da;
+      color:#d5d7dc;
 
       font-size:
         clamp(
-          11px,
-          1.5vw,
-          20px
+          9px,
+          1.2vw,
+          14px
         );
 
       line-height:1;
@@ -2386,150 +1751,189 @@
       white-space:nowrap;
     }
 
-
     #tc-timeline-start-label {
-
       left:0;
-      transform:none;
     }
-
 
     #tc-timeline-regular-label {
-
       transform:
         translateX(-50%);
     }
-
 
     #tc-timeline-end-label {
-
       right:0;
-      transform:none;
     }
 
-
     #tc-timeline-regular-marker {
-
       position:absolute;
 
-      top:-8px;
+      top:-6px;
 
       width:1px;
-      height:24px;
+      height:18px;
 
-      background:#f2f3f5;
+      background:#fff;
+
+      transform:
+        translateX(-50%);
+    }
+
+    #tc-timeline-current {
+      position:absolute;
+
+      top:
+        calc(
+          clamp(
+            15px,
+            2.8vh,
+            22px
+          ) +
+          clamp(
+            4px,
+            .7vh,
+            6px
+          ) +
+          5px
+        );
 
       transform:
         translateX(-50%);
 
-      opacity:.9;
+      z-index:3;
+
+      line-height:1;
     }
 
+    #tc-timeline-current::before {
+      content:"▲";
 
-    /*
-      v4.5.2
-      現在位置マーカーはバーの下に置く。
-      文字は表示せず、白い上向き三角形だけ表示。
-    */
-    #tc-timeline-current {
+      display:block;
+
+      color:#fff;
+
+      font-size:
+        clamp(
+          9px,
+          1.1vw,
+          13px
+        );
+
+      line-height:1;
+    }
+
+    #tc-timeline-current-text {
+      display:none;
+    }
+
+    #tc-work-timeline::before,
+    #tc-work-timeline::after {
+      content:"";
 
       position:absolute;
 
       top:
         calc(
           clamp(
-            18px,
-            3.6vh,
-            35px
-          ) +
-          clamp(
-            5px,
-            .8vh,
-            9px
-          ) +
-          6px
+            15px,
+            2.8vh,
+            22px
+          ) - 5px
         );
 
-      transform:
-        translateX(-50%);
+      width:1px;
 
-      z-index:2;
+      height:
+        calc(
+          clamp(
+            4px,
+            .7vh,
+            6px
+          ) + 16px
+        );
 
-      width:auto;
-      height:auto;
+      background:#fff;
 
-      line-height:1;
+      z-index:4;
     }
 
+    #tc-work-timeline::before {
+      left:0;
+    }
 
-    #tc-timeline-current::before {
+    #tc-work-timeline::after {
+      right:0;
+    }
 
-      content:"▲";
+    #tc-timeline-caption-start,
+    #tc-timeline-caption-end {
+      position:absolute;
 
-      display:block;
+      top:
+        calc(
+          clamp(
+            15px,
+            2.8vh,
+            22px
+          ) +
+          clamp(
+            4px,
+            .7vh,
+            6px
+          ) +
+          8px
+        );
 
-      color:#f2f3f5;
+      color:#fff;
 
       font-size:
         clamp(
-          12px,
-          1.5vw,
-          18px
+          7px,
+          .9vw,
+          10px
         );
 
-      line-height:1;
+      font-weight:800;
 
-      width:auto;
-      height:auto;
+      letter-spacing:.18em;
 
-      border:none;
-
-      margin:0;
+      white-space:nowrap;
     }
 
-
-    #tc-timeline-current.is-overtime::before {
-
-      color:#f2f3f5;
+    #tc-timeline-caption-start {
+      left:11px;
     }
 
-
-    #tc-timeline-current-text {
-
-      display:none;
+    #tc-timeline-caption-end {
+      right:11px;
     }
-
 
     /* =====================================================
        MAIN
     ===================================================== */
 
     #tc-main {
-
       min-width:0;
       min-height:0;
 
       display:grid;
 
       grid-template-columns:
-        minmax(0,1.5fr)
-        minmax(300px,1fr);
+        minmax(0,1.32fr)
+        minmax(310px,1fr);
 
       gap:
         clamp(
-          10px,
-          1.7vw,
-          22px
+          7px,
+          1vw,
+          12px
         );
     }
 
-
     /* =====================================================
-       CURRENT TASK
+       CURRENT
     ===================================================== */
 
     #tc-now {
-
       position:relative;
 
       min-width:0;
@@ -2539,34 +1943,45 @@
 
       background:var(--panel);
 
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
       border-radius:
         var(--card-radius);
 
-      border:
-        1px solid
-        rgba(255,255,255,.07);
-
       padding:
         clamp(
-          18px,
-          4vh,
-          45px
+          8px,
+          1.8vh,
+          18px
         )
         clamp(
-          28px,
-          4vw,
-          60px
+          18px,
+          2.4vw,
+          32px
+        )
+        clamp(
+          7px,
+          1.5vh,
+          15px
+        )
+        clamp(
+          22px,
+          2.8vw,
+          38px
         );
 
       display:flex;
+
       flex-direction:column;
 
-      justify-content:center;
+      justify-content:flex-start;
+
+      box-shadow:none;
     }
 
-
     #tc-now::before {
-
       content:"";
 
       position:absolute;
@@ -2577,101 +1992,378 @@
 
       width:
         clamp(
-          5px,
-          .55vw,
-          9px
+          4px,
+          .45vw,
+          6px
         );
 
-      background:white;
+      background:#fff;
     }
 
+    #tc-current-topline {
+      display:flex;
+
+      align-items:center;
+
+      gap:
+        clamp(
+          10px,
+          1.25vw,
+          18px
+        );
+
+      min-width:0;
+
+      flex:0 0 auto;
+
+      margin-bottom:
+        clamp(
+          3px,
+          .65vh,
+          7px
+        );
+    }
 
     #tc-now-badge {
+      flex:0 0 auto;
 
-      align-self:flex-start;
+      background:#fff;
 
-      background:white;
       color:#101218;
 
       font-size:
         clamp(
-          14px,
-          2vw,
-          25px
+          9px,
+          1.2vw,
+          14px
         );
 
       font-weight:900;
+
       letter-spacing:.14em;
 
-      border-radius:999px;
+      border-radius:
+        var(--card-radius);
 
       padding:
-        9px 20px;
-
-      margin-bottom:
         clamp(
-          12px,
-          3vh,
-          30px
+          5px,
+          .9vh,
+          8px
+        )
+        clamp(
+          10px,
+          1.3vw,
+          16px
         );
 
       white-space:nowrap;
     }
 
+    #tc-current-attributes {
+      display:flex;
+
+      align-items:center;
+
+      gap:
+        clamp(
+          10px,
+          1.25vw,
+          18px
+        );
+
+      min-width:0;
+
+      flex:1 1 auto;
+
+      color:#dce0e7;
+
+      font-size:
+        clamp(
+          9px,
+          1.15vw,
+          14px
+        );
+
+      font-weight:650;
+
+      line-height:1;
+    }
+
+    .tc-current-attr {
+      display:none;
+
+      align-items:center;
+
+      gap:
+        clamp(
+          4px,
+          .45vw,
+          7px
+        );
+
+      min-width:0;
+
+      max-width:
+        min(
+          190px,
+          18vw
+        );
+
+      white-space:nowrap;
+    }
+
+    .tc-current-attr.is-visible {
+      display:flex;
+    }
+
+    .tc-current-attr-icon {
+      width:
+        clamp(
+          12px,
+          1.2vw,
+          16px
+        );
+
+      height:
+        clamp(
+          12px,
+          1.2vw,
+          16px
+        );
+
+      flex:0 0 auto;
+
+      opacity:.95;
+    }
+
+    .tc-current-attr-icon svg {
+      width:100%;
+      height:100%;
+
+      display:block;
+    }
+
+    .tc-current-attr-text {
+      min-width:0;
+
+      overflow:hidden;
+
+      text-overflow:ellipsis;
+    }
+
+    #tc-task {
+      flex:0 0 auto;
+
+      margin:
+        clamp(
+          7px,
+          1.35vh,
+          14px
+        )
+        0
+        clamp(
+          7px,
+          1.35vh,
+          14px
+        );
+
+      font-size:
+        clamp(
+          27px,
+          4.35vw,
+          50px
+        );
+
+      font-weight:900;
+
+      line-height:1.03;
+
+      white-space:nowrap;
+
+      overflow:hidden;
+
+      text-overflow:ellipsis;
+    }
+
+    #tc-current-section-row {
+      display:none;
+
+      align-items:baseline;
+
+      gap:
+        clamp(
+          8px,
+          1vw,
+          14px
+        );
+
+      min-width:0;
+
+      flex:0 0 auto;
+
+      margin-bottom:
+        clamp(
+          5px,
+          .9vh,
+          9px
+        );
+
+      color:#c9cdd5;
+    }
+
+    #tc-current-section-row.is-visible {
+      display:flex;
+    }
+
+    #tc-current-section {
+      min-width:0;
+
+      font-size:
+        clamp(
+          10px,
+          1.25vw,
+          15px
+        );
+
+      font-weight:700;
+
+      white-space:nowrap;
+
+      overflow:hidden;
+
+      text-overflow:ellipsis;
+    }
+
+    #tc-section-count {
+      flex:0 0 auto;
+
+      color:#9da2ad;
+
+      font-size:
+        clamp(
+          9px,
+          1.05vw,
+          13px
+        );
+
+      font-weight:700;
+
+      font-variant-numeric:
+        tabular-nums;
+
+      white-space:nowrap;
+    }
+
+    #tc-progress {
+      display:grid;
+
+      grid-template-rows:
+        repeat(
+          5,
+          minmax(0,1fr)
+        );
+
+      gap:0;
+
+      min-height:0;
+
+      flex:1 1 auto;
+    }
 
     .tc-now-metric {
-
       display:grid;
 
       grid-template-columns:
         clamp(
-          150px,
-          15vw,
-          210px
+          20px,
+          2vw,
+          28px
+        )
+        clamp(
+          110px,
+          11vw,
+          160px
         )
         minmax(0,1fr);
 
-      align-items:baseline;
+      align-items:center;
 
       column-gap:
         clamp(
-          12px,
-          1.7vw,
-          24px
+          7px,
+          .85vw,
+          11px
         );
 
       min-width:0;
+      min-height:0;
+
+      padding:
+        clamp(
+          2px,
+          .35vh,
+          4px
+        )
+        0;
+
+      border-top:
+        1px solid
+        rgba(255,255,255,.09);
     }
 
+    .tc-metric-icon {
+      width:
+        clamp(
+          17px,
+          1.75vw,
+          23px
+        );
+
+      height:
+        clamp(
+          17px,
+          1.75vw,
+          23px
+        );
+
+      color:#e4e7ec;
+
+      opacity:.92;
+    }
+
+    .tc-metric-icon svg {
+      width:100%;
+      height:100%;
+
+      display:block;
+    }
 
     .tc-now-label {
-
       color:var(--muted);
 
       font-size:
         clamp(
-          12px,
-          1.65vw,
-          20px
+          11px,
+          1.45vw,
+          17px
         );
 
       font-weight:900;
 
-      letter-spacing:.2em;
+      letter-spacing:.17em;
 
       white-space:nowrap;
     }
 
-
     .tc-now-value {
-
       color:#c7cad2;
 
       font-size:
         clamp(
-          22px,
-          3.2vw,
-          42px
+          20px,
+          2.8vw,
+          33px
         );
 
       font-weight:500;
@@ -2682,326 +2374,243 @@
       white-space:nowrap;
     }
 
-
-    #tc-task {
-
-      margin:
-        clamp(
-          8px,
-          1.6vh,
-          18px
-        )
-        0;
-
-      font-size:
-        clamp(
-          31px,
-          5.1vw,
-          66px
-        );
-
-      font-weight:900;
-      line-height:1.08;
-
-      overflow-wrap:anywhere;
-    }
-
-
-    #tc-progress {
-
-      display:grid;
-
-      gap:
-        clamp(
-          4px,
-          .8vh,
-          9px
-        );
-    }
-
-
-    #tc-status-row {
-
-      margin-top:
-        clamp(
-          3px,
-          .8vh,
-          8px
-        );
-    }
-
-
     #tc-status-label.tc-over,
     #tc-status-value.tc-over {
-
-      color:
-        var(--over);
+      color:var(--over);
     }
-
 
     #tc-status-value.tc-over {
-
       font-weight:700;
     }
-
 
     /* =====================================================
        SIDE
     ===================================================== */
 
     #tc-side {
-
       min-width:0;
       min-height:0;
 
       display:grid;
 
-      /*
-        NEXTは少し縮め、
-        PREVIOUSに十分な縦スペースを与える。
-      */
       grid-template-rows:
-        minmax(0,1.28fr)
-        minmax(0,.72fr);
+        minmax(0,1.42fr)
+        minmax(92px,.72fr);
 
       gap:
         clamp(
-          8px,
-          1.3vh,
-          14px
+          5px,
+          .8vh,
+          8px
         );
     }
 
-
-    #tc-next-card {
-      grid-row:1;
-    }
-
-
-    #tc-prev-card {
-      grid-row:2;
-    }
-
-
     .tc-card {
-
       min-width:0;
       min-height:0;
 
       overflow:hidden;
 
-      background:
-        var(--panel2);
+      background:var(--panel2);
 
       border:
         1px solid
-        rgba(255,255,255,.07);
+        rgba(255,255,255,.12);
 
       border-radius:
         var(--card-radius);
 
-      padding:
-        clamp(
-          12px,
-          2.2vh,
-          23px
-        )
-        clamp(
-          16px,
-          2vw,
-          27px
-        );
-
-      display:flex;
-      flex-direction:column;
-
-      justify-content:flex-start;
+      box-shadow:none;
     }
 
-
     .tc-card-title {
-
-      color:var(--dim);
+      color:#fff;
 
       font-size:
         clamp(
-          12px,
-          1.65vw,
-          20px
+          9px,
+          1.25vw,
+          14px
         );
 
       font-weight:900;
 
       letter-spacing:.18em;
 
-      margin-bottom:
-        clamp(
-          6px,
-          .8vh,
-          10px
-        );
-
-      flex-shrink:0;
-    }
-
-
-    /* =====================================================
-       PREVIOUS
-    ===================================================== */
-
-    #tc-prev-task {
-
-      color:#767b86;
-
-      font-size:
-        clamp(
-          16px,
-          2vw,
-          27px
-        );
-
-      font-weight:800;
-
-      line-height:1.1;
-
-      margin-top:1px;
-
-      margin-bottom:
-        clamp(
-          4px,
-          .8vh,
-          8px
-        );
-
-      white-space:nowrap;
-      overflow:hidden;
-
-      text-overflow:ellipsis;
-
-      flex-shrink:0;
-    }
-
-
-    .tc-prev-metric {
-
-      display:grid;
-
-      grid-template-columns:
-        clamp(
-          74px,
-          6.5vw,
-          100px
-        )
-        minmax(0,1fr);
-
-      align-items:baseline;
-
-      column-gap:10px;
+      line-height:1;
 
       margin:0;
+
+      flex:0 0 auto;
     }
-
-
-    .tc-prev-label {
-
-      color:#555a66;
-
-      font-size:
-        clamp(
-          9px,
-          1.15vw,
-          15px
-        );
-
-      font-weight:900;
-
-      letter-spacing:.16em;
-    }
-
-
-    .tc-prev-value {
-
-      color:#747985;
-
-      font-size:
-        clamp(
-          15px,
-          2vw,
-          26px
-        );
-
-      font-variant-numeric:
-        tabular-nums;
-
-      white-space:nowrap;
-    }
-
 
     /* =====================================================
        NEXT
     ===================================================== */
 
-    #tc-next-list {
+    #tc-next-card {
+      display:flex;
 
-      display:grid;
+      flex-direction:column;
 
-      gap:
+      padding:
         clamp(
           5px,
-          .85vh,
-          11px
+          .8vh,
+          9px
+        )
+        clamp(
+          9px,
+          1vw,
+          13px
+        )
+        clamp(
+          5px,
+          .8vh,
+          9px
+        );
+
+      overflow:hidden;
+    }
+
+    #tc-next-card
+    .tc-card-title {
+      margin-bottom:
+        clamp(
+          3px,
+          .45vh,
+          5px
         );
     }
 
+    #tc-next-list {
+      display:grid;
+
+      grid-template-rows:
+        repeat(
+          5,
+          minmax(0,1fr)
+        );
+
+      gap:0;
+
+      min-height:0;
+
+      flex:1 1 auto;
+    }
 
     .tc-next-row {
+      position:relative;
 
       display:grid;
 
       grid-template-columns:
-        max-content
-        minmax(0,1fr);
+        clamp(
+          58px,
+          5.7vw,
+          72px
+        )
+        minmax(0,1fr)
+        clamp(
+          10px,
+          1vw,
+          15px
+        );
 
       column-gap:
         clamp(
-          14px,
-          1.7vw,
-          24px
+          7px,
+          .8vw,
+          11px
         );
 
-      align-items:baseline;
+      align-items:center;
+
+      min-height:0;
+
+      padding:
+        0
+        clamp(
+          3px,
+          .45vw,
+          6px
+        );
+
+      border-top:
+        1px solid
+        rgba(255,255,255,.10);
+
+      overflow:hidden;
     }
 
+    .tc-next-row:first-child {
+      border-top:0;
+
+      background:
+        rgba(255,255,255,.055);
+
+      border-radius:
+        calc(
+          var(--card-radius) - 2px
+        );
+
+      padding-left:
+        clamp(
+          8px,
+          .85vw,
+          11px
+        );
+    }
+
+    .tc-next-row:first-child::before {
+      content:"";
+
+      position:absolute;
+
+      left:0;
+
+      top:0;
+      bottom:0;
+
+      width:3px;
+
+      background:#fff;
+
+      border-radius:
+        calc(
+          var(--card-radius) - 2px
+        )
+        0
+        0
+        calc(
+          var(--card-radius) - 2px
+        );
+    }
 
     .tc-next-time,
     .tc-next-task {
-
-      color:#8a909d;
+      color:#fff;
 
       font-size:
         clamp(
-          21px,
-          2.9vw,
-          38px
+          14px,
+          1.9vw,
+          23px
         );
 
-      line-height:1.12;
+      line-height:1;
     }
 
-
     .tc-next-time {
-
       font-variant-numeric:
         tabular-nums;
 
       white-space:nowrap;
 
-      font-weight:400;
+      font-weight:450;
     }
 
-
     .tc-next-task {
-
       min-width:0;
 
       font-weight:700;
@@ -3013,26 +2622,254 @@
       text-overflow:ellipsis;
     }
 
+    .tc-next-arrow {
+      color:#e3e6ec;
+
+      font-size:
+        clamp(
+          14px,
+          1.5vw,
+          19px
+        );
+
+      line-height:1;
+
+      text-align:right;
+    }
+
+    /* =====================================================
+       PREVIOUS
+    ===================================================== */
+
+    #tc-prev-card {
+      display:flex;
+
+      flex-direction:column;
+
+      padding:
+        clamp(
+          5px,
+          .75vh,
+          8px
+        )
+        clamp(
+          9px,
+          1vw,
+          13px
+        );
+    }
+
+    #tc-prev-card
+    .tc-card-title {
+      margin-bottom:
+        clamp(
+          3px,
+          .4vh,
+          5px
+        );
+    }
+
+    #tc-prev-content {
+      display:grid;
+
+      grid-template-columns:
+        minmax(0,1fr)
+        clamp(
+          26px,
+          2.5vw,
+          34px
+        );
+
+      align-items:center;
+
+      gap:
+        clamp(
+          7px,
+          .8vw,
+          11px
+        );
+
+      min-height:0;
+
+      flex:1 1 auto;
+    }
+
+    #tc-prev-data {
+      min-width:0;
+    }
+
+    #tc-prev-task {
+      color:#fff;
+
+      font-size:
+        clamp(
+          12px,
+          1.6vw,
+          19px
+        );
+
+      font-weight:800;
+
+      line-height:1;
+
+      margin:
+        0 0
+        clamp(
+          3px,
+          .45vh,
+          5px
+        );
+
+      white-space:nowrap;
+
+      overflow:hidden;
+
+      text-overflow:ellipsis;
+    }
+
+    .tc-prev-metric {
+      display:grid;
+
+      grid-template-columns:
+        clamp(
+          54px,
+          5.2vw,
+          72px
+        )
+        minmax(0,1fr);
+
+      align-items:baseline;
+
+      column-gap:
+        clamp(
+          5px,
+          .6vw,
+          8px
+        );
+
+      min-height:
+        clamp(
+          14px,
+          2vh,
+          18px
+        );
+
+      margin:0;
+    }
+
+    .tc-prev-label {
+      color:#fff;
+
+      font-size:
+        clamp(
+          7px,
+          .9vw,
+          10px
+        );
+
+      font-weight:900;
+
+      letter-spacing:.15em;
+    }
+
+    .tc-prev-value {
+      color:#fff;
+
+      font-size:
+        clamp(
+          10px,
+          1.35vw,
+          15px
+        );
+
+      font-variant-numeric:
+        tabular-nums;
+
+      white-space:nowrap;
+    }
+
+    #tc-prev-check {
+      display:flex;
+
+      align-items:center;
+
+      justify-content:center;
+
+      width:
+        clamp(
+          25px,
+          2.45vw,
+          34px
+        );
+
+      height:
+        clamp(
+          25px,
+          2.45vw,
+          34px
+        );
+
+      border:
+        1px solid
+        rgba(255,255,255,.55);
+
+      border-radius:50%;
+
+      color:#fff;
+
+      font-size:
+        clamp(
+          14px,
+          1.45vw,
+          19px
+        );
+    }
+
+    /* =====================================================
+       OVERTIME ACCENT
+    ===================================================== */
+
+    #${ROOT_ID}.is-overtime
+    #tc-next-card,
+
+    #${ROOT_ID}.is-overtime
+    #tc-prev-card,
+
+    #${ROOT_ID}.is-overtime
+    #tc-now {
+      border-color:
+        rgba(
+          217,
+          154,
+          62,
+          .52
+        );
+    }
+
+    #${ROOT_ID}.is-overtime
+    .tc-next-row:first-child::before {
+      background:
+        var(--timeline-overtime);
+    }
 
     /* =====================================================
        ANDROID TASK / NOW
     ===================================================== */
 
     #tc-task-toggle {
-
       display:none;
 
       position:absolute;
 
       left:
         max(
-          12px,
+          10px,
           env(safe-area-inset-left)
         );
 
       bottom:
         max(
-          8px,
+          7px,
           env(safe-area-inset-bottom)
         );
 
@@ -3051,28 +2888,24 @@
 
       font:inherit;
 
-      font-size:10px;
+      font-size:9px;
       font-weight:900;
 
       letter-spacing:.12em;
 
       line-height:1;
 
-      padding:7px 10px;
+      padding:6px 9px;
 
       opacity:.88;
     }
 
-
     #${ROOT_ID}.platform-android
     #tc-task-toggle {
-
       display:block;
     }
 
-
     #tc-now-return-button {
-
       display:none;
 
       position:fixed;
@@ -3113,68 +2946,418 @@
 
       box-shadow:
         0 2px 10px
-        rgba(
-          0,
-          0,
-          0,
-          .35
-        );
+        rgba(0,0,0,.35);
     }
 
-
     #tc-version {
-
       position:absolute;
 
       right:
         max(
-          11px,
+          9px,
           env(safe-area-inset-right)
         );
 
       bottom:
         max(
-          4px,
+          2px,
           env(safe-area-inset-bottom)
         );
 
       color:#41454f;
 
-      font-size:10px;
+      font-size:7px;
 
       font-weight:700;
     }
 
+    /* =====================================================
+       COMPACT LANDSCAPE
+       iPhone 16e actual landscape height baseline
+    ===================================================== */
+
+    #${ROOT_ID}.layout-landscape
+    #tc-layout {
+      grid-template-rows:
+        50px
+        43px
+        minmax(0,1fr);
+
+      gap:3px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-header {
+      grid-template-columns:
+        minmax(70px,.38fr)
+        minmax(250px,1.03fr)
+        minmax(292px,1.08fr);
+
+      gap:8px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-brand {
+      font-size:12px;
+
+      padding-right:13px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-leave {
+      font-size:17px;
+
+      gap:15px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-leave-row:first-child {
+      padding-right:15px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-date {
+      font-size:16px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-clock {
+      gap:10px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-clock-time {
+      font-size:38px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-work-timeline {
+      height:43px;
+
+      min-height:0;
+
+      margin:
+        0 10px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-timeline-track {
+      top:15px;
+
+      height:5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-timeline-label {
+      top:0;
+
+      font-size:9px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-timeline-regular-marker {
+      top:-5px;
+
+      height:15px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-timeline-current {
+      top:25px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-timeline-current::before {
+      font-size:9px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-work-timeline::before,
+    #${ROOT_ID}.layout-landscape
+    #tc-work-timeline::after {
+      top:10px;
+
+      height:20px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-timeline-caption-start,
+    #${ROOT_ID}.layout-landscape
+    #tc-timeline-caption-end {
+      top:27px;
+
+      font-size:7px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-main {
+      grid-template-columns:
+        minmax(0,1.3fr)
+        minmax(300px,1fr);
+
+      gap:6px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-now {
+      padding:
+        6px
+        14px
+        5px
+        18px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-now::before {
+      width:5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-current-topline {
+      min-height:21px;
+
+      gap:7px;
+
+      margin-bottom:1px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-now-badge {
+      font-size:8px;
+
+      padding:
+        4px
+        9px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-current-attributes {
+      gap:7px;
+
+      font-size:8px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-current-attr {
+      gap:3px;
+
+      max-width:132px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-current-attr-icon {
+      width:11px;
+      height:11px;
+    }
+
+    /*
+      Give the task name more vertical breathing room,
+      while the metric rows below stay compact.
+    */
+    #${ROOT_ID}.layout-landscape
+    #tc-task {
+      margin:
+        7px
+        0
+        6px;
+
+      font-size:
+        clamp(
+          23px,
+          4vw,
+          31px
+        );
+
+      line-height:1;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-current-section-row {
+      gap:7px;
+
+      margin-bottom:4px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-current-section {
+      font-size:9px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-section-count {
+      font-size:8px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-now-metric {
+      grid-template-columns:
+        19px
+        108px
+        minmax(0,1fr);
+
+      column-gap:6px;
+
+      padding:
+        1px
+        0;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-metric-icon {
+      width:15px;
+      height:15px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-now-label {
+      font-size:10px;
+
+      letter-spacing:.15em;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-now-value {
+      font-size:
+        clamp(
+          15px,
+          2.35vw,
+          19px
+        );
+
+      line-height:1;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-side {
+      grid-template-rows:
+        minmax(0,1.5fr)
+        minmax(86px,.70fr);
+
+      gap:5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-next-card {
+      padding:
+        4px
+        8px
+        5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-next-card
+    .tc-card-title {
+      font-size:9px;
+
+      margin-bottom:2px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-next-row {
+      grid-template-columns:
+        56px
+        minmax(0,1fr)
+        10px;
+
+      column-gap:6px;
+
+      padding:
+        0
+        3px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-next-row:first-child {
+      padding-left:7px;
+
+      padding-right:3px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-next-time,
+    #${ROOT_ID}.layout-landscape
+    .tc-next-task {
+      font-size:
+        clamp(
+          12px,
+          1.95vw,
+          15px
+        );
+
+      line-height:1;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-next-arrow {
+      font-size:13px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-card {
+      padding:
+        4px
+        8px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-card
+    .tc-card-title {
+      font-size:8px;
+
+      margin-bottom:2px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-content {
+      grid-template-columns:
+        minmax(0,1fr)
+        24px;
+
+      gap:6px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-task {
+      font-size:11px;
+
+      margin-bottom:2px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-prev-metric {
+      grid-template-columns:
+        48px
+        minmax(0,1fr);
+
+      column-gap:5px;
+
+      min-height:13px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-prev-label {
+      font-size:6.5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    .tc-prev-value {
+      font-size:9.5px;
+    }
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-check {
+      width:22px;
+      height:22px;
+
+      font-size:12px;
+    }
 
     /* =====================================================
        PORTRAIT
     ===================================================== */
 
-    #${ROOT_ID}.layout-portrait {
-
-      padding:
-        max(
-          8px,
-          env(safe-area-inset-top)
-        )
-        max(
-          10px,
-          env(safe-area-inset-right)
-        )
-        max(
-          8px,
-          env(safe-area-inset-bottom)
-        )
-        max(
-          10px,
-          env(safe-area-inset-left)
-        );
-    }
-
-
     #${ROOT_ID}.layout-portrait
     #tc-layout {
-
       grid-template-rows:
         auto
         auto
@@ -3183,10 +3366,8 @@
       gap:6px;
     }
 
-
     #${ROOT_ID}.layout-portrait
     #tc-header {
-
       grid-template-columns:
         minmax(0,1fr)
         auto;
@@ -3199,183 +3380,95 @@
       row-gap:3px;
     }
 
-
     #${ROOT_ID}.layout-portrait
     #tc-brand {
-
       grid-area:brand;
 
       font-size:
         clamp(
-          14px,
+          13px,
           4vw,
-          19px
+          18px
         );
-    }
 
+      border-right:0;
+
+      padding-right:0;
+    }
 
     #${ROOT_ID}.layout-portrait
     #tc-clock {
-
       grid-area:clock;
 
-      gap:7px;
+      gap:6px;
     }
-
 
     #${ROOT_ID}.layout-portrait
     #tc-date {
-
       font-size:
         clamp(
-          12px,
-          3.3vw,
-          15px
+          10px,
+          3vw,
+          13px
         );
-
-      font-weight:700;
     }
-
 
     #${ROOT_ID}.layout-portrait
     #tc-clock-time {
-
       font-size:
         clamp(
-          30px,
-          8.8vw,
-          42px
+          29px,
+          8.7vw,
+          41px
         );
     }
 
-
     #${ROOT_ID}.layout-portrait
     #tc-leave {
-
       grid-area:leave;
 
       gap:
         clamp(
-          18px,
-          5.5vw,
-          30px
+          14px,
+          5vw,
+          25px
         );
 
       font-size:
         clamp(
-          15px,
-          4.2vw,
-          19px
+          13px,
+          3.8vw,
+          17px
         );
     }
 
-
     #${ROOT_ID}.layout-portrait
-    .tc-leave-row {
+    .tc-leave-row:first-child {
+      border-right:0;
 
-      grid-template-columns:
-        max-content
-        max-content;
+      padding-right:0;
     }
-
 
     #${ROOT_ID}.layout-portrait
     #tc-work-timeline {
+      min-height:37px;
 
-      min-height:38px;
-
-      margin:
-        0 5px;
+      margin:0 5px;
     }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-timeline-track {
-
-      top:16px;
-      height:5px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-timeline-label {
-
-      top:-1px;
-
-      font-size:
-        clamp(
-          8px,
-          2.4vw,
-          11px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-timeline-regular-marker {
-
-      top:-5px;
-      height:17px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-timeline-current {
-
-      top:27px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-timeline-current::before {
-
-      content:"▲";
-
-      display:block;
-
-      color:#f2f3f5;
-
-      font-size:
-        clamp(
-          10px,
-          2.6vw,
-          13px
-        );
-
-      line-height:1;
-
-      border:none;
-
-      width:auto;
-      height:auto;
-
-      margin:0;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-timeline-current-text {
-
-      display:none;
-    }
-
 
     #${ROOT_ID}.layout-portrait
     #tc-main {
-
       grid-template-columns:1fr;
 
       grid-template-rows:
-        minmax(0,1.15fr)
+        minmax(0,1.12fr)
         minmax(0,1.35fr);
 
       gap:6px;
     }
 
-
     #${ROOT_ID}.layout-portrait
     #tc-side {
-
       display:flex;
 
       flex-direction:column;
@@ -3385,1650 +3478,83 @@
       min-height:0;
     }
 
-
     #${ROOT_ID}.layout-portrait
     #tc-next-card {
-
-      order:1;
-      grid-row:auto;
+      flex:1.3 1 0;
     }
-
 
     #${ROOT_ID}.layout-portrait
     #tc-prev-card {
-
-      order:2;
-      grid-row:auto;
+      flex:.7 1 0;
     }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-side
-    > .tc-card {
-
-      flex:1 1 0;
-    }
-
 
     #${ROOT_ID}.layout-portrait
     #tc-now {
-
-      justify-content:flex-start;
-
       padding:
-        10px
-        17px;
-
-      border-radius:
-        var(--card-radius);
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-now::before {
-
-      width:5px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-now-badge {
-
-      font-size:10px;
-
-      padding:
-        5px 11px;
-
-      margin-bottom:5px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-now-metric {
-
-      grid-template-columns:
-        118px
-        minmax(0,1fr);
-
-      column-gap:9px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-now-label {
-
-      font-size:
-        clamp(
-          9px,
-          2.9vw,
-          12px
-        );
-
-      letter-spacing:.14em;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-now-value {
-
-      font-size:
-        clamp(
-          18px,
-          5.2vw,
-          24px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-task {
-
-      margin:
-        4px
-        0
-        5px;
-
-      font-size:
-        clamp(
-          25px,
-          7.6vw,
-          35px
-        );
-
-      line-height:1.02;
-
-      white-space:nowrap;
-
-      overflow:hidden;
-
-      text-overflow:ellipsis;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-progress {
-
-      gap:1px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-status-row {
-
-      margin-top:0;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-card {
-
-      padding:
+        9px
+        14px
         8px
-        13px;
-
-      border-radius:
-        var(--card-radius);
+        17px;
     }
 
-
     #${ROOT_ID}.layout-portrait
-    .tc-card-title {
-
-      font-size:
-        clamp(
-          9px,
-          2.9vw,
-          12px
-        );
+    #tc-current-topline {
+      gap:7px;
 
       margin-bottom:3px;
     }
 
-
     #${ROOT_ID}.layout-portrait
-    #tc-next-list {
+    #tc-now-badge {
+      font-size:9px;
 
-      gap:2px;
+      padding:5px 9px;
     }
 
-
     #${ROOT_ID}.layout-portrait
-    .tc-next-row {
-
-      grid-template-columns:
-        58px
-        minmax(0,1fr);
-
-      column-gap:8px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-next-time,
-    #${ROOT_ID}.layout-portrait
-    .tc-next-task {
-
-      font-size:
-        clamp(
-          15px,
-          4.3vw,
-          19px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-prev-task {
-
-      font-size:
-        clamp(
-          15px,
-          4.5vw,
-          20px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-prev-metric {
-
-      grid-template-columns:
-        72px
-        minmax(0,1fr);
-
-      column-gap:8px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-prev-label {
-
-      font-size:
-        clamp(
-          8px,
-          2.5vw,
-          10px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-prev-value {
-
-      font-size:
-        clamp(
-          13px,
-          3.9vw,
-          17px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-version {
+    #tc-current-attributes {
+      gap:7px;
 
       font-size:8px;
     }
 
-
-    /* =====================================================
-       SMALL LANDSCAPE
-    ===================================================== */
-
-    @media
-      (max-height:500px) {
-
-      #${ROOT_ID}.layout-landscape {
-
-        padding:
-          max(
-            4px,
-            env(safe-area-inset-top)
-          )
-          max(
-            8px,
-            env(safe-area-inset-right)
-          )
-          max(
-            4px,
-            env(safe-area-inset-bottom)
-          )
-          max(
-            8px,
-            env(safe-area-inset-left)
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-layout {
-
-        grid-template-rows:
-          15dvh
-          10dvh
-          minmax(0,1fr);
-
-        gap:1.2dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-header {
-
-        grid-template-columns:
-          minmax(90px,.5fr)
-          minmax(300px,1.08fr)
-          minmax(320px,1.08fr);
-
-        gap:10px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-brand {
-
-        font-size:
-          clamp(
-            10px,
-            3dvh,
-            16px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-leave {
-
-        font-size:
-          clamp(
-            15px,
-            4.4dvh,
-            23px
-          );
-
-        gap:
-          clamp(
-            18px,
-            2.5vw,
-            34px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-date {
-
-        font-size:
-          clamp(
-            14px,
-            4.1dvh,
-            22px
-          );
-
-        font-weight:700;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-clock-time {
-
-        font-size:
-          clamp(
-            28px,
-            10.2dvh,
-            52px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-work-timeline {
-
-        min-height:0;
-
-        margin:
-          0 2vw;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-track {
-
-        top:3.5dvh;
-
-        height:
-          clamp(
-            4px,
-            1.4dvh,
-            7px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-timeline-label {
-
-        top:0;
-
-        font-size:
-          clamp(
-            8px,
-            2.6dvh,
-            13px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-regular-marker {
-
-        top:-5px;
-        height:18px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current {
-
-        top:
-          calc(
-            3.5dvh +
-            clamp(
-              4px,
-              1.4dvh,
-              7px
-            ) +
-            4px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current::before {
-
-        content:"▲";
-
-        display:block;
-
-        color:#f2f3f5;
-
-        font-size:
-          clamp(
-            10px,
-            2.8dvh,
-            14px
-          );
-
-        line-height:1;
-
-        border:none;
-
-        width:auto;
-        height:auto;
-
-        margin:0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current-text {
-
-        display:none;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-main {
-
-        grid-template-columns:
-          minmax(0,1.45fr)
-          minmax(240px,1fr);
-
-        gap:1.2vw;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now {
-
-        padding:
-          1.7dvh
-          2.6vw;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now-badge {
-
-        font-size:
-          clamp(
-            9px,
-            2.8dvh,
-            14px
-          );
-
-        padding:
-          1dvh
-          1.2vw;
-
-        margin-bottom:
-          1.2dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-metric {
-
-        grid-template-columns:
-          clamp(
-            95px,
-            10vw,
-            135px
-          )
-          minmax(0,1fr);
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-label {
-
-        font-size:
-          clamp(
-            8px,
-            2.6dvh,
-            13px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-value {
-
-        font-size:
-          clamp(
-            15px,
-            4.6dvh,
-            23px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-task {
-
-        font-size:
-          clamp(
-            21px,
-            6.8dvh,
-            35px
-          );
-
-        margin:
-          1dvh 0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-progress {
-
-        gap:.2dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-side {
-
-        grid-template-rows:
-          minmax(0,1.22fr)
-          minmax(0,.78fr);
-
-        gap:1dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-card {
-
-        padding:
-          1.05dvh
-          1.3vw;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-card
-      .tc-card-title {
-
-        font-size:
-          clamp(
-            9px,
-            2.6dvh,
-            13px
-          );
-
-        margin-bottom:.25dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-time,
-      #${ROOT_ID}.layout-landscape
-      .tc-next-task {
-
-        font-size:
-          clamp(
-            15px,
-            4.1dvh,
-            22px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-list {
-
-        gap:.25dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-card {
-
-        padding:
-          .8dvh
-          1.3vw;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-card
-      .tc-card-title {
-
-        font-size:
-          clamp(
-            8px,
-            2.2dvh,
-            12px
-          );
-
-        margin-bottom:.15dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-task {
-
-        font-size:
-          clamp(
-            12px,
-            3.2dvh,
-            18px
-          );
-
-        margin:
-          0 0 .15dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-metric {
-
-        grid-template-columns:
-          clamp(
-            54px,
-            5.2vw,
-            74px
-          )
-          1fr;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-label {
-
-        font-size:
-          clamp(
-            7px,
-            2.1dvh,
-            11px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-value {
-
-        font-size:
-          clamp(
-            11px,
-            3dvh,
-            17px
-          );
-      }
-    }
-
-
-    /* =====================================================
-       ANDROID / FIREFOX MEDIUM LANDSCAPE
-    ===================================================== */
-
-    @media
-      (min-height:501px)
-      and (max-height:650px) {
-
-      #${ROOT_ID}.browser-firefox.layout-landscape {
-
-        padding:10px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-layout {
-
-        grid-template-rows:
-          61px
-          46px
-          minmax(0,1fr);
-
-        gap:7px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-header {
-
-        grid-template-columns:
-          minmax(100px,.45fr)
-          minmax(300px,1.05fr)
-          minmax(350px,1.1fr);
-
-        gap:10px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-brand {
-
-        font-size:14px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-leave {
-
-        font-size:18px;
-        gap:24px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-date {
-
-        font-size:18px;
-        font-weight:700;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-clock-time {
-
-        font-size:42px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-work-timeline {
-
-        margin:
-          0 14px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-timeline-track {
-
-        top:20px;
-        height:6px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-timeline-label {
-
-        top:1px;
-        font-size:11px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-timeline-current {
-
-        top:30px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-timeline-current::before {
-
-        content:"▲";
-
-        display:block;
-
-        color:#f2f3f5;
-
-        font-size:12px;
-
-        line-height:1;
-
-        border:none;
-
-        width:auto;
-        height:auto;
-
-        margin:0;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-timeline-current-text {
-
-        display:none;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-main {
-
-        grid-template-columns:
-          minmax(0,1.45fr)
-          minmax(300px,1fr);
-
-        gap:8px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-now {
-
-        padding:
-          18px
-          24px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-now-badge {
-
-        font-size:13px;
-        margin-bottom:10px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-now-metric {
-
-        grid-template-columns:
-          116px
-          1fr;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-now-label {
-
-        font-size:10px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-now-value {
-
-        font-size:19px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-task {
-
-        font-size:29px;
-        margin:5px 0;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-progress {
-
-        gap:2px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-side {
-
-        grid-template-rows:
-          minmax(0,1.24fr)
-          minmax(0,.76fr);
-
-        gap:6px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-next-card {
-
-        padding:
-          9px
-          16px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-next-card
-      .tc-card-title {
-
-        font-size:10px;
-        margin-bottom:3px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-next-time,
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-next-task {
-
-        font-size:19px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-next-list {
-
-        gap:2px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-prev-card {
-
-        padding:
-          8px
-          16px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-prev-card
-      .tc-card-title {
-
-        font-size:9px;
-        margin-bottom:2px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-prev-task {
-
-        font-size:15px;
-        margin-bottom:2px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-prev-metric {
-
-        grid-template-columns:
-          60px
-          1fr;
-
-        column-gap:6px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-prev-label {
-
-        font-size:8px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-prev-value {
-
-        font-size:13px;
-      }
-    }
-
-
-    /* =====================================================
-       VERY NARROW ANDROID PORTRAIT
-    ===================================================== */
-
-
-    /* =====================================================
-       v4.5.2 REFINED DASHBOARD
-    ===================================================== */
-
-    #tc-brand {
-      position:relative;
-      padding-right:clamp(16px,2vw,30px);
-      border-right:1px solid rgba(255,255,255,.24);
-    }
-
-
-    #tc-leave {
-      column-gap:clamp(18px,2.4vw,36px);
-    }
-
-
-    #tc-leave .tc-leave-row:first-child {
-      padding-right:clamp(18px,2.4vw,36px);
-      border-right:1px solid rgba(255,255,255,.24);
-    }
-
-
-    #tc-work-timeline::before,
-    #tc-work-timeline::after {
-
-      content:"";
-
-      position:absolute;
-
-      top:
-        calc(
-          clamp(
-            18px,
-            3.6vh,
-            35px
-          ) - 7px
-        );
-
-      width:1px;
-
-      height:
-        calc(
-          clamp(
-            5px,
-            .8vh,
-            9px
-          ) + 20px
-        );
-
-      background:
-        rgba(255,255,255,.85);
-
-      z-index:3;
-    }
-
-
-    #tc-work-timeline::before {
-      left:0;
-    }
-
-
-    #tc-work-timeline::after {
-      right:0;
-    }
-
-
-    #tc-timeline-caption-start,
-    #tc-timeline-caption-end {
-
-      position:absolute;
-
-      top:
-        calc(
-          clamp(
-            18px,
-            3.6vh,
-            35px
-          ) +
-          clamp(
-            5px,
-            .8vh,
-            9px
-          ) +
-          12px
-        );
-
-      color:#f4f5f7;
-
-      font-size:
-        clamp(
-          9px,
-          1.1vw,
-          14px
-        );
-
-      font-weight:700;
-
-      letter-spacing:.18em;
-
-      white-space:nowrap;
-    }
-
-
-    #tc-timeline-caption-start {
-      left:12px;
-    }
-
-
-    #tc-timeline-caption-end {
-      right:12px;
-    }
-
-
-    #tc-now,
-    .tc-card {
-
-      box-shadow:none;
-
-      border:
-        1px solid
-        rgba(255,255,255,.12);
-    }
-
-
-    #tc-now::before {
-
-      background:#fff;
-    }
-
-
-    #tc-current-topline {
-
-      display:flex;
-
-      align-items:center;
-
-      gap:
-        clamp(
-          12px,
-          1.5vw,
-          20px
-        );
-
-      min-width:0;
-
-      margin-bottom:
-        clamp(
-          9px,
-          1.7vh,
-          18px
-        );
-    }
-
-
-    #tc-now-badge {
-
-      margin:0;
-
-      flex:0 0 auto;
-
-      border-radius:
-        var(--card-radius);
-    }
-
-
-    #tc-current-attributes {
-
-      display:flex;
-
-      align-items:center;
-
-      gap:
-        clamp(
-          12px,
-          1.5vw,
-          20px
-        );
-
-      min-width:0;
-
-      flex:1 1 auto;
-
-      color:#d8dbe2;
-
-      font-size:
-        clamp(
-          11px,
-          1.35vw,
-          17px
-        );
-
-      font-weight:600;
-    }
-
-
+    #${ROOT_ID}.layout-portrait
     .tc-current-attr {
-
-      display:none;
-
-      align-items:center;
-
-      gap:7px;
-
-      min-width:0;
-
-      white-space:nowrap;
+      max-width:105px;
     }
-
-
-    .tc-current-attr.is-visible {
-      display:flex;
-    }
-
-
-    .tc-current-attr-icon {
-
-      width:
-        clamp(
-          14px,
-          1.35vw,
-          18px
-        );
-
-      height:
-        clamp(
-          14px,
-          1.35vw,
-          18px
-        );
-
-      flex:0 0 auto;
-
-      opacity:.9;
-    }
-
-
-    .tc-current-attr-text {
-
-      min-width:0;
-
-      overflow:hidden;
-
-      text-overflow:ellipsis;
-    }
-
-
-    #tc-section-count {
-
-      display:none;
-
-      margin-left:auto;
-
-      color:#c6cad2;
-
-      font-size:
-        clamp(
-          10px,
-          1.25vw,
-          16px
-        );
-
-      font-weight:700;
-
-      white-space:nowrap;
-
-      letter-spacing:.08em;
-    }
-
-
-    #tc-section-count.is-visible {
-      display:block;
-    }
-
-
-    #tc-task {
-
-      margin:
-        clamp(
-          5px,
-          1vh,
-          10px
-        )
-        0
-        clamp(
-          5px,
-          1vh,
-          10px
-        );
-    }
-
-
-    #tc-current-section {
-
-      display:none;
-
-      color:#d0d3da;
-
-      font-size:
-        clamp(
-          12px,
-          1.55vw,
-          20px
-        );
-
-      font-weight:650;
-
-      line-height:1.25;
-
-      white-space:nowrap;
-
-      overflow:hidden;
-
-      text-overflow:ellipsis;
-
-      margin-bottom:
-        clamp(
-          7px,
-          1.4vh,
-          14px
-        );
-    }
-
-
-    #tc-current-section.is-visible {
-      display:block;
-    }
-
-
-    .tc-now-metric {
-
-      grid-template-columns:
-        clamp(
-          28px,
-          2.6vw,
-          38px
-        )
-        clamp(
-          130px,
-          12vw,
-          185px
-        )
-        minmax(0,1fr);
-
-      border-top:
-        1px solid
-        rgba(255,255,255,.09);
-
-      padding:
-        clamp(
-          5px,
-          .75vh,
-          9px
-        )
-        0;
-    }
-
-
-    .tc-metric-icon {
-
-      width:
-        clamp(
-          20px,
-          2vw,
-          28px
-        );
-
-      height:
-        clamp(
-          20px,
-          2vw,
-          28px
-        );
-
-      color:#dfe2e8;
-
-      opacity:.9;
-
-      align-self:center;
-    }
-
-
-    .tc-metric-icon svg {
-
-      width:100%;
-      height:100%;
-
-      display:block;
-    }
-
-
-    #tc-status-row {
-      margin-top:0;
-    }
-
-
-    .tc-card-title,
-    #tc-prev-task,
-    .tc-prev-value,
-    .tc-prev-label,
-    .tc-next-time,
-    .tc-next-task {
-
-      color:#f4f5f7;
-    }
-
-
-    #tc-next-list {
-
-      gap:0;
-    }
-
-
-    .tc-next-row {
-
-      position:relative;
-
-      grid-template-columns:
-        max-content
-        minmax(0,1fr)
-        18px;
-
-      gap:
-        clamp(
-          12px,
-          1.35vw,
-          20px
-        );
-
-      align-items:center;
-
-      min-height:
-        clamp(
-          42px,
-          6.7vh,
-          66px
-        );
-
-      padding:
-        0
-        clamp(
-          4px,
-          .5vw,
-          8px
-        );
-
-      border-top:
-        1px solid
-        rgba(255,255,255,.10);
-    }
-
-
-    .tc-next-row:first-child {
-
-      border-top:0;
-
-      background:
-        rgba(255,255,255,.055);
-
-      border-radius:
-        calc(
-          var(--card-radius) - 2px
-        );
-
-      padding-left:
-        clamp(
-          10px,
-          1vw,
-          15px
-        );
-
-      padding-right:
-        clamp(
-          10px,
-          1vw,
-          15px
-        );
-    }
-
-
-    .tc-next-row:first-child::before {
-
-      content:"";
-
-      position:absolute;
-
-      left:0;
-
-      top:0;
-      bottom:0;
-
-      width:4px;
-
-      border-radius:
-        calc(
-          var(--card-radius) - 2px
-        )
-        0
-        0
-        calc(
-          var(--card-radius) - 2px
-        );
-
-      background:#fff;
-    }
-
-
-    #${ROOT_ID}.is-overtime
-    .tc-next-row:first-child::before {
-
-      background:
-        var(--timeline-overtime);
-    }
-
-
-    #${ROOT_ID}.is-overtime
-    #tc-next-card {
-
-      border-color:
-        rgba(217,154,62,.48);
-    }
-
-
-    #${ROOT_ID}.is-overtime
-    #tc-prev-card {
-
-      border-color:
-        rgba(217,154,62,.32);
-    }
-
-
-    #${ROOT_ID}.is-overtime
-    #tc-now {
-
-      border-color:
-        rgba(217,154,62,.32);
-    }
-
-
-    .tc-next-arrow {
-
-      color:#dfe2e8;
-
-      font-size:
-        clamp(
-          18px,
-          2vw,
-          26px
-        );
-
-      line-height:1;
-
-      text-align:right;
-    }
-
-
-    #tc-prev-header {
-
-      display:flex;
-
-      align-items:center;
-
-      justify-content:space-between;
-
-      gap:12px;
-    }
-
-
-    #tc-prev-check {
-
-      display:flex;
-
-      align-items:center;
-
-      justify-content:center;
-
-      width:
-        clamp(
-          26px,
-          2.4vw,
-          34px
-        );
-
-      height:
-        clamp(
-          26px,
-          2.4vw,
-          34px
-        );
-
-      border:
-        1px solid
-        rgba(255,255,255,.45);
-
-      border-radius:50%;
-
-      color:#f4f5f7;
-
-      font-size:
-        clamp(
-          15px,
-          1.4vw,
-          20px
-        );
-
-      flex:0 0 auto;
-    }
-
-
-    #tc-prev-content {
-
-      display:grid;
-
-      grid-template-columns:
-        minmax(0,1fr)
-        auto;
-
-      gap:
-        clamp(
-          12px,
-          1.5vw,
-          20px
-        );
-
-      align-items:center;
-
-      min-height:0;
-    }
-
-
-    #tc-prev-data {
-      min-width:0;
-    }
-
-
-    #tc-timeline-caption-start,
-    #tc-timeline-caption-end {
-      color:#fff;
-    }
-
-
-    #tc-next-card .tc-card-title,
-    #tc-prev-card .tc-card-title {
-      color:#fff;
-    }
-
-
-    #tc-timeline-current::before {
-      color:#fff;
-    }
-
 
     #${ROOT_ID}.layout-portrait
-    #tc-current-topline {
+    #tc-task {
+      font-size:
+        clamp(
+          24px,
+          7vw,
+          33px
+        );
 
-      gap:8px;
+      margin:
+        7px
+        0
+        6px;
+    }
 
+    #${ROOT_ID}.layout-portrait
+    #tc-current-section-row {
       margin-bottom:4px;
     }
 
+    #${ROOT_ID}.layout-portrait
+    #tc-current-section {
+      font-size:
+        clamp(
+          9px,
+          2.8vw,
+          12px
+        );
+    }
 
     #${ROOT_ID}.layout-portrait
-    #tc-current-attributes {
-
-      gap:8px;
-
+    #tc-section-count {
       font-size:
         clamp(
           8px,
@@ -5037,1222 +3563,68 @@
         );
     }
 
-
-    #${ROOT_ID}.layout-portrait
-    #tc-section-count {
-
-      font-size:
-        clamp(
-          8px,
-          2.1vw,
-          9px
-        );
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    #tc-current-section {
-
-      font-size:
-        clamp(
-          10px,
-          3vw,
-          13px
-        );
-
-      margin-bottom:3px;
-    }
-
-
     #${ROOT_ID}.layout-portrait
     .tc-now-metric {
-
       grid-template-columns:
-        24px
-        96px
+        20px
+        100px
         minmax(0,1fr);
+
+      column-gap:7px;
 
       padding:2px 0;
     }
 
-
     #${ROOT_ID}.layout-portrait
     .tc-metric-icon {
-
-      width:17px;
-      height:17px;
+      width:16px;
+      height:16px;
     }
-
 
     #${ROOT_ID}.layout-portrait
-    .tc-next-row {
-
-      grid-template-columns:
-        58px
-        minmax(0,1fr)
-        12px;
-
-      min-height:0;
-
-      padding:1px 4px;
-    }
-
-
-    #${ROOT_ID}.layout-portrait
-    .tc-next-arrow {
-
-      font-size:13px;
-    }
-
-
-    @media
-      (max-width:520px) {
-
-      #${ROOT_ID}.platform-android.layout-portrait {
-
-        padding:7px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-date {
-
-        font-size:11px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-clock-time {
-
-        font-size:34px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-leave {
-
-        font-size:14px;
-      }
-
-
-      #${ROOT_ID}.platform-android.layout-portrait
-      #tc-task {
-
-        font-size:
-          clamp(
-            24px,
-            7vw,
-            33px
-          );
-      }
-    }
-
-    /* =====================================================
-       v4.5.2
-       COMPACT LANDSCAPE FOR PHONE
-       iPhone 16e actual landscape height baseline
-
-       Goal:
-       - CURRENT full content visible
-       - NEXT up to 5 rows visible
-       - PREVIOUS full content visible
-       - No overlap with timeline/header
-    ===================================================== */
-
-    @media
-      (orientation:landscape)
-      and (max-height:720px) {
-
-      #${ROOT_ID}.layout-landscape {
-
-        padding:
-          max(4px,env(safe-area-inset-top))
-          max(8px,env(safe-area-inset-right))
-          max(4px,env(safe-area-inset-bottom))
-          max(8px,env(safe-area-inset-left));
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-layout {
-
-        grid-template-rows:
-          52px
-          46px
-          minmax(0,1fr);
-
-        gap:4px;
-      }
-
-
-      /* ---------- HEADER ---------- */
-
-      #${ROOT_ID}.layout-landscape
-      #tc-header {
-
-        grid-template-columns:
-          minmax(72px,.42fr)
-          minmax(250px,1.05fr)
-          minmax(300px,1.12fr);
-
-        gap:10px;
-
-        min-height:0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-brand {
-
-        font-size:13px;
-
-        padding-right:14px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-leave {
-
-        font-size:18px;
-
-        gap:18px;
-
-        line-height:1;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-leave
-      .tc-leave-row:first-child {
-
-        padding-right:18px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-date {
-
-        font-size:17px;
-
-        font-weight:700;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-clock {
-
-        gap:12px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-clock-time {
-
-        font-size:40px;
-
-        line-height:.95;
-      }
-
-
-      /* ---------- TIMELINE ---------- */
-
-      #${ROOT_ID}.layout-landscape
-      #tc-work-timeline {
-
-        min-height:0;
-
-        height:46px;
-
-        margin:
-          0 12px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-track {
-
-        top:17px;
-
-        height:5px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-timeline-label {
-
-        top:1px;
-
-        font-size:10px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-regular-marker {
-
-        top:-5px;
-
-        height:16px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current {
-
-        top:27px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current::before {
-
-        font-size:10px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-work-timeline::before,
-      #${ROOT_ID}.layout-landscape
-      #tc-work-timeline::after {
-
-        top:11px;
-
-        height:22px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-caption-start,
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-caption-end {
-
-        top:29px;
-
-        font-size:8px;
-
-        letter-spacing:.17em;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-caption-start {
-        left:10px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-caption-end {
-        right:10px;
-      }
-
-
-      /* ---------- MAIN ---------- */
-
-      #${ROOT_ID}.layout-landscape
-      #tc-main {
-
-        grid-template-columns:
-          minmax(0,1.32fr)
-          minmax(300px,1fr);
-
-        gap:8px;
-
-        min-height:0;
-      }
-
-
-      /* ---------- CURRENT ---------- */
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now {
-
-        justify-content:flex-start;
-
-        padding:
-          8px
-          18px
-          7px
-          22px;
-
-        min-height:0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now::before {
-
-        width:5px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-current-topline {
-
-        gap:9px;
-
-        min-height:24px;
-
-        margin-bottom:2px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now-badge {
-
-        font-size:10px;
-
-        letter-spacing:.13em;
-
-        padding:
-          5px
-          11px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-current-attributes {
-
-        gap:9px;
-
-        font-size:9px;
-
-        line-height:1;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-current-attr {
-
-        gap:4px;
-
-        max-width:145px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-current-attr-icon {
-
-        width:12px;
-        height:12px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-section-count {
-
-        font-size:9px;
-
-        letter-spacing:.04em;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-task {
-
-        margin:
-          1px
-          0
-          2px;
-
-        font-size:
-          clamp(
-            24px,
-            4.2vw,
-            34px
-          );
-
-        line-height:1;
-
-        white-space:nowrap;
-
-        overflow:hidden;
-
-        text-overflow:ellipsis;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-current-section {
-
-        font-size:10px;
-
-        line-height:1.15;
-
-        margin-bottom:2px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-progress {
-
-        display:grid;
-
-        grid-template-rows:
-          repeat(
-            5,
-            minmax(0,1fr)
-          );
-
-        gap:0;
-
-        min-height:0;
-
-        flex:1 1 auto;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-metric {
-
-        grid-template-columns:
-          22px
-          118px
-          minmax(0,1fr);
-
-        column-gap:7px;
-
-        min-height:0;
-
-        padding:
-          2px
-          0;
-
-        align-items:center;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-metric-icon {
-
-        width:17px;
-        height:17px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-label {
-
-        font-size:9px;
-
-        letter-spacing:.17em;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-value {
-
-        font-size:
-          clamp(
-            16px,
-            2.45vw,
-            21px
-          );
-
-        line-height:1;
-
-        align-self:center;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-status-row {
-
-        margin-top:0;
-      }
-
-
-      /* ---------- SIDE ---------- */
-
-      #${ROOT_ID}.layout-landscape
-      #tc-side {
-
-        grid-template-rows:
-          minmax(0,1.42fr)
-          minmax(90px,.78fr);
-
-        gap:6px;
-
-        min-height:0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-card {
-
-        padding:
-          6px
-          10px;
-
-        min-height:0;
-      }
-
-
-      /* ---------- NEXT ---------- */
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-card {
-
-        padding:
-          5px
-          10px
-          6px;
-
-        overflow:hidden;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-card
-      .tc-card-title {
-
-        font-size:10px;
-
-        line-height:1;
-
-        margin-bottom:3px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-list {
-
-        display:grid;
-
-        grid-template-rows:
-          repeat(
-            5,
-            minmax(0,1fr)
-          );
-
-        gap:0;
-
-        flex:1 1 auto;
-
-        min-height:0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-row {
-
-        grid-template-columns:
-          62px
-          minmax(0,1fr)
-          12px;
-
-        column-gap:8px;
-
-        min-height:0;
-
-        height:auto;
-
-        padding:
-          0
-          4px;
-
-        line-height:1;
-
-        overflow:hidden;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-row:first-child {
-
-        padding-left:8px;
-
-        padding-right:5px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-row:first-child::before {
-
-        width:3px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-time,
-      #${ROOT_ID}.layout-landscape
-      .tc-next-task {
-
-        font-size:
-          clamp(
-            13px,
-            2.1vw,
-            17px
-          );
-
-        line-height:1;
-
-        align-self:center;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-task {
-
-        font-weight:700;
-
-        overflow:hidden;
-
-        text-overflow:ellipsis;
-
-        white-space:nowrap;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-arrow {
-
-        font-size:15px;
-
-        align-self:center;
-      }
-
-
-      /* ---------- PREVIOUS ---------- */
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-card {
-
-        padding:
-          5px
-          10px
-          5px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-card
-      .tc-card-title {
-
-        font-size:9px;
-
-        line-height:1;
-
-        margin-bottom:2px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-content {
-
-        grid-template-columns:
-          minmax(0,1fr)
-          30px;
-
-        gap:8px;
-
-        min-height:0;
-
-        flex:1 1 auto;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-task {
-
-        font-size:13px;
-
-        line-height:1;
-
-        margin:
-          0
-          0
-          3px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-metric {
-
-        grid-template-columns:
-          58px
-          minmax(0,1fr);
-
-        column-gap:6px;
-
-        line-height:1;
-
-        margin:0;
-
-        min-height:16px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-label {
-
-        font-size:7px;
-
-        line-height:1;
-
-        letter-spacing:.14em;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-value {
-
-        font-size:11px;
-
-        line-height:1;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-check {
-
-        width:25px;
-        height:25px;
-
-        font-size:14px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-version {
-
-        font-size:7px;
-
-        bottom:
-          max(
-            2px,
-            env(safe-area-inset-bottom)
-          );
-      }
-    }
-
-
-    /*
-      Extra-tight fallback.
-      Very short browser viewport / UI chrome visible.
-    */
-    @media
-      (orientation:landscape)
-      and (max-height:430px) {
-
-      #${ROOT_ID}.layout-landscape
-      #tc-layout {
-
-        grid-template-rows:
-          48px
-          42px
-          minmax(0,1fr);
-
-        gap:3px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-header {
-
-        grid-template-columns:
-          minmax(65px,.38fr)
-          minmax(235px,1.02fr)
-          minmax(275px,1.08fr);
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-brand {
-
-        font-size:12px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-leave {
-
-        font-size:16px;
-
-        gap:14px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-leave
-      .tc-leave-row:first-child {
-
-        padding-right:14px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-date {
-
-        font-size:15px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-clock-time {
-
-        font-size:36px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-work-timeline {
-
-        height:42px;
-
-        margin:
-          0 10px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-track {
-
-        top:15px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-timeline-label {
-
-        top:0;
-
-        font-size:9px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current {
-
-        top:24px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-caption-start,
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-caption-end {
-
-        top:26px;
-
-        font-size:7px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-work-timeline::before,
-      #${ROOT_ID}.layout-landscape
-      #tc-work-timeline::after {
-
-        top:9px;
-
-        height:21px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-main {
-
-        grid-template-columns:
-          minmax(0,1.28fr)
-          minmax(292px,1fr);
-
-        gap:6px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now {
-
-        padding:
-          6px
-          14px
-          5px
-          18px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-current-topline {
-
-        min-height:20px;
-
-        margin-bottom:1px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now-badge {
-
-        font-size:8px;
-
-        padding:
-          4px
-          9px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-current-attributes {
-
-        font-size:8px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-section-count {
-
-        font-size:8px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-task {
-
-        font-size:
-          clamp(
-            21px,
-            3.8vw,
-            29px
-          );
-
-        margin:
-          1px
-          0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-current-section {
-
-        font-size:9px;
-
-        margin-bottom:1px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-metric {
-
-        grid-template-columns:
-          19px
-          105px
-          minmax(0,1fr);
-
-        column-gap:6px;
-
-        padding:
-          1px
-          0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-metric-icon {
-
-        width:15px;
-        height:15px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-label {
-
-        font-size:8px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-now-value {
-
-        font-size:
-          clamp(
-            14px,
-            2.25vw,
-            18px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-side {
-
-        grid-template-rows:
-          minmax(0,1.5fr)
-          minmax(84px,.72fr);
-
-        gap:5px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-card {
-
-        padding:
-          4px
-          8px
-          5px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-next-card
-      .tc-card-title {
-
-        font-size:9px;
-
-        margin-bottom:2px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-row {
-
-        grid-template-columns:
-          56px
-          minmax(0,1fr)
-          10px;
-
-        column-gap:6px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-time,
-      #${ROOT_ID}.layout-landscape
-      .tc-next-task {
-
-        font-size:
-          clamp(
-            12px,
-            1.95vw,
-            15px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-next-arrow {
-
-        font-size:13px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-card {
-
-        padding:
-          4px
-          8px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-task {
-
-        font-size:12px;
-
-        margin-bottom:2px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-metric {
-
-        min-height:14px;
-
-        grid-template-columns:
-          52px
-          minmax(0,1fr);
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-label {
-
-        font-size:6.5px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-value {
-
-        font-size:10px;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-check {
-
-        width:23px;
-        height:23px;
-
-        font-size:13px;
-      }
-    }
-
-
-    /* =====================================================
-       v4.5.2
-       CURRENT TASK refinements
-    ===================================================== */
-
-    #tc-current-section,
-    #tc-section-count {
-      display:none !important;
-    }
-
-
-    /*
-      CURRENT TASK metrics:
-      make START / PLANNED / PLANNED END / ELAPSED / REMAINING
-      easier to read without increasing the numeric values.
-    */
-    #tc-now .tc-now-label {
+    .tc-now-label {
       font-size:
         clamp(
-          13px,
-          1.8vw,
+          9px,
+          2.8vw,
+          11px
+        );
+    }
+
+    #${ROOT_ID}.layout-portrait
+    .tc-now-value {
+      font-size:
+        clamp(
+          17px,
+          4.9vw,
           22px
         );
     }
 
-
-    @media
-      (orientation:landscape)
-      and (max-height:720px) {
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now
-      .tc-now-label {
-
-        font-size:11px;
-
-        letter-spacing:.16em;
-      }
+    #${ROOT_ID}.layout-portrait
+    .tc-next-row {
+      grid-template-columns:
+        54px
+        minmax(0,1fr)
+        11px;
     }
 
-
-    @media
-      (orientation:landscape)
-      and (max-height:430px) {
-
-      #${ROOT_ID}.layout-landscape
-      #tc-now
-      .tc-now-label {
-
-        font-size:10px;
-
-        letter-spacing:.15em;
-      }
+    #${ROOT_ID}.layout-portrait
+    .tc-next-time,
+    #${ROOT_ID}.layout-portrait
+    .tc-next-task {
+      font-size:
+        clamp(
+          14px,
+          4.1vw,
+          18px
+        );
     }
-
   `;
 
-
-  document.head
-    .appendChild(
-      style
-    );
-
+  document.head.appendChild(
+    style
+  );
 
   /* =========================================================
      HTML
@@ -6263,40 +3635,26 @@
       'div'
     );
 
-
   root.id =
     ROOT_ID;
 
-
-  if (
-    IS_IOS
-  ) {
-
+  if (IS_IOS) {
     root.classList.add(
       'platform-ios'
     );
   }
 
-
-  if (
-    IS_ANDROID
-  ) {
-
+  if (IS_ANDROID) {
     root.classList.add(
       'platform-android'
     );
   }
 
-
-  if (
-    IS_FIREFOX
-  ) {
-
+  if (IS_FIREFOX) {
     root.classList.add(
       'browser-firefox'
     );
   }
-
 
   root.innerHTML = `
 
@@ -6308,36 +3666,19 @@
           NOW
         </div>
 
-
         <div id="tc-leave">
 
           <div class="tc-leave-row">
-
-            <span>
-              退勤
-            </span>
-
-            <span id="tc-leave-time">
-              --:--
-            </span>
-
+            <span>退勤</span>
+            <span id="tc-leave-time">--:--</span>
           </div>
 
-
           <div class="tc-leave-row">
-
-            <span id="tc-leave-label">
-              あと
-            </span>
-
-            <span id="tc-leave-count">
-              --:--
-            </span>
-
+            <span id="tc-leave-label">あと</span>
+            <span id="tc-leave-count">--:--</span>
           </div>
 
         </div>
-
 
         <div id="tc-clock">
 
@@ -6353,7 +3694,6 @@
 
       </header>
 
-
       <section id="tc-work-timeline">
 
         <div
@@ -6362,13 +3702,11 @@
           08:30
         </div>
 
-
         <div
           id="tc-timeline-regular-label"
           class="tc-timeline-label">
           17:25
         </div>
-
 
         <div
           id="tc-timeline-end-label"
@@ -6376,34 +3714,25 @@
           17:25
         </div>
 
-
         <div id="tc-timeline-track">
-
           <div id="tc-timeline-normal"></div>
-
           <div id="tc-timeline-overtime"></div>
-
           <div id="tc-timeline-regular-marker"></div>
-
         </div>
-
 
         <div id="tc-timeline-current">
           <div id="tc-timeline-current-text"></div>
         </div>
 
-
         <div id="tc-timeline-caption-start">
           REGULAR HOURS
         </div>
-
 
         <div id="tc-timeline-caption-end">
           OVERTIME
         </div>
 
       </section>
-
 
       <main id="tc-main">
 
@@ -6414,7 +3743,6 @@
             <div id="tc-now-badge">
               CURRENT TASK
             </div>
-
 
             <div id="tc-current-attributes">
 
@@ -6433,7 +3761,6 @@
                   class="tc-current-attr-text"></span>
 
               </div>
-
 
               <div
                 id="tc-current-mode"
@@ -6454,19 +3781,19 @@
 
             </div>
 
-
-            <div id="tc-section-count"></div>
-
           </div>
-
 
           <div id="tc-task">
             タスクを取得できません
           </div>
 
+          <div id="tc-current-section-row">
 
-          <div id="tc-current-section"></div>
+            <span id="tc-current-section"></span>
 
+            <span id="tc-section-count"></span>
+
+          </div>
 
           <div id="tc-progress">
 
@@ -6483,15 +3810,13 @@
                 START
               </span>
 
-            <span
-              id="tc-start"
-              class="tc-now-value">
-              --:--
-            </span>
+              <span
+                id="tc-start"
+                class="tc-now-value">
+                --:--
+              </span>
 
-          </div>
-
-
+            </div>
 
             <div class="tc-now-metric">
 
@@ -6514,7 +3839,6 @@
 
             </div>
 
-
             <div class="tc-now-metric">
 
               <span class="tc-metric-icon">
@@ -6536,7 +3860,6 @@
 
             </div>
 
-
             <div class="tc-now-metric">
 
               <span class="tc-metric-icon">
@@ -6557,7 +3880,6 @@
               </span>
 
             </div>
-
 
             <div
               id="tc-status-row"
@@ -6587,86 +3909,7 @@
 
         </section>
 
-
         <aside id="tc-side">
-
-          <section
-            id="tc-prev-card"
-            class="tc-card">
-
-            <div id="tc-prev-header">
-
-              <div class="tc-card-title">
-                PREVIOUS
-              </div>
-
-            </div>
-
-
-            <div id="tc-prev-content">
-
-              <div id="tc-prev-data">
-
-                <div id="tc-prev-task">
-                  —
-                </div>
-
-
-                <div class="tc-prev-metric">
-
-              <span class="tc-prev-label">
-                START
-              </span>
-
-              <span
-                id="tc-prev-start"
-                class="tc-prev-value">
-                —
-              </span>
-
-            </div>
-
-
-            <div class="tc-prev-metric">
-
-              <span class="tc-prev-label">
-                FINISH
-              </span>
-
-              <span
-                id="tc-prev-finish"
-                class="tc-prev-value">
-                —
-              </span>
-
-            </div>
-
-
-                <div class="tc-prev-metric">
-
-                  <span class="tc-prev-label">
-                    ELAPSED
-                  </span>
-
-                  <span
-                    id="tc-prev-elapsed"
-                    class="tc-prev-value">
-                    —
-                  </span>
-
-                </div>
-
-              </div>
-
-
-              <div id="tc-prev-check">
-                ✓
-              </div>
-
-            </div>
-
-          </section>
-
 
           <section
             id="tc-next-card"
@@ -6676,62 +3919,77 @@
               NEXT
             </div>
 
-
             <div id="tc-next-list">
 
               <div class="tc-next-row">
-                <span
-                  id="tc-next-time-0"
-                  class="tc-next-time">—</span>
-                <span
-                  id="tc-next-task-0"
-                  class="tc-next-task">—</span>
-
+                <span id="tc-next-time-0" class="tc-next-time">—</span>
+                <span id="tc-next-task-0" class="tc-next-task">—</span>
                 <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
-                <span
-                  id="tc-next-time-1"
-                  class="tc-next-time">—</span>
-                <span
-                  id="tc-next-task-1"
-                  class="tc-next-task">—</span>
-
+                <span id="tc-next-time-1" class="tc-next-time">—</span>
+                <span id="tc-next-task-1" class="tc-next-task">—</span>
                 <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
-                <span
-                  id="tc-next-time-2"
-                  class="tc-next-time">—</span>
-                <span
-                  id="tc-next-task-2"
-                  class="tc-next-task">—</span>
-
+                <span id="tc-next-time-2" class="tc-next-time">—</span>
+                <span id="tc-next-task-2" class="tc-next-task">—</span>
                 <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
-                <span
-                  id="tc-next-time-3"
-                  class="tc-next-time">—</span>
-                <span
-                  id="tc-next-task-3"
-                  class="tc-next-task">—</span>
-
+                <span id="tc-next-time-3" class="tc-next-time">—</span>
+                <span id="tc-next-task-3" class="tc-next-task">—</span>
                 <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
-                <span
-                  id="tc-next-time-4"
-                  class="tc-next-time">—</span>
-                <span
-                  id="tc-next-task-4"
-                  class="tc-next-task">—</span>
-
+                <span id="tc-next-time-4" class="tc-next-time">—</span>
+                <span id="tc-next-task-4" class="tc-next-task">—</span>
                 <span class="tc-next-arrow">›</span>
+              </div>
+
+            </div>
+
+          </section>
+
+          <section
+            id="tc-prev-card"
+            class="tc-card">
+
+            <div class="tc-card-title">
+              PREVIOUS
+            </div>
+
+            <div id="tc-prev-content">
+
+              <div id="tc-prev-data">
+
+                <div id="tc-prev-task">
+                  —
+                </div>
+
+                <div class="tc-prev-metric">
+                  <span class="tc-prev-label">START</span>
+                  <span id="tc-prev-start" class="tc-prev-value">—</span>
+                </div>
+
+                <div class="tc-prev-metric">
+                  <span class="tc-prev-label">FINISH</span>
+                  <span id="tc-prev-finish" class="tc-prev-value">—</span>
+                </div>
+
+                <div class="tc-prev-metric">
+                  <span class="tc-prev-label">ELAPSED</span>
+                  <span id="tc-prev-elapsed" class="tc-prev-value">—</span>
+                </div>
+
+              </div>
+
+              <div id="tc-prev-check">
+                ✓
               </div>
 
             </div>
@@ -6744,86 +4002,68 @@
 
     </div>
 
-
     <button
       id="tc-task-toggle"
       type="button">
       TASK
     </button>
 
-
     <div id="tc-version">
       v${VERSION}
     </div>
   `;
 
-
-  document.body
-    .appendChild(
-      root
-    );
-
+  document.body.appendChild(
+    root
+  );
 
   /* =========================================================
      VIEWPORT
   ========================================================= */
 
   function getCurrentViewportSize() {
-
     const vv =
       window.visualViewport;
 
-
-    const width =
-      Math.max(
-        1,
-        Math.round(
-          vv?.width ||
-          window.innerWidth ||
-          document.documentElement.clientWidth ||
-          1
-        )
-      );
-
-
-    const height =
-      Math.max(
-        1,
-        Math.round(
-          vv?.height ||
-          window.innerHeight ||
-          document.documentElement.clientHeight ||
-          1
-        )
-      );
-
-
     return {
-      width,
-      height
+      width:
+        Math.max(
+          1,
+          Math.round(
+            vv?.width ||
+            window.innerWidth ||
+            document.documentElement.clientWidth ||
+            1
+          )
+        ),
+
+      height:
+        Math.max(
+          1,
+          Math.round(
+            vv?.height ||
+            window.innerHeight ||
+            document.documentElement.clientHeight ||
+            1
+          )
+        )
     };
   }
 
-
   function applyViewportLayout() {
-
     const size =
       getCurrentViewportSize();
-
 
     root.style.width =
       `${size.width}px`;
 
-
     root.style.height =
       `${size.height}px`;
-
 
     root.classList.toggle(
       'layout-portrait',
       size.height > size.width
     );
-
 
     root.classList.toggle(
       'layout-landscape',
@@ -6831,29 +4071,21 @@
     );
   }
 
-
-  let viewportRAF =
-    null;
-
+  let viewportRAF = null;
 
   function scheduleViewportUpdate() {
-
     if (
       viewportRAF !== null
     ) {
-
       cancelAnimationFrame(
         viewportRAF
       );
     }
 
-
     viewportRAF =
       requestAnimationFrame(
         () => {
-
-          viewportRAF =
-            null;
+          viewportRAF = null;
 
           applyViewportLayout();
 
@@ -6862,9 +4094,7 @@
       );
   }
 
-
   applyViewportLayout();
-
 
   window.addEventListener(
     'resize',
@@ -6874,7 +4104,6 @@
     }
   );
 
-
   window.addEventListener(
     'orientationchange',
     scheduleViewportUpdate,
@@ -6883,11 +4112,9 @@
     }
   );
 
-
   if (
     window.visualViewport
   ) {
-
     window.visualViewport
       .addEventListener(
         'resize',
@@ -6896,7 +4123,6 @@
           passive:true
         }
       );
-
 
     window.visualViewport
       .addEventListener(
@@ -6908,32 +4134,26 @@
       );
   }
 
-
   window.tcNowViewportCleanup =
     () => {
-
       window.removeEventListener(
         'resize',
         scheduleViewportUpdate
       );
-
 
       window.removeEventListener(
         'orientationchange',
         scheduleViewportUpdate
       );
 
-
       if (
         window.visualViewport
       ) {
-
         window.visualViewport
           .removeEventListener(
             'resize',
             scheduleViewportUpdate
           );
-
 
         window.visualViewport
           .removeEventListener(
@@ -6942,64 +4162,49 @@
           );
       }
 
-
       if (
         viewportRAF !== null
       ) {
-
         cancelAnimationFrame(
           viewportRAF
         );
 
-        viewportRAF =
-          null;
+        viewportRAF = null;
       }
     };
 
-
   /* =========================================================
-     ANDROID TASK / NOW SWITCH
+     ANDROID TASK / NOW
   ========================================================= */
 
-  if (
-    IS_ANDROID
-  ) {
-
+  if (IS_ANDROID) {
     const taskToggle =
       document.getElementById(
         'tc-task-toggle'
       );
-
 
     const returnButton =
       document.createElement(
         'button'
       );
 
-
     returnButton.id =
       'tc-now-return-button';
-
 
     returnButton.type =
       'button';
 
-
     returnButton.textContent =
       'NOW';
 
-
-    document.body
-      .appendChild(
-        returnButton
-      );
-
+    document.body.appendChild(
+      returnButton
+    );
 
     taskToggle
       ?.addEventListener(
         'click',
         () => {
-
           root.style.display =
             'none';
 
@@ -7008,12 +4213,10 @@
         }
       );
 
-
     returnButton
       .addEventListener(
         'click',
         () => {
-
           applyViewportLayout();
 
           sync();
@@ -7026,10 +4229,8 @@
           returnButton.style.display =
             'none';
 
-
           requestAnimationFrame(
             () => {
-
               applyViewportLayout();
 
               sync();
@@ -7041,18 +4242,13 @@
       );
   }
 
-
   /* =========================================================
      RENDER HELPERS
   ========================================================= */
 
   const $ =
     id =>
-      document
-        .getElementById(
-          id
-        );
-
+      document.getElementById(id);
 
   const WEEKDAYS = [
     'Sun',
@@ -7064,48 +4260,29 @@
     'Sat'
   ];
 
-
-  function renderTimeline(
-    now
-  ) {
-
+  function renderTimeline(now) {
     const start =
-      hmToMinutes(
-        WORK_START
-      );
-
+      hmToMinutes(WORK_START);
 
     const regular =
-      hmToMinutes(
-        REGULAR_END
-      );
-
+      hmToMinutes(REGULAR_END);
 
     let leave =
       hmToMinutes(
         state.leaveTime
       );
 
-
     if (
       leave === null
     ) {
-
-      leave =
-        regular;
+      leave = regular;
     }
 
-
-    /*
-      退勤予定が17:25より前でも
-      バーは17:25までは必ず表示する。
-    */
     const end =
       Math.max(
         regular,
         leave
       );
-
 
     const span =
       Math.max(
@@ -7113,20 +4290,15 @@
         end - start
       );
 
-
     const regularPercent =
-      Math.max(
+      clamp(
+        (
+          (regular - start) /
+          span
+        ) * 100,
         0,
-        Math.min(
-          100,
-          (
-            (regular - start) /
-            span
-          ) *
-          100
-        )
+        100
       );
-
 
     const overtimePercent =
       Math.max(
@@ -7135,70 +4307,47 @@
         regularPercent
       );
 
-
     const currentMinutes =
-      (
-        now.getHours() *
-        60
-      ) +
+      now.getHours() * 60 +
       now.getMinutes() +
-      (
-        now.getSeconds() /
-        60
-      );
+      now.getSeconds() / 60;
 
-
-    /*
-      表示範囲外では端に固定。
-    */
     const visibleCurrent =
-      Math.max(
+      clamp(
+        currentMinutes,
         start,
-        Math.min(
-          end,
-          currentMinutes
-        )
+        end
       );
-
 
     const currentPercent =
-      Math.max(
+      clamp(
+        (
+          (visibleCurrent - start) /
+          span
+        ) * 100,
         0,
-        Math.min(
-          100,
-          (
-            (visibleCurrent - start) /
-            span
-          ) *
-          100
-        )
+        100
       );
-
 
     $('tc-timeline-normal')
       .style.width =
         `${regularPercent}%`;
 
-
     $('tc-timeline-overtime')
       .style.left =
         `${regularPercent}%`;
-
 
     $('tc-timeline-overtime')
       .style.width =
         `${overtimePercent}%`;
 
-
     $('tc-timeline-regular-marker')
       .style.left =
         `${regularPercent}%`;
 
-
     $('tc-timeline-regular-label')
       .style.left =
         `${regularPercent}%`;
-
 
     $('tc-timeline-end-label')
       .textContent =
@@ -7206,80 +4355,48 @@
           ? state.leaveTime
           : REGULAR_END;
 
-
     $('tc-timeline-end-label')
       .style.display =
         end > regular
           ? 'block'
           : 'none';
 
-
     $('tc-timeline-current')
       .style.left =
         `${currentPercent}%`;
 
-
-    $('tc-timeline-current')
-      .classList
-      .toggle(
-        'is-overtime',
-        currentMinutes >
-          regular
-      );
-
-
-    root.classList
-      .toggle(
-        'is-overtime',
-        currentMinutes >
-          regular
-      );
+    root.classList.toggle(
+      'is-overtime',
+      currentMinutes >
+        regular
+    );
   }
-
 
   /* =========================================================
      RENDER
   ========================================================= */
 
   function render() {
-
-    const now =
-      new Date();
-
+    const now = new Date();
 
     $('tc-date')
       .textContent =
         now.getFullYear() +
         '/' +
-        pad(
-          now.getMonth() + 1
-        ) +
+        pad(now.getMonth() + 1) +
         '/' +
-        pad(
-          now.getDate()
-        ) +
+        pad(now.getDate()) +
         ' (' +
-        WEEKDAYS[
-          now.getDay()
-        ] +
+        WEEKDAYS[now.getDay()] +
         ')';
-
 
     $('tc-clock-time')
       .textContent =
-        pad(
-          now.getHours()
-        ) +
+        pad(now.getHours()) +
         ':' +
-        pad(
-          now.getMinutes()
-        );
+        pad(now.getMinutes());
 
-
-    renderTimeline(
-      now
-    );
-
+    renderTimeline(now);
 
     /* CURRENT */
 
@@ -7288,78 +4405,66 @@
         state.currentTask ||
         'タスクを取得できません';
 
-
     const projectEl =
       $('tc-current-project');
 
     const modeEl =
       $('tc-current-mode');
 
-    const sectionEl =
-      $('tc-current-section');
-
-    const sectionCountEl =
-      $('tc-section-count');
-
-
     $('tc-current-project-text')
       .textContent =
         state.currentProject ||
         '';
-
 
     $('tc-current-mode-text')
       .textContent =
         state.currentMode ||
         '';
 
-
     projectEl
-      .classList
-      .toggle(
+      .classList.toggle(
         'is-visible',
         !!state.currentProject
       );
 
-
     modeEl
-      .classList
-      .toggle(
+      .classList.toggle(
         'is-visible',
         !!state.currentMode
       );
 
+    const sectionRow =
+      $('tc-current-section-row');
 
-    sectionEl
+    const sectionName =
+      state.currentSection ||
+      '';
+
+    const sectionCount =
+      state.currentSectionCount ||
+      '';
+
+    $('tc-current-section')
       .textContent =
-        state.currentSection ||
-        '';
+        sectionName;
 
-
-    sectionEl
-      .classList
-      .remove(
-        'is-visible'
-      );
-
-
-    sectionCountEl
+    $('tc-section-count')
       .textContent =
-        '';
+        sectionCount;
 
-
-    sectionCountEl
-      .classList
-      .remove(
-        'is-visible'
+    sectionRow
+      .classList.toggle(
+        'is-visible',
+        !!(
+          sectionName ||
+          sectionCount
+        )
       );
-
 
     $('tc-start')
       .textContent =
         state.currentStart ||
         '--:--';
-
 
     $('tc-planned')
       .textContent =
@@ -7367,195 +4472,144 @@
           state.plannedSeconds
         );
 
-
     $('tc-planned-end')
       .textContent =
         getPlannedEnd();
 
-
     const elapsed =
       getElapsedSeconds();
 
-
     $('tc-elapsed')
       .textContent =
-        secondsToHMS(
-          elapsed
-        );
-
+        secondsToHMS(elapsed);
 
     const statusLabel =
       $('tc-status-label');
 
-
     const statusValue =
       $('tc-status-value');
 
-
     if (
       elapsed !== null &&
-      state.plannedSeconds !== null
+      state.plannedSeconds !==
+        null
     ) {
-
       const diff =
         state.plannedSeconds -
         elapsed;
 
-
       if (
         diff >= 0
       ) {
-
         statusLabel
           .textContent =
             'REMAINING';
 
-
         statusValue
           .textContent =
-            secondsToHMS(
-              diff
-            );
-
+            secondsToHMS(diff);
 
         statusLabel
-          .classList
-          .remove(
+          .classList.remove(
             'tc-over'
           );
-
 
         statusValue
-          .classList
-          .remove(
+          .classList.remove(
             'tc-over'
           );
-
       } else {
-
         statusLabel
           .textContent =
             'OVER';
 
-
         statusValue
           .textContent =
             secondsToHMS(
-              Math.abs(
-                diff
-              )
+              Math.abs(diff)
             );
 
-
         statusLabel
-          .classList
-          .add(
+          .classList.add(
             'tc-over'
           );
 
-
         statusValue
-          .classList
-          .add(
+          .classList.add(
             'tc-over'
           );
       }
-
     } else {
-
       statusLabel
         .textContent =
           'REMAINING';
-
 
       statusValue
         .textContent =
           '--:--:--';
 
-
       statusLabel
-        .classList
-        .remove(
+        .classList.remove(
           'tc-over'
         );
 
-
       statusValue
-        .classList
-        .remove(
+        .classList.remove(
           'tc-over'
         );
     }
-
 
     /* PREVIOUS */
 
     const prev =
       state.previous;
 
-
     $('tc-prev-task')
       .textContent =
         prev?.task ||
         '—';
-
 
     $('tc-prev-start')
       .textContent =
         prev?.start ||
         '—';
 
-
     let prevFinish =
       prev?.finish ||
       '—';
-
 
     if (
       prevFinish ===
       '--:--:--'
     ) {
-
-      prevFinish =
-        '—';
+      prevFinish = '—';
     }
-
 
     $('tc-prev-finish')
       .textContent =
         prevFinish;
 
-
-    let prevElapsed =
-      '—';
-
+    let prevElapsed = '—';
 
     if (
       prev?.actualDuration
     ) {
-
       const sec =
         durationToSeconds(
           prev.actualDuration
         );
 
-
       if (
         sec !== null
       ) {
-
         prevElapsed =
-          secondsToHMS(
-            sec
-          );
+          secondsToHMS(sec);
       }
     }
-
 
     $('tc-prev-elapsed')
       .textContent =
         prevElapsed;
-
 
     /* NEXT */
 
@@ -7564,27 +4618,21 @@
       i < 5;
       i++
     ) {
-
       const row =
         state.next[i];
 
-
       $(
         `tc-next-time-${i}`
-      )
-        .textContent =
-          row?.scheduleTime ||
-          '—';
-
+      ).textContent =
+        row?.scheduleTime ||
+        '—';
 
       $(
         `tc-next-task-${i}`
-      )
-        .textContent =
-          row?.task ||
-          '—';
+      ).textContent =
+        row?.task ||
+        '—';
     }
-
 
     /* LEAVE */
 
@@ -7593,38 +4641,30 @@
         state.leaveTime ||
         '--:--';
 
-
     if (
       !state.leaveTime
     ) {
-
       $('tc-leave-label')
         .textContent =
           'あと';
-
 
       $('tc-leave-count')
         .textContent =
           '--:--';
 
-
       return;
     }
-
 
     const parts =
       state.leaveTime
         .split(':')
         .map(Number);
 
-
     if (
       parts.length !== 2
     ) {
-
       return;
     }
-
 
     const leaveDate =
       new Date(
@@ -7636,7 +4676,6 @@
         0
       );
 
-
     let diff =
       Math.floor(
         (
@@ -7646,15 +4685,12 @@
         1000
       );
 
-
     if (
       diff >= 0
     ) {
-
       $('tc-leave-label')
         .textContent =
           'あと';
-
 
       $('tc-leave-count')
         .textContent =
@@ -7672,28 +4708,19 @@
               60
             )
           );
-
     } else {
-
       diff =
-        Math.abs(
-          diff
-        );
-
+        Math.abs(diff);
 
       $('tc-leave-label')
         .textContent =
           '超過';
 
-
       $('tc-leave-count')
         .textContent =
-          secondsToHMS(
-            diff
-          );
+          secondsToHMS(diff);
     }
   }
-
 
   /* =========================================================
      START
@@ -7703,22 +4730,17 @@
 
   render();
 
-
   window.tcNowRenderTimer =
     setInterval(
       render,
       RENDER_INTERVAL
     );
 
-
   window.tcNowSyncTimer =
     setInterval(
       () => {
-
         sync();
-
         render();
-
       },
       SYNC_INTERVAL
     );
