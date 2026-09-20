@@ -1,31 +1,23 @@
 (() => {
   'use strict';
-
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.0.0
-
+     v4.1.0
      iOS Safari
      Android Firefox / Violentmonkey
-
      Common source:
      GitHub Pages /v4/now.js
   ========================================================= */
-
-  const VERSION = '4.0.0';
-
+  const VERSION = '4.1.0';
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
-
   const SYNC_INTERVAL = 5000;
   const RENDER_INTERVAL = 1000;
-
 
   /* =========================================================
      ENVIRONMENT
   ========================================================= */
-
   const UA =
     navigator.userAgent || '';
 
@@ -38,33 +30,27 @@
   const IS_FIREFOX =
     /Firefox|FxiOS/i.test(UA);
 
-
   /* =========================================================
      UTIL
   ========================================================= */
-
   const clean = value =>
     String(value || '')
       .replace(/\s+/g, ' ')
       .trim();
 
-
   const pad = n =>
     String(n)
       .padStart(2, '0');
-
 
   const text = el =>
     clean(
       el?.textContent
     );
 
-
   const isInsideNow = el =>
     !!el?.closest?.(
       '#' + ROOT_ID
     );
-
 
   const isHM = value =>
     /^\d{1,2}:\d{2}$/
@@ -72,29 +58,24 @@
         clean(value)
       );
 
-
   const isHMS = value =>
     /^\d{2}:\d{2}:\d{2}$/
       .test(
         clean(value)
       );
 
-
   function hmsToSeconds(
     value
   ) {
-
     const m =
       clean(value)
         .match(
           /^(\d{1,2}):(\d{2}):(\d{2})$/
         );
 
-
     if (!m) {
       return null;
     }
-
 
     return (
       Number(m[1]) * 3600 +
@@ -103,22 +84,18 @@
     );
   }
 
-
   function durationToSeconds(
     value
   ) {
-
     const m =
       clean(value)
         .match(
           /^(\d{1,2}):(\d{2})$/
         );
 
-
     if (!m) {
       return null;
     }
-
 
     return (
       Number(m[1]) * 3600 +
@@ -126,20 +103,16 @@
     );
   }
 
-
   function secondsToHMS(
     seconds
   ) {
-
     if (
       seconds === null ||
       seconds === undefined ||
       Number.isNaN(seconds)
     ) {
-
       return '--:--:--';
     }
-
 
     seconds =
       Math.max(
@@ -147,22 +120,18 @@
         Math.floor(seconds)
       );
 
-
     const h =
       Math.floor(
         seconds / 3600
       );
-
 
     const m =
       Math.floor(
         (seconds % 3600) / 60
       );
 
-
     const s =
       seconds % 60;
-
 
     return (
       pad(h) +
@@ -173,20 +142,16 @@
     );
   }
 
-
   function secondsToHM(
     seconds
   ) {
-
     if (
       seconds === null ||
       seconds === undefined ||
       Number.isNaN(seconds)
     ) {
-
       return '--:--';
     }
-
 
     seconds =
       Math.max(
@@ -194,18 +159,15 @@
         Math.floor(seconds)
       );
 
-
     const h =
       Math.floor(
         seconds / 3600
       );
 
-
     const m =
       Math.floor(
         (seconds % 3600) / 60
       );
-
 
     return (
       pad(h) +
@@ -214,40 +176,125 @@
     );
   }
 
+  function clockToSecondsOfDay(
+    value
+  ) {
+    const v =
+      clean(value);
+
+    let m =
+      v.match(
+        /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+      );
+
+    if (!m) {
+      return null;
+    }
+
+    const h =
+      Number(m[1]);
+
+    const min =
+      Number(m[2]);
+
+    const sec =
+      Number(
+        m[3] || 0
+      );
+
+    if (
+      h < 0 ||
+      h > 23 ||
+      min < 0 ||
+      min > 59 ||
+      sec < 0 ||
+      sec > 59
+    ) {
+      return null;
+    }
+
+    return (
+      h * 3600 +
+      min * 60 +
+      sec
+    );
+  }
+
+  function resolveClockAtOrBefore(
+    value,
+    referenceDate
+  ) {
+    const secondsOfDay =
+      clockToSecondsOfDay(
+        value
+      );
+
+    if (
+      secondsOfDay === null
+    ) {
+      return null;
+    }
+
+    const reference =
+      referenceDate instanceof Date
+        ? new Date(
+            referenceDate.getTime()
+          )
+        : new Date();
+
+    const resolved =
+      new Date(
+        reference.getFullYear(),
+        reference.getMonth(),
+        reference.getDate(),
+        0,
+        0,
+        0,
+        0
+      );
+
+    resolved.setSeconds(
+      secondsOfDay
+    );
+
+    if (
+      resolved.getTime() >
+      reference.getTime()
+    ) {
+      resolved.setDate(
+        resolved.getDate() - 1
+      );
+    }
+
+    return resolved;
+  }
 
   function addDurationToTime(
     startTime,
     seconds
   ) {
-
     if (
       !startTime ||
       seconds === null
     ) {
-
       return '--:--';
     }
-
 
     const parts =
       startTime
         .split(':')
         .map(Number);
 
-
     if (
       parts.length !== 2 ||
       Number.isNaN(parts[0]) ||
       Number.isNaN(parts[1])
     ) {
-
       return '--:--';
     }
 
-
     const d =
       new Date();
-
 
     d.setHours(
       parts[0],
@@ -256,12 +303,10 @@
       0
     );
 
-
     d.setSeconds(
       d.getSeconds() +
       seconds
     );
-
 
     return (
       pad(d.getHours()) +
@@ -270,81 +315,134 @@
     );
   }
 
-
   function validTaskName(
     value
   ) {
-
     const t =
       clean(value);
-
 
     if (!t) {
       return false;
     }
-
 
     if (
       t.length > 150 ||
       isHM(t) ||
       isHMS(t)
     ) {
-
       return false;
     }
-
 
     if (
       /^[-\d\s:./]+$/
         .test(t)
     ) {
-
       return false;
     }
-
 
     return true;
   }
 
-
   /* =========================================================
      STATE
   ========================================================= */
-
   const state = {
-
     currentTask:
       null,
-
     currentStart:
       null,
-
     plannedSeconds:
       null,
-
     elapsedBase:
       null,
-
     elapsedCapturedAt:
       null,
-
     previous:
       null,
-
     next:
       [],
-
     leaveTime:
       null
   };
 
-
   /* =========================================================
      CURRENT PLAYER
+
+     v4.1.0:
+     一覧側の実績を正とし、
+     STARTあり / FINISHなし の行だけを
+     CURRENT候補にする。
+
+     プレイヤーDOMはELAPSED取得の補助にのみ使う。
+     Firefox側に終了済みプレイヤーDOMが残っていても、
+     CURRENT判定には使わない。
   ========================================================= */
+  function findCurrentPlayer(
+    rows
+  ) {
+    const now =
+      new Date();
 
-  function findCurrentPlayer() {
+    const activeRows =
+      rows
+        .filter(
+          row =>
+            !!row.start &&
+            !row.finish
+        )
+        .map(
+          row => ({
+            row,
+            startDate:
+              resolveClockAtOrBefore(
+                row.start,
+                now
+              )
+          })
+        )
+        .filter(
+          item =>
+            item.startDate
+        );
 
+    if (
+      !activeRows.length
+    ) {
+      return null;
+    }
+
+    /*
+      万一STARTあり / FINISHなしが複数残った場合も、
+      現在時刻から見て最も新しく開始された行を採用する。
+    */
+    activeRows.sort(
+      (a, b) => {
+        const byStart =
+          b.startDate.getTime() -
+          a.startDate.getTime();
+
+        if (byStart !== 0) {
+          return byStart;
+        }
+
+        return (
+          b.row.top -
+          a.row.top
+        );
+      }
+    );
+
+    const active =
+      activeRows[0];
+
+    const currentRow =
+      active.row;
+
+    /*
+      ELAPSEDだけは従来どおりプレイヤー表示を利用する。
+      ただし、一覧側でCURRENTと確定したタスク名と
+      一致するプレイヤーだけを候補にする。
+    */
     const elapsedElements =
       [
         ...document
@@ -353,104 +451,73 @@
           )
       ]
         .filter(el => {
-
           if (
             isInsideNow(el)
           ) {
-
             return false;
           }
-
 
           return isHMS(
             text(el)
           );
         });
 
-
-    const candidates =
+    const elapsedCandidates =
       [];
-
 
     for (
       const elapsedEl
       of elapsedElements
     ) {
-
       const taskEl =
         elapsedEl
           ?.parentElement
           ?.parentElement
           ?.previousElementSibling;
 
-
       if (!taskEl) {
         continue;
       }
-
 
       const taskName =
         clean(
           taskEl.textContent
         );
 
-
       if (
-        !validTaskName(
-          taskName
-        )
+        taskName !==
+        currentRow.task
       ) {
-
         continue;
       }
-
 
       const rect =
         elapsedEl
           .getBoundingClientRect();
 
-
-      candidates.push({
-
-        task:
-          taskName,
-
+      elapsedCandidates.push({
         elapsed:
           clean(
             elapsedEl.textContent
           ),
-
         top:
           rect.top,
-
         visible:
           rect.width > 0 &&
           rect.height > 0
       });
     }
 
-
-    if (
-      !candidates.length
-    ) {
-
-      return null;
-    }
-
-
-    candidates.sort(
+    elapsedCandidates.sort(
       (a, b) => {
-
         if (
           a.visible !==
           b.visible
         ) {
-
           return a.visible
             ? -1
             : 1;
         }
-
 
         return (
           b.top -
@@ -459,17 +526,55 @@
       }
     );
 
+    let elapsedSeconds =
+      null;
 
-    return candidates[0];
+    if (
+      elapsedCandidates.length
+    ) {
+      elapsedSeconds =
+        hmsToSeconds(
+          elapsedCandidates[0]
+            .elapsed
+        );
+    }
+
+    /*
+      FirefoxでプレイヤーDOMが更新されていない、
+      または見つからない場合のフォールバック。
+      START実績から経過時間を計算する。
+    */
+    if (
+      elapsedSeconds === null
+    ) {
+      elapsedSeconds =
+        Math.max(
+          0,
+          Math.floor(
+            (
+              now.getTime() -
+              active.startDate.getTime()
+            ) /
+            1000
+          )
+        );
+    }
+
+    return {
+      task:
+        currentRow.task,
+      row:
+        currentRow,
+      startDate:
+        active.startDate,
+      elapsedSeconds
+    };
   }
-
 
   /* =========================================================
      TASK ROWS
   ========================================================= */
-
   function getTaskRowElements() {
-
     return [
       ...document
         .querySelectorAll(
@@ -477,19 +582,15 @@
         )
     ]
       .filter(el => {
-
         if (
           isInsideNow(el)
         ) {
-
           return false;
         }
-
 
         const r =
           el
             .getBoundingClientRect();
-
 
         return (
           r.left >= -20 &&
@@ -502,15 +603,12 @@
       });
   }
 
-
   function findScheduleRow(
     taskName
   ) {
-
     if (!taskName) {
       return null;
     }
-
 
     const candidates =
       getTaskRowElements()
@@ -521,55 +619,43 @@
           taskName
         );
 
-
     for (
       const taskEl
       of candidates
     ) {
-
       const row =
         taskEl
           .parentElement;
 
-
       if (!row) {
         continue;
       }
-
 
       const rowText =
         clean(
           row.textContent
         );
 
-
       if (
         rowText.length >
         taskName.length
       ) {
-
         return {
-
           taskEl,
-
           row
         };
       }
     }
 
-
     return null;
   }
-
 
   function getRowLeafValues(
     row
   ) {
-
     if (!row) {
       return [];
     }
-
 
     return [
       ...row
@@ -584,44 +670,43 @@
         )
       )
       .map(el => ({
-
         value:
           clean(
             el.textContent
           ),
-
         tag:
           el.tagName,
-
         el
       }));
   }
 
-
   /* =========================================================
      CURRENT TASK INFO
   ========================================================= */
-
   function getCurrentScheduleInfo(
-    currentTask
+    currentTask,
+    currentRow
   ) {
-
     const found =
-      findScheduleRow(
-        currentTask
-      );
-
+      currentRow?.rowEl
+        ? {
+            taskEl:
+              currentRow.taskEl,
+            row:
+              currentRow.rowEl
+          }
+        : findScheduleRow(
+            currentTask
+          );
 
     if (!found) {
       return null;
     }
 
-
     const leaves =
       getRowLeafValues(
         found.row
       );
-
 
     let start =
       null;
@@ -632,37 +717,30 @@
     let planned =
       null;
 
-
     if (
       leaves[1] &&
       isHM(
         leaves[1].value
       )
     ) {
-
       start =
         leaves[1].value;
     }
 
-
     if (
       leaves[2]
     ) {
-
       const v =
         leaves[2].value;
-
 
       if (
         isHM(v) ||
         isHMS(v)
       ) {
-
         finish =
           v;
       }
     }
-
 
     if (
       leaves[6] &&
@@ -670,14 +748,11 @@
         leaves[6].value
       )
     ) {
-
       planned =
         leaves[6].value;
     }
 
-
     if (!planned) {
-
       const buttonDurations =
         leaves
           .filter(
@@ -692,11 +767,9 @@
               x.value
           );
 
-
       if (
         buttonDurations.length >= 2
       ) {
-
         planned =
           buttonDurations[
             buttonDurations.length - 1
@@ -704,15 +777,10 @@
       }
     }
 
-
     return {
-
       start,
-
       finish,
-
       planned,
-
       plannedSeconds:
         planned
           ? durationToSeconds(
@@ -722,74 +790,59 @@
     };
   }
 
-
   /* =========================================================
      SCHEDULE LIST
   ========================================================= */
-
   function getScheduleRows() {
-
     const rows =
       [];
-
 
     for (
       const taskEl
       of getTaskRowElements()
     ) {
-
       const task =
         clean(
           taskEl.textContent
         );
-
 
       if (
         !validTaskName(
           task
         )
       ) {
-
         continue;
       }
-
 
       const row =
         taskEl
           .parentElement;
 
-
       if (!row) {
         continue;
       }
-
 
       const rowText =
         clean(
           row.textContent
         );
 
-
       if (
         rowText === task ||
         rowText.length <
           task.length + 3
       ) {
-
         continue;
       }
-
 
       const rect =
         taskEl
           .getBoundingClientRect();
 
-
       const leaves =
         getRowLeafValues(
           row
         );
-
 
       let start =
         null;
@@ -806,18 +859,15 @@
       let scheduleTime =
         null;
 
-
       if (
         leaves[1] &&
         isHM(
           leaves[1].value
         )
       ) {
-
         start =
           leaves[1].value;
       }
-
 
       if (
         leaves[2] &&
@@ -830,11 +880,9 @@
           )
         )
       ) {
-
         finish =
           leaves[2].value;
       }
-
 
       if (
         leaves[5] &&
@@ -842,11 +890,9 @@
           leaves[5].value
         )
       ) {
-
         actualDuration =
           leaves[5].value;
       }
-
 
       if (
         leaves[6] &&
@@ -854,11 +900,9 @@
           leaves[6].value
         )
       ) {
-
         planned =
           leaves[6].value;
       }
-
 
       const HMvalues =
         leaves
@@ -870,47 +914,35 @@
             isHM
           );
 
-
       if (!start) {
-
         const last =
           HMvalues[
             HMvalues.length - 1
           ];
 
-
         if (last) {
-
           scheduleTime =
             last;
         }
-
       } else {
-
         scheduleTime =
           start;
       }
 
-
       rows.push({
-
         task,
-
         start,
-
         finish,
-
         actualDuration,
-
         planned,
-
         scheduleTime,
-
         top:
-          rect.top
+          rect.top,
+        taskEl,
+        rowEl:
+          row
       });
     }
-
 
     rows.sort(
       (a, b) =>
@@ -918,16 +950,13 @@
         b.top
     );
 
-
     const unique =
       [];
-
 
     for (
       const row
       of rows
     ) {
-
       const duplicate =
         unique.some(
           x =>
@@ -939,78 +968,120 @@
             ) < 3
         );
 
-
       if (!duplicate) {
-
         unique.push(
           row
         );
       }
     }
 
-
     return unique;
   }
-
 
   /* =========================================================
      PREVIOUS / NEXT
   ========================================================= */
-
-  function getNeighbours(
+  function getPreviousTask(
     rows,
-    currentTask
+    currentStartDate
   ) {
+    /*
+      CURRENTがある場合:
+      現在タスクのSTART実績を基準時刻にする。
+
+      CURRENTがない場合:
+      現在時刻を基準時刻にする。
+    */
+    const anchor =
+      currentStartDate instanceof Date
+        ? currentStartDate
+        : new Date();
+
+    const completed =
+      rows
+        .filter(
+          row =>
+            !!row.start &&
+            !!row.finish
+        )
+        .map(
+          row => ({
+            row,
+            finishDate:
+              resolveClockAtOrBefore(
+                row.finish,
+                anchor
+              )
+          })
+        )
+        .filter(
+          item =>
+            item.finishDate &&
+            item.finishDate.getTime() <=
+              anchor.getTime()
+        );
+
+    if (
+      !completed.length
+    ) {
+      return null;
+    }
+
+    completed.sort(
+      (a, b) => {
+        const byFinish =
+          b.finishDate.getTime() -
+          a.finishDate.getTime();
+
+        if (byFinish !== 0) {
+          return byFinish;
+        }
+
+        /*
+          FINISHが同時刻の場合は、
+          DOM上で後ろにある行を優先する。
+        */
+        return (
+          b.row.top -
+          a.row.top
+        );
+      }
+    );
+
+    return completed[0].row;
+  }
+
+  function getNextTasks(
+    rows,
+    currentRow
+  ) {
+    if (!currentRow) {
+      return [];
+    }
 
     const index =
-      rows.findIndex(
-        x =>
-          x.task ===
-          currentTask
+      rows.indexOf(
+        currentRow
       );
-
 
     if (
       index < 0
     ) {
-
-      return {
-
-        previous:
-          null,
-
-        next:
-          []
-      };
+      return [];
     }
 
-
-    return {
-
-      previous:
-        index > 0
-          ? rows[
-              index - 1
-            ]
-          : null,
-
-      next:
-        rows.slice(
-          index + 1,
-          index + 6
-        )
-    };
+    return rows.slice(
+      index + 1,
+      index + 6
+    );
   }
-
 
   /* =========================================================
      LEAVE
   ========================================================= */
-
   function getLeaveTime(
     rows
   ) {
-
     const leave =
       rows.find(
         x =>
@@ -1018,11 +1089,9 @@
           '退勤'
       );
 
-
     if (!leave) {
       return null;
     }
-
 
     return (
       leave.scheduleTime ||
@@ -1031,122 +1100,158 @@
     );
   }
 
-
   /* =========================================================
      SYNC
   ========================================================= */
+  function clearCurrentState() {
+    state.currentTask =
+      null;
+
+    state.currentStart =
+      null;
+
+    state.plannedSeconds =
+      null;
+
+    state.elapsedBase =
+      null;
+
+    state.elapsedCapturedAt =
+      null;
+  }
 
   function sync() {
+    /*
+      v4.1.0では一覧側を先に読む。
+      CURRENT / PREVIOUS / NEXT の判定は
+      一覧側の実績情報を基準にする。
+    */
+    const rows =
+      getScheduleRows();
 
     const player =
-      findCurrentPlayer();
-
+      findCurrentPlayer(
+        rows
+      );
 
     if (
       player
     ) {
-
       const taskChanged =
         state.currentTask !==
         player.task;
 
-
       if (
         taskChanged
       ) {
-
         state.currentStart =
           null;
 
         state.plannedSeconds =
           null;
-      }
 
+        state.elapsedBase =
+          null;
+
+        state.elapsedCapturedAt =
+          null;
+      }
 
       state.currentTask =
         player.task;
 
-
-      const elapsedSeconds =
-        hmsToSeconds(
-          player.elapsed
-        );
-
-
-      if (
-        elapsedSeconds !==
-        null
-      ) {
-
-        state.elapsedBase =
-          elapsedSeconds;
-
-        state.elapsedCapturedAt =
-          Date.now();
-      }
-    }
-
-
-    if (
-      state.currentTask
-    ) {
-
+      /*
+        タスク固有値は毎回クリアしてから
+        現在行の情報を入れ直す。
+        PLANNED未入力時の持ち越しを防ぐ。
+      */
       state.currentStart =
         null;
 
       state.plannedSeconds =
         null;
 
-
       const info =
         getCurrentScheduleInfo(
-          state.currentTask
+          player.task,
+          player.row
         );
-
 
       if (
         info
       ) {
-
         if (
           info.start
         ) {
-
           state.currentStart =
             info.start;
         }
-
 
         if (
           info.plannedSeconds !==
           null
         ) {
-
           state.plannedSeconds =
             info.plannedSeconds;
         }
       }
+
+      if (
+        !state.currentStart &&
+        player.row?.start
+      ) {
+        state.currentStart =
+          player.row.start;
+      }
+
+      if (
+        player.elapsedSeconds !==
+        null &&
+        player.elapsedSeconds !==
+        undefined
+      ) {
+        state.elapsedBase =
+          player.elapsedSeconds;
+
+        state.elapsedCapturedAt =
+          Date.now();
+      }
+
+      state.previous =
+        getPreviousTask(
+          rows,
+          player.startDate
+        );
+
+      state.next =
+        getNextTasks(
+          rows,
+          player.row
+        );
+
+    } else {
+      /*
+        実行中タスクが存在しない場合は、
+        CURRENT関連の状態を明示的に全クリアする。
+
+        これにより、終了した直前タスクが
+        CURRENTに残り続けることを防ぐ。
+      */
+      clearCurrentState();
+
+      state.previous =
+        getPreviousTask(
+          rows,
+          new Date()
+        );
+
+      /*
+        CURRENTがない場合のNEXTは、
+        従来どおり空表示とする。
+      */
+      state.next =
+        [];
     }
-
-
-    const rows =
-      getScheduleRows();
-
-
-    const neighbours =
-      getNeighbours(
-        rows,
-        state.currentTask
-      );
-
-
-    state.previous =
-      neighbours.previous;
-
-
-    state.next =
-      neighbours.next;
-
 
     state.leaveTime =
       getLeaveTime(
@@ -1155,21 +1260,16 @@
       null;
   }
 
-
   /* =========================================================
      LIVE VALUES
   ========================================================= */
-
   function getElapsedSeconds() {
-
     if (
       state.elapsedBase === null ||
       state.elapsedCapturedAt === null
     ) {
-
       return null;
     }
-
 
     return (
       state.elapsedBase +
@@ -1183,17 +1283,13 @@
     );
   }
 
-
   function getPlannedEnd() {
-
     if (
       !state.currentStart ||
       state.plannedSeconds === null
     ) {
-
       return '--:--';
     }
-
 
     return addDurationToTime(
       state.currentStart,
@@ -1201,30 +1297,24 @@
     );
   }
 
-
   /* =========================================================
      CLEANUP
   ========================================================= */
-
   if (
     window.tcNowRenderTimer
   ) {
-
     clearInterval(
       window.tcNowRenderTimer
     );
   }
 
-
   if (
     window.tcNowSyncTimer
   ) {
-
     clearInterval(
       window.tcNowSyncTimer
     );
   }
-
 
   document
     .getElementById(
@@ -1232,43 +1322,40 @@
     )
     ?.remove();
 
-
   document
     .getElementById(
       STYLE_ID
     )
     ?.remove();
 
+  document
+    .getElementById(
+      'tc-now-return-button'
+    )
+    ?.remove();
 
   /* =========================================================
      iOS VIEWPORT
   ========================================================= */
-
   if (
     IS_IOS
   ) {
-
     let viewport =
       document.querySelector(
         'meta[name="viewport"]'
       );
 
-
     if (!viewport) {
-
       viewport =
         document.createElement(
           'meta'
         );
 
-
       viewport.name =
         'viewport';
 
-
       viewport.content =
         'width=device-width,initial-scale=1,viewport-fit=cover';
-
 
       document.head
         .appendChild(
@@ -1276,7 +1363,6 @@
         );
 
     } else {
-
       let content =
         viewport
           .getAttribute(
@@ -1284,16 +1370,13 @@
           ) ||
         '';
 
-
       if (
         !content.includes(
           'viewport-fit=cover'
         )
       ) {
-
         content +=
           ',viewport-fit=cover';
-
 
         viewport
           .setAttribute(
@@ -1304,41 +1387,29 @@
     }
   }
 
-
   /* =========================================================
      CSS
   ========================================================= */
-
   const style =
     document.createElement(
       'style'
     );
 
-
   style.id =
     STYLE_ID;
 
-
   style.textContent = `
-
     html,
     body {
-
-      background:
-        #07090d !important;
+      background:#07090d !important;
     }
-
 
     #${ROOT_ID},
     #${ROOT_ID} * {
-
-      box-sizing:
-        border-box;
+      box-sizing:border-box;
     }
 
-
     #${ROOT_ID} {
-
       --bg:#07090d;
       --panel:#1a2029;
       --panel2:#0d1016;
@@ -1348,26 +1419,15 @@
       --over:#ff6363;
 
       position:fixed;
-
       inset:0;
+      z-index:2147483647;
 
-      z-index:
-        2147483647;
+      width:100vw;
+      height:100dvh;
+      overflow:hidden;
 
-      width:
-        100vw;
-
-      height:
-        100dvh;
-
-      overflow:
-        hidden;
-
-      background:
-        var(--bg);
-
-      color:
-        var(--text);
+      background:var(--bg);
+      color:var(--text);
 
       font-family:
         -apple-system,
@@ -1379,854 +1439,481 @@
         sans-serif;
 
       padding:
-        max(
-          8px,
-          env(
-            safe-area-inset-top
-          )
-        )
-        max(
-          12px,
-          env(
-            safe-area-inset-right
-          )
-        )
-        max(
-          8px,
-          env(
-            safe-area-inset-bottom
-          )
-        )
-        max(
-          12px,
-          env(
-            safe-area-inset-left
-          )
-        );
+        max(8px,env(safe-area-inset-top))
+        max(12px,env(safe-area-inset-right))
+        max(8px,env(safe-area-inset-bottom))
+        max(12px,env(safe-area-inset-left));
     }
-
 
     #tc-layout {
-
-      width:
-        100%;
-
-      height:
-        100%;
-
-      display:
-        grid;
-
+      width:100%;
+      height:100%;
+      display:grid;
       grid-template-rows:
         auto
-        minmax(
-          0,
-          1fr
-        );
-
+        minmax(0,1fr);
       gap:
-        clamp(
-          10px,
-          2.5vh,
-          26px
-        );
+        clamp(10px,2.5vh,26px);
     }
 
-
-    /* =====================================================
-       HEADER
-    ===================================================== */
+    /* HEADER */
 
     #tc-header {
-
-      display:
-        grid;
-
+      display:grid;
       grid-template-columns:
-        minmax(
-          170px,
-          .85fr
-        )
-        minmax(
-          330px,
-          1.4fr
-        )
-        minmax(
-          130px,
-          .7fr
-        );
-
-      align-items:
-        center;
-
-      gap:
-        2vw;
+        minmax(170px,.85fr)
+        minmax(330px,1.4fr)
+        minmax(130px,.7fr);
+      align-items:center;
+      gap:2vw;
     }
-
 
     #tc-brand {
-
-      color:
-        var(--muted);
-
+      color:var(--muted);
       font-size:
-        clamp(
-          14px,
-          2.2vw,
-          28px
-        );
-
-      font-weight:
-        800;
-
-      letter-spacing:
-        .13em;
-
-      white-space:
-        nowrap;
+        clamp(14px,2.2vw,28px);
+      font-weight:800;
+      letter-spacing:.13em;
+      white-space:nowrap;
     }
-
 
     #tc-leave {
-
-      display:
-        flex;
-
-      align-items:
-        center;
-
+      display:flex;
+      align-items:center;
       gap:
-        clamp(
-          20px,
-          3vw,
-          48px
-        );
-
+        clamp(20px,3vw,48px);
       font-size:
-        clamp(
-          16px,
-          2.5vw,
-          29px
-        );
-
-      font-weight:
-        800;
-
-      line-height:
-        1.32;
-
+        clamp(16px,2.5vw,29px);
+      font-weight:800;
+      line-height:1.32;
       font-variant-numeric:
         tabular-nums;
-
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
-
     .tc-leave-row {
-
-      display:
-        grid;
-
+      display:grid;
       grid-template-columns:
         3.1em
         max-content;
-
-      column-gap:
-        .45em;
+      column-gap:.45em;
     }
-
 
     #tc-clock {
-
-      justify-self:
-        end;
-
+      justify-self:end;
       font-size:
-        clamp(
-          40px,
-          6.7vw,
-          78px
-        );
-
-      font-weight:
-        800;
-
-      line-height:
-        1;
-
-      letter-spacing:
-        -.04em;
-
+        clamp(40px,6.7vw,78px);
+      font-weight:800;
+      line-height:1;
+      letter-spacing:-.04em;
       font-variant-numeric:
         tabular-nums;
-
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
-
-    /* =====================================================
-       MAIN
-    ===================================================== */
+    /* MAIN */
 
     #tc-main {
-
-      min-width:
-        0;
-
-      min-height:
-        0;
-
-      display:
-        grid;
-
+      min-width:0;
+      min-height:0;
+      display:grid;
       grid-template-columns:
-        minmax(
-          0,
-          1.65fr
-        )
-        minmax(
-          250px,
-          .9fr
-        );
-
+        minmax(0,1.65fr)
+        minmax(250px,.9fr);
       gap:
-        clamp(
-          12px,
-          2.4vw,
-          30px
-        );
+        clamp(12px,2.4vw,30px);
     }
 
-
-    /* =====================================================
-       CURRENT TASK
-    ===================================================== */
+    /* CURRENT TASK */
 
     #tc-now {
-
-      position:
-        relative;
-
-      min-width:
-        0;
-
-      min-height:
-        0;
-
-      overflow:
-        hidden;
-
-      background:
-        var(--panel);
+      position:relative;
+      min-width:0;
+      min-height:0;
+      overflow:hidden;
+      background:var(--panel);
 
       border-radius:
-        clamp(
-          18px,
-          3.5vw,
-          46px
-        );
+        clamp(18px,3.5vw,46px);
 
       padding:
-        clamp(
-          18px,
-          4vh,
-          45px
-        )
-        clamp(
-          28px,
-          4vw,
-          60px
-        );
+        clamp(18px,4vh,45px)
+        clamp(28px,4vw,60px);
 
-      display:
-        flex;
-
-      flex-direction:
-        column;
-
-      justify-content:
-        center;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
     }
-
 
     #tc-now::before {
-
-      content:
-        "";
-
-      position:
-        absolute;
-
-      top:
-        0;
-
-      bottom:
-        0;
-
-      left:
-        0;
-
+      content:"";
+      position:absolute;
+      top:0;
+      bottom:0;
+      left:0;
       width:
-        clamp(
-          7px,
-          .8vw,
-          13px
-        );
-
-      background:
-        white;
+        clamp(7px,.8vw,13px);
+      background:white;
     }
-
 
     #tc-now-badge {
-
-      align-self:
-        flex-start;
-
-      background:
-        white;
-
-      color:
-        #101218;
+      align-self:flex-start;
+      background:white;
+      color:#101218;
 
       font-size:
-        clamp(
-          14px,
-          2vw,
-          25px
-        );
+        clamp(14px,2vw,25px);
 
-      font-weight:
-        900;
+      font-weight:900;
+      letter-spacing:.14em;
 
-      letter-spacing:
-        .14em;
-
-      border-radius:
-        18px;
-
-      padding:
-        9px 20px;
+      border-radius:18px;
+      padding:9px 20px;
 
       margin-bottom:
-        clamp(
-          12px,
-          3vh,
-          30px
-        );
+        clamp(12px,3vh,30px);
 
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
-
 
     .tc-now-metric {
-
-      display:
-        grid;
-
+      display:grid;
       grid-template-columns:
-        clamp(
-          150px,
-          15vw,
-          210px
-        )
-        minmax(
-          0,
-          1fr
-        );
+        clamp(150px,15vw,210px)
+        minmax(0,1fr);
 
-      align-items:
-        baseline;
-
+      align-items:baseline;
       column-gap:
-        clamp(
-          12px,
-          1.7vw,
-          24px
-        );
+        clamp(12px,1.7vw,24px);
 
-      min-width:
-        0;
+      min-width:0;
     }
-
 
     .tc-now-label {
-
-      color:
-        var(--muted);
+      color:var(--muted);
 
       font-size:
-        clamp(
-          12px,
-          1.65vw,
-          20px
-        );
+        clamp(12px,1.65vw,20px);
 
-      font-weight:
-        900;
-
-      letter-spacing:
-        .2em;
-
-      white-space:
-        nowrap;
+      font-weight:900;
+      letter-spacing:.2em;
+      white-space:nowrap;
     }
-
 
     .tc-now-value {
-
-      color:
-        #c7cad2;
+      color:#c7cad2;
 
       font-size:
-        clamp(
-          22px,
-          3.2vw,
-          42px
-        );
+        clamp(22px,3.2vw,42px);
 
-      font-weight:
-        500;
-
+      font-weight:500;
       font-variant-numeric:
         tabular-nums;
-
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
-
     #tc-task {
-
       margin:
-        clamp(
-          8px,
-          1.6vh,
-          18px
-        )
+        clamp(8px,1.6vh,18px)
         0;
 
       font-size:
-        clamp(
-          31px,
-          5.1vw,
-          66px
-        );
+        clamp(31px,5.1vw,66px);
 
-      font-weight:
-        900;
-
-      line-height:
-        1.08;
-
-      overflow-wrap:
-        anywhere;
+      font-weight:900;
+      line-height:1.08;
+      overflow-wrap:anywhere;
     }
-
 
     #tc-progress {
-
-      display:
-        grid;
-
+      display:grid;
       gap:
-        clamp(
-          4px,
-          .8vh,
-          9px
-        );
+        clamp(4px,.8vh,9px);
     }
-
 
     #tc-status-row {
-
       margin-top:
-        clamp(
-          3px,
-          .8vh,
-          8px
-        );
+        clamp(3px,.8vh,8px);
     }
-
 
     #tc-status-label.tc-over,
     #tc-status-value.tc-over {
-
-      color:
-        var(--over);
+      color:var(--over);
     }
-
 
     #tc-status-value.tc-over {
-
-      font-weight:
-        700;
+      font-weight:700;
     }
 
-
-    /* =====================================================
-       SIDE
-    ===================================================== */
+    /* SIDE */
 
     #tc-side {
+      min-width:0;
+      min-height:0;
 
-      min-width:
-        0;
-
-      min-height:
-        0;
-
-      display:
-        grid;
-
+      display:grid;
       grid-template-rows:
-        minmax(
-          0,
-          1fr
-        )
-        minmax(
-          0,
-          1fr
-        );
+        minmax(0,1fr)
+        minmax(0,1fr);
 
       gap:
-        clamp(
-          10px,
-          2vh,
-          20px
-        );
+        clamp(10px,2vh,20px);
     }
-
 
     #tc-next-card {
-
-      grid-row:
-        1;
+      grid-row:1;
     }
-
 
     #tc-prev-card {
-
-      grid-row:
-        2;
+      grid-row:2;
     }
-
 
     .tc-card {
+      min-width:0;
+      min-height:0;
+      overflow:hidden;
 
-      min-width:
-        0;
-
-      min-height:
-        0;
-
-      overflow:
-        hidden;
-
-      background:
-        var(--panel2);
+      background:var(--panel2);
 
       border-radius:
-        clamp(
-          16px,
-          2.8vw,
-          30px
-        );
+        clamp(16px,2.8vw,30px);
 
       padding:
-        clamp(
-          14px,
-          3vh,
-          28px
-        )
-        clamp(
-          18px,
-          2.5vw,
-          32px
-        );
+        clamp(14px,3vh,28px)
+        clamp(18px,2.5vw,32px);
 
-      display:
-        flex;
-
-      flex-direction:
-        column;
-
-      justify-content:
-        flex-start;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
     }
-
 
     .tc-card-title {
-
-      color:
-        var(--dim);
+      color:var(--dim);
 
       font-size:
-        clamp(
-          12px,
-          1.65vw,
-          20px
-        );
+        clamp(12px,1.65vw,20px);
 
-      font-weight:
-        900;
-
-      letter-spacing:
-        .18em;
+      font-weight:900;
+      letter-spacing:.18em;
 
       margin-bottom:
-        clamp(
-          7px,
-          1.1vh,
-          12px
-        );
+        clamp(7px,1.1vh,12px);
 
-      flex-shrink:
-        0;
+      flex-shrink:0;
     }
 
-
-    /* =====================================================
-       PREVIOUS
-    ===================================================== */
+    /* PREVIOUS */
 
     #tc-prev-task {
-
-      color:
-        #767b86;
+      color:#767b86;
 
       font-size:
-        clamp(
-          18px,
-          2.6vw,
-          32px
-        );
+        clamp(18px,2.6vw,32px);
 
-      font-weight:
-        800;
+      font-weight:800;
+      line-height:1.15;
 
-      line-height:
-        1.15;
-
-      margin-top:
-        2px;
+      margin-top:2px;
 
       margin-bottom:
-        clamp(
-          8px,
-          1.4vh,
-          14px
-        );
+        clamp(8px,1.4vh,14px);
 
-      white-space:
-        nowrap;
-
-      overflow:
-        hidden;
-
-      text-overflow:
-        ellipsis;
-
-      flex-shrink:
-        0;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      flex-shrink:0;
     }
-
 
     .tc-prev-metric {
-
-      display:
-        grid;
+      display:grid;
 
       grid-template-columns:
-        clamp(
-          85px,
-          8vw,
-          120px
-        )
-        minmax(
-          0,
-          1fr
-        );
+        clamp(85px,8vw,120px)
+        minmax(0,1fr);
 
-      align-items:
-        baseline;
-
-      column-gap:
-        12px;
-
-      margin:
-        1px 0;
+      align-items:baseline;
+      column-gap:12px;
+      margin:1px 0;
     }
-
 
     .tc-prev-label {
-
-      color:
-        #555a66;
+      color:#555a66;
 
       font-size:
-        clamp(
-          11px,
-          1.45vw,
-          18px
-        );
+        clamp(11px,1.45vw,18px);
 
-      font-weight:
-        900;
-
-      letter-spacing:
-        .18em;
+      font-weight:900;
+      letter-spacing:.18em;
     }
 
-
     .tc-prev-value {
-
-      color:
-        #747985;
+      color:#747985;
 
       font-size:
-        clamp(
-          18px,
-          2.6vw,
-          32px
-        );
+        clamp(18px,2.6vw,32px);
 
       font-variant-numeric:
         tabular-nums;
-
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
 
-
-    /* =====================================================
-       NEXT
-    ===================================================== */
+    /* NEXT */
 
     #tc-next-list {
-
-      display:
-        grid;
+      display:grid;
 
       gap:
-        clamp(
-          5px,
-          .8vh,
-          10px
-        );
+        clamp(5px,.8vh,10px);
     }
 
-
     .tc-next-row {
-
-      display:
-        grid;
+      display:grid;
 
       grid-template-columns:
         max-content
-        minmax(
-          0,
-          1fr
-        );
+        minmax(0,1fr);
 
       column-gap:
-        clamp(
-          10px,
-          1.4vw,
-          18px
-        );
+        clamp(10px,1.4vw,18px);
 
-      align-items:
-        baseline;
+      align-items:baseline;
     }
-
 
     #tc-next-list
     .tc-next-row:nth-child(n+4) {
-
-      display:
-        none;
+      display:none;
     }
-
 
     .tc-next-time,
     .tc-next-task {
-
-      color:
-        #747985;
+      color:#747985;
 
       font-size:
-        clamp(
-          18px,
-          2.7vw,
-          33px
-        );
+        clamp(18px,2.7vw,33px);
     }
-
 
     .tc-next-time {
-
       font-variant-numeric:
         tabular-nums;
-
-      white-space:
-        nowrap;
+      white-space:nowrap;
     }
-
 
     .tc-next-task {
-
-      min-width:
-        0;
-
-      font-weight:
-        700;
-
-      white-space:
-        nowrap;
-
-      overflow:
-        hidden;
-
-      text-overflow:
-        ellipsis;
+      min-width:0;
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
+    /* =====================================================
+       ANDROID ONLY
+       TASK / NOW SWITCH
+    ===================================================== */
+
+    #tc-task-toggle {
+      display:none;
+
+      position:absolute;
+      left:
+        max(
+          12px,
+          env(safe-area-inset-left)
+        );
+
+      bottom:
+        max(
+          8px,
+          env(safe-area-inset-bottom)
+        );
+
+      z-index:5;
+
+      appearance:none;
+      border:
+        1px solid #3b414d;
+
+      border-radius:999px;
+      background:#11151c;
+      color:#9da3af;
+
+      font:inherit;
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.12em;
+      line-height:1;
+
+      padding:
+        7px 10px;
+
+      opacity:.88;
+    }
+
+    #${ROOT_ID}.platform-android
+    #tc-task-toggle {
+      display:block;
+    }
+
+    #tc-now-return-button {
+      display:none;
+
+      position:fixed;
+      right:10px;
+      bottom:10px;
+
+      z-index:2147483647;
+
+      appearance:none;
+
+      border:
+        1px solid #3b414d;
+
+      border-radius:999px;
+
+      background:#11151c;
+      color:#f5f5f7;
+
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Helvetica Neue",
+        "Hiragino Sans",
+        "Yu Gothic",
+        sans-serif;
+
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.12em;
+      line-height:1;
+
+      padding:
+        9px 12px;
+
+      box-shadow:
+        0 2px 10px
+        rgba(0,0,0,.35);
+    }
 
     #tc-version {
-
-      position:
-        absolute;
+      position:absolute;
 
       right:
         max(
           11px,
-          env(
-            safe-area-inset-right
-          )
+          env(safe-area-inset-right)
         );
 
       bottom:
         max(
           4px,
-          env(
-            safe-area-inset-bottom
-          )
+          env(safe-area-inset-bottom)
         );
 
-      color:
-        #41454f;
-
-      font-size:
-        10px;
-
-      font-weight:
-        700;
+      color:#41454f;
+      font-size:10px;
+      font-weight:700;
     }
-
 
     /* =====================================================
        LANDSCAPE SMALL
@@ -2237,330 +1924,161 @@
       and (max-height:500px) {
 
       #${ROOT_ID} {
-
         padding:
-          max(
-            4px,
-            env(
-              safe-area-inset-top
-            )
-          )
-          max(
-            8px,
-            env(
-              safe-area-inset-right
-            )
-          )
-          max(
-            4px,
-            env(
-              safe-area-inset-bottom
-            )
-          )
-          max(
-            8px,
-            env(
-              safe-area-inset-left
-            )
-          );
+          max(4px,env(safe-area-inset-top))
+          max(8px,env(safe-area-inset-right))
+          max(4px,env(safe-area-inset-bottom))
+          max(8px,env(safe-area-inset-left));
       }
-
 
       #tc-layout {
-
         grid-template-rows:
           17dvh
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        gap:
-          1.8dvh;
+        gap:1.8dvh;
       }
 
-
       #tc-header {
-
         grid-template-columns:
-          minmax(
-            100px,
-            .7fr
-          )
-          minmax(
-            300px,
-            1.4fr
-          )
+          minmax(100px,.7fr)
+          minmax(300px,1.4fr)
           auto;
       }
 
-
       #tc-brand {
-
         font-size:
-          clamp(
-            10px,
-            3.2dvh,
-            17px
-          );
+          clamp(10px,3.2dvh,17px);
       }
-
 
       #tc-leave {
-
         gap:
-          clamp(
-            14px,
-            2vw,
-            28px
-          );
+          clamp(14px,2vw,28px);
 
         font-size:
-          clamp(
-            12px,
-            4dvh,
-            20px
-          );
+          clamp(12px,4dvh,20px);
       }
-
 
       #tc-clock {
-
         font-size:
-          clamp(
-            29px,
-            11.5dvh,
-            58px
-          );
+          clamp(29px,11.5dvh,58px);
       }
-
 
       #tc-main {
-
         grid-template-columns:
-          minmax(
-            0,
-            1.65fr
-          )
-          minmax(
-            190px,
-            .9fr
-          );
+          minmax(0,1.65fr)
+          minmax(190px,.9fr);
 
-        gap:
-          1.6vw;
+        gap:1.6vw;
       }
-
 
       #tc-now {
-
         padding:
-          2.2dvh
-          3vw;
+          2.2dvh 3vw;
 
         border-radius:
-          clamp(
-            13px,
-            5dvh,
-            25px
-          );
+          clamp(13px,5dvh,25px);
       }
-
 
       #tc-now-badge {
-
         font-size:
-          clamp(
-            10px,
-            3.2dvh,
-            16px
-          );
+          clamp(10px,3.2dvh,16px);
 
         padding:
-          1.2dvh
-          1.4vw;
+          1.2dvh 1.4vw;
 
-        margin-bottom:
-          1.7dvh;
+        margin-bottom:1.7dvh;
       }
-
 
       .tc-now-metric {
-
         grid-template-columns:
-          clamp(
-            100px,
-            12vw,
-            145px
-          )
-          minmax(
-            0,
-            1fr
-          );
+          clamp(100px,12vw,145px)
+          minmax(0,1fr);
 
-        column-gap:
-          1.2vw;
+        column-gap:1.2vw;
       }
-
 
       .tc-now-label {
-
         font-size:
-          clamp(
-            9px,
-            2.9dvh,
-            14px
-          );
+          clamp(9px,2.9dvh,14px);
       }
-
 
       .tc-now-value {
-
         font-size:
-          clamp(
-            16px,
-            5dvh,
-            25px
-          );
+          clamp(16px,5dvh,25px);
       }
 
-
       #tc-task {
-
         font-size:
-          clamp(
-            22px,
-            7.4dvh,
-            39px
-          );
+          clamp(22px,7.4dvh,39px);
 
         margin:
           1.2dvh 0;
 
-        line-height:
-          1;
+        line-height:1;
       }
-
 
       #tc-progress {
-
-        gap:
-          .4dvh;
+        gap:.4dvh;
       }
-
 
       #tc-side {
-
-        gap:
-          1.8dvh;
+        gap:1.8dvh;
       }
-
 
       .tc-card {
-
         padding:
-          1.6dvh
-          1.4vw;
+          1.6dvh 1.4vw;
 
         border-radius:
-          clamp(
-            11px,
-            4dvh,
-            21px
-          );
+          clamp(11px,4dvh,21px);
       }
-
 
       .tc-card-title {
-
         font-size:
-          clamp(
-            9px,
-            3dvh,
-            15px
-          );
+          clamp(9px,3dvh,15px);
 
-        margin-bottom:
-          .7dvh;
+        margin-bottom:.7dvh;
       }
-
 
       #tc-prev-task {
-
         font-size:
-          clamp(
-            14px,
-            4.5dvh,
-            23px
-          );
+          clamp(14px,4.5dvh,23px);
 
-        line-height:
-          1.15;
+        line-height:1.15;
 
-        margin-top:
-          .3dvh;
-
-        margin-bottom:
-          1dvh;
+        margin-top:.3dvh;
+        margin-bottom:1dvh;
       }
-
 
       .tc-prev-metric {
-
         grid-template-columns:
-          clamp(
-            65px,
-            6.5vw,
-            90px
-          )
+          clamp(65px,6.5vw,90px)
           1fr;
 
-        margin:
-          .2dvh 0;
+        margin:.2dvh 0;
       }
-
 
       .tc-prev-label {
-
         font-size:
-          clamp(
-            8px,
-            2.7dvh,
-            13px
-          );
+          clamp(8px,2.7dvh,13px);
       }
-
 
       .tc-prev-value {
-
         font-size:
-          clamp(
-            13px,
-            4.1dvh,
-            21px
-          );
+          clamp(13px,4.1dvh,21px);
       }
-
 
       .tc-next-time,
       .tc-next-task {
-
         font-size:
-          clamp(
-            13px,
-            4.1dvh,
-            21px
-          );
+          clamp(13px,4.1dvh,21px);
       }
-
 
       #tc-next-list {
-
-        gap:
-          .7dvh;
+        gap:.7dvh;
       }
     }
-
 
     /* =====================================================
        PORTRAIT
@@ -2570,499 +2088,252 @@
       (orientation:portrait) {
 
       #${ROOT_ID} {
-
         padding:
-          max(
-            8px,
-            env(
-              safe-area-inset-top
-            )
-          )
-          max(
-            10px,
-            env(
-              safe-area-inset-right
-            )
-          )
-          max(
-            8px,
-            env(
-              safe-area-inset-bottom
-            )
-          )
-          max(
-            10px,
-            env(
-              safe-area-inset-left
-            )
-          );
+          max(8px,env(safe-area-inset-top))
+          max(10px,env(safe-area-inset-right))
+          max(8px,env(safe-area-inset-bottom))
+          max(10px,env(safe-area-inset-left));
       }
-
 
       #tc-layout {
-
         grid-template-rows:
           auto
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        gap:
-          8px;
+        gap:8px;
       }
 
-
       #tc-header {
-
         grid-template-columns:
-          minmax(
-            0,
-            1fr
-          )
+          minmax(0,1fr)
           auto;
 
         grid-template-areas:
           "brand clock"
           "leave leave";
 
-        align-items:
-          center;
-
-        column-gap:
-          10px;
-
-        row-gap:
-          4px;
+        align-items:center;
+        column-gap:10px;
+        row-gap:4px;
       }
-
 
       #tc-brand {
-
-        grid-area:
-          brand;
+        grid-area:brand;
 
         font-size:
-          clamp(
-            15px,
-            4.5vw,
-            20px
-          );
+          clamp(15px,4.5vw,20px);
 
-        letter-spacing:
-          .11em;
+        letter-spacing:.11em;
       }
-
 
       #tc-clock {
-
-        grid-area:
-          clock;
-
-        justify-self:
-          end;
+        grid-area:clock;
+        justify-self:end;
 
         font-size:
-          clamp(
-            40px,
-            12vw,
-            54px
-          );
+          clamp(40px,12vw,54px);
 
-        line-height:
-          .95;
+        line-height:.95;
       }
-
 
       #tc-leave {
+        grid-area:leave;
 
-        grid-area:
-          leave;
-
-        display:
-          flex;
-
-        align-items:
-          center;
+        display:flex;
+        align-items:center;
 
         gap:
-          clamp(
-            18px,
-            6vw,
-            32px
-          );
+          clamp(18px,6vw,32px);
 
         font-size:
-          clamp(
-            14px,
-            4.1vw,
-            18px
-          );
+          clamp(14px,4.1vw,18px);
 
-        line-height:
-          1.1;
+        line-height:1.1;
       }
 
-
       .tc-leave-row {
-
-        display:
-          grid;
+        display:grid;
 
         grid-template-columns:
           max-content
           max-content;
 
-        column-gap:
-          .45em;
+        column-gap:.45em;
       }
-
 
       #tc-main {
-
-        display:
-          grid;
-
-        grid-template-columns:
-          1fr;
+        display:grid;
+        grid-template-columns:1fr;
 
         grid-template-rows:
-          minmax(
-            0,
-            1.15fr
-          )
-          minmax(
-            0,
-            1.35fr
-          );
+          minmax(0,1.15fr)
+          minmax(0,1.35fr);
 
-        gap:
-          8px;
-
-        min-height:
-          0;
+        gap:8px;
+        min-height:0;
       }
-
 
       #tc-side {
-
-        display:
-          flex;
-
-        flex-direction:
-          column;
-
-        gap:
-          7px;
-
-        min-height:
-          0;
+        display:flex;
+        flex-direction:column;
+        gap:7px;
+        min-height:0;
       }
-
 
       #tc-next-card {
-
-        order:
-          1;
+        order:1;
       }
-
 
       #tc-prev-card {
-
-        order:
-          2;
+        order:2;
       }
 
-
-      #tc-side
-      > .tc-card {
-
-        flex:
-          1 1 0;
+      #tc-side > .tc-card {
+        flex:1 1 0;
       }
-
 
       #tc-now {
-
-        justify-content:
-          flex-start;
-
-        padding:
-          11px
-          18px;
-
-        border-radius:
-          20px;
+        justify-content:flex-start;
+        padding:11px 18px;
+        border-radius:20px;
       }
-
 
       #tc-now::before {
-
-        width:
-          6px;
+        width:6px;
       }
-
 
       #tc-now-badge {
-
-        font-size:
-          11px;
-
-        padding:
-          5px
-          12px;
-
-        margin-bottom:
-          6px;
-
-        border-radius:
-          11px;
-
-        letter-spacing:
-          .11em;
+        font-size:11px;
+        padding:5px 12px;
+        margin-bottom:6px;
+        border-radius:11px;
+        letter-spacing:.11em;
       }
-
 
       .tc-now-metric {
-
         grid-template-columns:
           122px
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        column-gap:
-          10px;
+        column-gap:10px;
       }
-
 
       .tc-now-label {
-
         font-size:
-          clamp(
-            10px,
-            3.1vw,
-            13px
-          );
+          clamp(10px,3.1vw,13px);
 
-        letter-spacing:
-          .14em;
+        letter-spacing:.14em;
       }
-
 
       .tc-now-value {
-
         font-size:
-          clamp(
-            20px,
-            5.8vw,
-            27px
-          );
+          clamp(20px,5.8vw,27px);
 
-        line-height:
-          1.02;
+        line-height:1.02;
       }
-
 
       #tc-task {
-
         margin:
-          5px
-          0
-          6px;
+          5px 0 6px;
 
         font-size:
-          clamp(
-            27px,
-            8.2vw,
-            37px
-          );
+          clamp(27px,8.2vw,37px);
 
-        line-height:
-          1.02;
+        line-height:1.02;
 
-        white-space:
-          nowrap;
-
-        overflow:
-          hidden;
-
-        text-overflow:
-          ellipsis;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
       }
-
 
       #tc-progress {
-
-        gap:
-          2px;
+        gap:2px;
       }
-
 
       #tc-status-row {
-
-        margin-top:
-          0;
+        margin-top:0;
       }
-
 
       .tc-card {
-
-        padding:
-          9px
-          14px;
-
-        border-radius:
-          16px;
-
-        justify-content:
-          flex-start;
+        padding:9px 14px;
+        border-radius:16px;
+        justify-content:flex-start;
       }
-
 
       .tc-card-title {
-
         font-size:
-          clamp(
-            10px,
-            3.1vw,
-            13px
-          );
+          clamp(10px,3.1vw,13px);
 
-        letter-spacing:
-          .16em;
-
-        margin-bottom:
-          4px;
+        letter-spacing:.16em;
+        margin-bottom:4px;
       }
-
 
       #tc-next-list {
-
-        gap:
-          3px;
+        gap:3px;
       }
-
 
       #tc-next-list
       .tc-next-row:nth-child(n+4) {
-
-        display:
-          grid;
+        display:grid;
       }
-
 
       .tc-next-row {
-
         grid-template-columns:
           60px
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        column-gap:
-          9px;
+        column-gap:9px;
       }
-
 
       .tc-next-time,
       .tc-next-task {
-
         font-size:
-          clamp(
-            15px,
-            4.4vw,
-            20px
-          );
+          clamp(15px,4.4vw,20px);
 
-        line-height:
-          1.1;
+        line-height:1.1;
       }
-
 
       #tc-prev-task {
-
         font-size:
-          clamp(
-            16px,
-            4.8vw,
-            21px
-          );
+          clamp(16px,4.8vw,21px);
 
-        line-height:
-          1.05;
+        line-height:1.05;
 
-        margin-top:
-          0;
+        margin-top:0;
+        margin-bottom:4px;
 
-        margin-bottom:
-          4px;
-
-        white-space:
-          nowrap;
-
-        overflow:
-          hidden;
-
-        text-overflow:
-          ellipsis;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
       }
-
 
       .tc-prev-metric {
-
         grid-template-columns:
           76px
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        column-gap:
-          9px;
-
-        margin:
-          0;
+        column-gap:9px;
+        margin:0;
       }
-
 
       .tc-prev-label {
-
         font-size:
-          clamp(
-            9px,
-            2.7vw,
-            11px
-          );
+          clamp(9px,2.7vw,11px);
 
-        letter-spacing:
-          .13em;
+        letter-spacing:.13em;
       }
-
 
       .tc-prev-value {
-
         font-size:
-          clamp(
-            14px,
-            4.2vw,
-            18px
-          );
+          clamp(14px,4.2vw,18px);
 
-        line-height:
-          1.05;
+        line-height:1.05;
       }
-
 
       #tc-version {
-
-        font-size:
-          8px;
+        font-size:8px;
       }
     }
-
 
     /* =====================================================
        ANDROID / FIREFOX SMALL LANDSCAPE補正
@@ -3074,247 +2345,149 @@
       and (max-height:650px) {
 
       #${ROOT_ID}.browser-firefox {
-
-        padding:
-          10px;
+        padding:10px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-layout {
-
         grid-template-rows:
           65px
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        gap:
-          9px;
+        gap:9px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-header {
-
         grid-template-columns:
-          minmax(
-            120px,
-            .6fr
-          )
-          minmax(
-            280px,
-            1.3fr
-          )
+          minmax(120px,.6fr)
+          minmax(280px,1.3fr)
           auto;
 
-        gap:
-          12px;
+        gap:12px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-brand {
-
-        font-size:
-          15px;
+        font-size:15px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-leave {
-
         gap:
-          clamp(
-            14px,
-            2vw,
-            28px
-          );
+          clamp(14px,2vw,28px);
 
-        font-size:
-          14px;
+        font-size:14px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-clock {
-
-        font-size:
-          44px;
+        font-size:44px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-main {
-
         grid-template-columns:
-          minmax(
-            0,
-            1.68fr
-          )
-          minmax(
-            260px,
-            .95fr
-          );
+          minmax(0,1.68fr)
+          minmax(260px,.95fr);
 
-        gap:
-          9px;
+        gap:9px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-now {
-
         padding:
-          20px
-          26px;
+          20px 26px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-now-badge {
-
-        font-size:
-          14px;
-
-        margin-bottom:
-          13px;
+        font-size:14px;
+        margin-bottom:13px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-now-metric {
-
         grid-template-columns:
-          125px
-          1fr;
+          125px 1fr;
 
-        column-gap:
-          12px;
+        column-gap:12px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-now-label {
-
-        font-size:
-          11px;
+        font-size:11px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-now-value {
-
-        font-size:
-          21px;
+        font-size:21px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-task {
-
-        font-size:
-          32px;
-
-        margin:
-          7px 0;
+        font-size:32px;
+        margin:7px 0;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-progress {
-
-        gap:
-          3px;
+        gap:3px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-side {
-
-        gap:
-          9px;
+        gap:9px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-card {
-
         padding:
-          14px
-          17px;
+          14px 17px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-card-title {
-
-        font-size:
-          11px;
-
-        margin-bottom:
-          6px;
+        font-size:11px;
+        margin-bottom:6px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-prev-task {
-
-        font-size:
-          19px;
-
-        margin-bottom:
-          7px;
+        font-size:19px;
+        margin-bottom:7px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-prev-metric {
-
         grid-template-columns:
-          72px
-          1fr;
+          72px 1fr;
 
-        column-gap:
-          8px;
+        column-gap:8px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-prev-label {
-
-        font-size:
-          9px;
+        font-size:9px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-prev-value {
-
-        font-size:
-          16px;
+        font-size:16px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       .tc-next-time,
       #${ROOT_ID}.browser-firefox
       .tc-next-task {
-
-        font-size:
-          17px;
+        font-size:17px;
       }
-
 
       #${ROOT_ID}.browser-firefox
       #tc-next-list {
-
-        gap:
-          4px;
+        gap:4px;
       }
     }
-
 
     /* =====================================================
        VERY NARROW ANDROID PORTRAIT
@@ -3325,235 +2498,143 @@
       and (max-width:520px) {
 
       #${ROOT_ID}.platform-android {
-
-        padding:
-          7px;
+        padding:7px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-layout {
-
-        gap:
-          6px;
+        gap:6px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-brand {
-
-        font-size:
-          14px;
+        font-size:14px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-clock {
-
-        font-size:
-          38px;
+        font-size:38px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-leave {
-
-        gap:
-          16px;
-
-        font-size:
-          13px;
+        gap:16px;
+        font-size:13px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-main {
-
         grid-template-rows:
-          minmax(
-            0,
-            1.1fr
-          )
-          minmax(
-            0,
-            1.4fr
-          );
+          minmax(0,1.1fr)
+          minmax(0,1.4fr);
 
-        gap:
-          6px;
+        gap:6px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-side {
-
-        gap:
-          5px;
+        gap:5px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-now {
-
         padding:
-          10px
-          14px;
+          10px 14px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-now-badge {
-
-        font-size:
-          10px;
-
-        margin-bottom:
-          5px;
+        font-size:10px;
+        margin-bottom:5px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-now-metric {
-
         grid-template-columns:
           106px
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        column-gap:
-          7px;
+        column-gap:7px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-now-label {
-
-        font-size:
-          9px;
+        font-size:9px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-now-value {
-
-        font-size:
-          18px;
+        font-size:18px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-task {
-
         font-size:
-          clamp(
-            25px,
-            7.4vw,
-            35px
-          );
+          clamp(25px,7.4vw,35px);
 
         margin:
-          4px
-          0
-          5px;
+          4px 0 5px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-card {
-
         padding:
-          7px
-          11px;
+          7px 11px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-card-title {
-
-        font-size:
-          9px;
-
-        margin-bottom:
-          3px;
+        font-size:9px;
+        margin-bottom:3px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-next-row {
-
         grid-template-columns:
           54px
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        column-gap:
-          7px;
+        column-gap:7px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-next-time,
       #${ROOT_ID}.platform-android
       .tc-next-task {
-
-        font-size:
-          14px;
+        font-size:14px;
       }
-
 
       #${ROOT_ID}.platform-android
       #tc-prev-task {
-
-        font-size:
-          15px;
-
-        margin-bottom:
-          3px;
+        font-size:15px;
+        margin-bottom:3px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-prev-metric {
-
         grid-template-columns:
           65px
-          minmax(
-            0,
-            1fr
-          );
+          minmax(0,1fr);
 
-        column-gap:
-          7px;
+        column-gap:7px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-prev-label {
-
-        font-size:
-          8px;
+        font-size:8px;
       }
-
 
       #${ROOT_ID}.platform-android
       .tc-prev-value {
-
-        font-size:
-          14px;
+        font-size:14px;
       }
     }
   `;
-
 
   document.head
     .appendChild(
       style
     );
-
 
   /* =========================================================
      HTML
@@ -3564,43 +2645,34 @@
       'div'
     );
 
-
   root.id =
     ROOT_ID;
-
 
   if (
     IS_IOS
   ) {
-
     root.classList.add(
       'platform-ios'
     );
   }
 
-
   if (
     IS_ANDROID
   ) {
-
     root.classList.add(
       'platform-android'
     );
   }
 
-
   if (
     IS_FIREFOX
   ) {
-
     root.classList.add(
       'browser-firefox'
     );
   }
 
-
   root.innerHTML = `
-
     <div id="tc-layout">
 
       <header id="tc-header">
@@ -3609,11 +2681,9 @@
           NOW
         </div>
 
-
         <div id="tc-leave">
 
           <div class="tc-leave-row">
-
             <span>
               退勤
             </span>
@@ -3621,9 +2691,7 @@
             <span id="tc-leave-time">
               --:--
             </span>
-
           </div>
-
 
           <div class="tc-leave-row">
 
@@ -3639,13 +2707,11 @@
 
         </div>
 
-
         <div id="tc-clock">
           --:--
         </div>
 
       </header>
-
 
       <main id="tc-main">
 
@@ -3654,7 +2720,6 @@
           <div id="tc-now-badge">
             CURRENT TASK
           </div>
-
 
           <div class="tc-now-metric">
 
@@ -3670,13 +2735,9 @@
 
           </div>
 
-
           <div id="tc-task">
-
             タスクを取得できません
-
           </div>
-
 
           <div id="tc-progress">
 
@@ -3689,13 +2750,10 @@
               <span
                 id="tc-planned"
                 class="tc-now-value">
-
                 --:--
-
               </span>
 
             </div>
-
 
             <div class="tc-now-metric">
 
@@ -3706,13 +2764,10 @@
               <span
                 id="tc-planned-end"
                 class="tc-now-value">
-
                 --:--
-
               </span>
 
             </div>
-
 
             <div class="tc-now-metric">
 
@@ -3723,13 +2778,10 @@
               <span
                 id="tc-elapsed"
                 class="tc-now-value">
-
                 --:--:--
-
               </span>
 
             </div>
-
 
             <div
               id="tc-status-row"
@@ -3738,17 +2790,13 @@
               <span
                 id="tc-status-label"
                 class="tc-now-label">
-
                 REMAINING
-
               </span>
 
               <span
                 id="tc-status-value"
                 class="tc-now-value">
-
                 --:--:--
-
               </span>
 
             </div>
@@ -3756,7 +2804,6 @@
           </div>
 
         </section>
-
 
         <aside id="tc-side">
 
@@ -3768,11 +2815,9 @@
               PREVIOUS
             </div>
 
-
             <div id="tc-prev-task">
               —
             </div>
-
 
             <div class="tc-prev-metric">
 
@@ -3783,13 +2828,10 @@
               <span
                 id="tc-prev-start"
                 class="tc-prev-value">
-
                 —
-
               </span>
 
             </div>
-
 
             <div class="tc-prev-metric">
 
@@ -3800,13 +2842,10 @@
               <span
                 id="tc-prev-finish"
                 class="tc-prev-value">
-
                 —
-
               </span>
 
             </div>
-
 
             <div class="tc-prev-metric">
 
@@ -3817,15 +2856,12 @@
               <span
                 id="tc-prev-elapsed"
                 class="tc-prev-value">
-
                 —
-
               </span>
 
             </div>
 
           </section>
-
 
           <section
             id="tc-next-card"
@@ -3835,7 +2871,6 @@
               NEXT
             </div>
 
-
             <div id="tc-next-list">
 
               <div class="tc-next-row">
@@ -3843,101 +2878,77 @@
                 <span
                   id="tc-next-time-0"
                   class="tc-next-time">
-
                   —
-
                 </span>
 
                 <span
                   id="tc-next-task-0"
                   class="tc-next-task">
-
                   —
-
                 </span>
 
               </div>
-
 
               <div class="tc-next-row">
 
                 <span
                   id="tc-next-time-1"
                   class="tc-next-time">
-
                   —
-
                 </span>
 
                 <span
                   id="tc-next-task-1"
                   class="tc-next-task">
-
                   —
-
                 </span>
 
               </div>
-
 
               <div class="tc-next-row">
 
                 <span
                   id="tc-next-time-2"
                   class="tc-next-time">
-
                   —
-
                 </span>
 
                 <span
                   id="tc-next-task-2"
                   class="tc-next-task">
-
                   —
-
                 </span>
 
               </div>
-
 
               <div class="tc-next-row">
 
                 <span
                   id="tc-next-time-3"
                   class="tc-next-time">
-
                   —
-
                 </span>
 
                 <span
                   id="tc-next-task-3"
                   class="tc-next-task">
-
                   —
-
                 </span>
 
               </div>
-
 
               <div class="tc-next-row">
 
                 <span
                   id="tc-next-time-4"
                   class="tc-next-time">
-
                   —
-
                 </span>
 
                 <span
                   id="tc-next-task-4"
                   class="tc-next-task">
-
                   —
-
                 </span>
 
               </div>
@@ -3952,18 +2963,96 @@
 
     </div>
 
+    <button
+      id="tc-task-toggle"
+      type="button">
+      TASK
+    </button>
 
     <div id="tc-version">
       v${VERSION}
     </div>
   `;
 
-
   document.body
     .appendChild(
       root
     );
 
+  /* =========================================================
+     ANDROID TASK / NOW SWITCH
+  ========================================================= */
+
+  if (
+    IS_ANDROID
+  ) {
+    const taskToggle =
+      document.getElementById(
+        'tc-task-toggle'
+      );
+
+    const returnButton =
+      document.createElement(
+        'button'
+      );
+
+    returnButton.id =
+      'tc-now-return-button';
+
+    returnButton.type =
+      'button';
+
+    returnButton.textContent =
+      'NOW';
+
+    document.body
+      .appendChild(
+        returnButton
+      );
+
+    taskToggle
+      ?.addEventListener(
+        'click',
+        () => {
+          root.style.display =
+            'none';
+
+          returnButton.style.display =
+            'block';
+        }
+      );
+
+    returnButton
+      .addEventListener(
+        'click',
+        () => {
+
+          /*
+            NOW復帰時は即時同期してから表示する。
+          */
+          sync();
+
+          render();
+
+          root.style.display =
+            'block';
+
+          returnButton.style.display =
+            'none';
+
+          /*
+            display復帰後にも再描画して、
+            レイアウトと値を確定させる。
+          */
+          requestAnimationFrame(
+            () => {
+              sync();
+              render();
+            }
+          );
+        }
+      );
+  }
 
   /* =========================================================
      RENDER
@@ -3976,12 +3065,9 @@
           id
         );
 
-
   function render() {
-
     const now =
       new Date();
-
 
     $('tc-clock')
       .textContent =
@@ -3993,18 +3079,15 @@
           now.getMinutes()
         );
 
-
     $('tc-task')
       .textContent =
         state.currentTask ||
         'タスクを取得できません';
 
-
     $('tc-start')
       .textContent =
         state.currentStart ||
         '--:--';
-
 
     $('tc-planned')
       .textContent =
@@ -4012,15 +3095,12 @@
           state.plannedSeconds
         );
 
-
     $('tc-planned-end')
       .textContent =
         getPlannedEnd();
 
-
     const elapsed =
       getElapsedSeconds();
-
 
     $('tc-elapsed')
       .textContent =
@@ -4028,33 +3108,26 @@
           elapsed
         );
 
-
     const statusLabel =
       $('tc-status-label');
 
-
     const statusValue =
       $('tc-status-value');
-
 
     if (
       elapsed !== null &&
       state.plannedSeconds !== null
     ) {
-
       const diff =
         state.plannedSeconds -
         elapsed;
 
-
       if (
         diff >= 0
       ) {
-
         statusLabel
           .textContent =
             'REMAINING';
-
 
         statusValue
           .textContent =
@@ -4062,13 +3135,11 @@
               diff
             );
 
-
         statusLabel
           .classList
           .remove(
             'tc-over'
           );
-
 
         statusValue
           .classList
@@ -4077,11 +3148,9 @@
           );
 
       } else {
-
         statusLabel
           .textContent =
             'OVER';
-
 
         statusValue
           .textContent =
@@ -4089,13 +3158,11 @@
               Math.abs(diff)
             );
 
-
         statusLabel
           .classList
           .add(
             'tc-over'
           );
-
 
         statusValue
           .classList
@@ -4105,23 +3172,19 @@
       }
 
     } else {
-
       statusLabel
         .textContent =
           'REMAINING';
 
-
       statusValue
         .textContent =
           '--:--:--';
-
 
       statusLabel
         .classList
         .remove(
           'tc-over'
         );
-
 
       statusValue
         .classList
@@ -4129,64 +3192,52 @@
           'tc-over'
         );
     }
-
 
     /* PREVIOUS */
 
     const prev =
       state.previous;
 
-
     $('tc-prev-task')
       .textContent =
         prev?.task ||
         '—';
-
 
     $('tc-prev-start')
       .textContent =
         prev?.start ||
         '—';
 
-
     let prevFinish =
       prev?.finish ||
       '—';
-
 
     if (
       prevFinish ===
       '--:--:--'
     ) {
-
       prevFinish =
         '—';
     }
-
 
     $('tc-prev-finish')
       .textContent =
         prevFinish;
 
-
     let prevElapsed =
       '—';
-
 
     if (
       prev?.actualDuration
     ) {
-
       const sec =
         durationToSeconds(
           prev.actualDuration
         );
 
-
       if (
         sec !== null
       ) {
-
         prevElapsed =
           secondsToHMS(
             sec
@@ -4194,11 +3245,9 @@
       }
     }
 
-
     $('tc-prev-elapsed')
       .textContent =
         prevElapsed;
-
 
     /* NEXT */
 
@@ -4207,10 +3256,8 @@
       i < 5;
       i++
     ) {
-
       const row =
         state.next[i];
-
 
       $(
         `tc-next-time-${i}`
@@ -4218,7 +3265,6 @@
         .textContent =
           row?.scheduleTime ||
           '—';
-
 
       $(
         `tc-next-task-${i}`
@@ -4228,7 +3274,6 @@
           '—';
     }
 
-
     /* LEAVE */
 
     $('tc-leave-time')
@@ -4236,38 +3281,30 @@
         state.leaveTime ||
         '--:--';
 
-
     if (
       !state.leaveTime
     ) {
-
       $('tc-leave-label')
         .textContent =
           'あと';
-
 
       $('tc-leave-count')
         .textContent =
           '--:--';
 
-
       return;
     }
-
 
     const parts =
       state.leaveTime
         .split(':')
         .map(Number);
 
-
     if (
       parts.length !== 2
     ) {
-
       return;
     }
-
 
     const leaveDate =
       new Date(
@@ -4279,7 +3316,6 @@
         0
       );
 
-
     let diff =
       Math.floor(
         (
@@ -4289,15 +3325,12 @@
         1000
       );
 
-
     if (
       diff >= 0
     ) {
-
       $('tc-leave-label')
         .textContent =
           'あと';
-
 
       $('tc-leave-count')
         .textContent =
@@ -4317,17 +3350,14 @@
           );
 
     } else {
-
       diff =
         Math.abs(
           diff
         );
 
-
       $('tc-leave-label')
         .textContent =
           '超過';
-
 
       $('tc-leave-count')
         .textContent =
@@ -4337,7 +3367,6 @@
     }
   }
 
-
   /* =========================================================
      START
   ========================================================= */
@@ -4346,22 +3375,17 @@
 
   render();
 
-
   window.tcNowRenderTimer =
     setInterval(
       render,
       RENDER_INTERVAL
     );
 
-
   window.tcNowSyncTimer =
     setInterval(
       () => {
-
         sync();
-
         render();
-
       },
       SYNC_INTERVAL
     );
