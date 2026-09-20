@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.8
+     v4.5.9
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.8';
+  const VERSION = '4.5.9';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -385,7 +385,6 @@
     /*
       Remove the leading section time range.
 
-      Example:
       18:00-23:30 夜5 / 18 4h -3h53m12s
       -> 夜5 / 18 4h -3h53m12s
     */
@@ -396,71 +395,38 @@
       );
 
     /*
-      If a count separator exists, cut from the digits
-      immediately before the slash.
+      Cut at the beginning of a task-count fragment.
+      This intentionally does not require a space before
+      the number, so "夜5 /" is handled as well.
 
-      Handles:
+      Examples:
       夜5 /
       夜 5 /
       夜5/18
       夜 5／18
       夜5⁄18
     */
-    const slashIndex =
-      stripped.search(
-        /[\/／⁄]/
+    const countMatch =
+      stripped.match(
+        /\d{1,3}\s*[\/／⁄]/
       );
 
     if (
-      slashIndex >= 0
+      countMatch &&
+      typeof countMatch.index ===
+        'number'
     ) {
-      let cut =
-        slashIndex;
-
-      while (
-        cut > 0 &&
-        /\s/.test(
-          stripped[
-            cut - 1
-          ]
-        )
-      ) {
-        cut--;
-      }
-
-      while (
-        cut > 0 &&
-        /\d/.test(
-          stripped[
-            cut - 1
-          ]
-        )
-      ) {
-        cut--;
-      }
-
-      while (
-        cut > 0 &&
-        /\s/.test(
-          stripped[
-            cut - 1
-          ]
-        )
-      ) {
-        cut--;
-      }
-
       stripped =
         stripped.slice(
           0,
-          cut
+          countMatch.index
         );
     }
 
     /*
-      Fallback when TaskChute's DOM does not expose the
-      slash/count in the same text node.
-      Remove trailing duration / balance fragments.
+      Defensive fallback: if TaskChute exposes only
+      duration/balance fragments in this text node,
+      remove them from the tail.
     */
     stripped =
       stripped
@@ -4685,8 +4651,8 @@
 
     /* =====================================================
        TABLET LANDSCAPE
-       Prevent vertical stretching on wide/tall tablets.
-       Smartphone layouts are excluded by min-width/min-height.
+       iPad mini-class / wide-and-tall tablets
+       Smartphone layouts are excluded.
     ===================================================== */
 
     @media
@@ -4694,15 +4660,246 @@
       and (min-width: 900px)
       and (min-height: 600px) {
 
-      /*
-        CURRENT:
-        do not distribute all spare card height across
-        the five metric rows.
-      */
+      #${ROOT_ID}.layout-landscape {
+        padding:
+          max(8px,env(safe-area-inset-top))
+          max(12px,env(safe-area-inset-right))
+          max(8px,env(safe-area-inset-bottom))
+          max(12px,env(safe-area-inset-left));
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-layout {
+        grid-template-rows:
+          72px
+          62px
+          minmax(0,1fr);
+
+        gap:8px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-header {
+        grid-template-columns:
+          minmax(105px,.5fr)
+          minmax(360px,1.1fr)
+          minmax(410px,1.1fr);
+
+        gap:18px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-brand {
+        font-size:20px;
+
+        padding-right:20px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-leave {
+        font-size:27px;
+
+        gap:24px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-leave-row:first-child {
+        padding-right:24px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-date {
+        font-size:22px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-clock {
+        gap:18px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-clock-time {
+        font-size:58px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-work-timeline {
+        height:62px;
+
+        min-height:0;
+
+        margin:
+          0 14px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-track {
+        top:24px;
+
+        height:7px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-timeline-label {
+        top:2px;
+
+        font-size:14px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-regular-marker {
+        top:-7px;
+
+        height:21px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-current {
+        top:37px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-current::before {
+        font-size:13px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-work-timeline::before,
+      #${ROOT_ID}.layout-landscape
+      #tc-work-timeline::after {
+        top:17px;
+
+        height:29px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-caption-start,
+      #${ROOT_ID}.layout-landscape
+      #tc-timeline-caption-end {
+        top:39px;
+
+        font-size:10px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-main {
+        grid-template-columns:
+          minmax(0,1.22fr)
+          minmax(0,1fr);
+
+        gap:14px;
+      }
+
+      /* CURRENT */
+
+      #${ROOT_ID}.layout-landscape
+      #tc-now {
+        padding:
+          18px
+          28px
+          22px
+          34px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-now::before {
+        width:6px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-topline {
+        min-height:38px;
+
+        gap:16px;
+
+        margin-bottom:8px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-now-badge {
+        font-size:13px;
+
+        padding:
+          8px
+          15px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-attributes {
+        gap:14px;
+
+        font-size:12px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-current-attr {
+        gap:6px;
+
+        max-width:190px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-current-attr-icon {
+        width:15px;
+        height:15px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-task {
+        margin:
+          16px
+          0
+          13px;
+
+        font-size:
+          clamp(
+            46px,
+            4.25vw,
+            64px
+          );
+
+        line-height:1;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-section-panel {
+        margin-bottom:14px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-current-section-panel.is-visible {
+        gap:5px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-section-primary {
+        gap:8px;
+
+        font-size:15px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-section-stats {
+        gap:20px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-section-stat {
+        gap:7px;
+
+        font-size:13px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-section-icon {
+        width:16px;
+        height:16px;
+      }
+
       #${ROOT_ID}.layout-landscape
       #tc-progress {
         grid-template-rows:
-          repeat(5, 58px);
+          repeat(5, 64px);
 
         align-content:start;
 
@@ -4711,76 +4908,707 @@
 
       #${ROOT_ID}.layout-landscape
       .tc-now-metric {
-        min-height:58px;
+        grid-template-columns:
+          30px
+          170px
+          minmax(0,1fr);
+
+        column-gap:14px;
+
+        min-height:64px;
 
         padding:
-          6px
+          8px
           0;
       }
 
       #${ROOT_ID}.layout-landscape
-      #tc-task {
-        margin:
-          11px
-          0
-          9px;
+      .tc-metric-icon {
+        width:25px;
+        height:25px;
       }
 
       #${ROOT_ID}.layout-landscape
-      #tc-current-section-panel {
-        margin-bottom:8px;
+      .tc-now-label {
+        font-size:15px;
+
+        letter-spacing:.18em;
       }
 
-      /*
-        NEXT:
-        keep a calm, fixed row rhythm rather than
-        stretching five rows to fill the whole card.
-      */
+      #${ROOT_ID}.layout-landscape
+      .tc-now-value {
+        font-size:
+          clamp(
+            29px,
+            2.7vw,
+            38px
+          );
+      }
+
+      /* RIGHT SIDE */
+
+      #${ROOT_ID}.layout-landscape
+      #tc-side {
+        grid-template-rows:
+          minmax(350px,1.55fr)
+          minmax(190px,.85fr);
+
+        gap:14px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-next-card {
+        padding:
+          18px
+          20px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-next-card
+      .tc-card-title {
+        font-size:16px;
+
+        margin-bottom:9px;
+      }
+
       #${ROOT_ID}.layout-landscape
       #tc-next-list {
         grid-template-rows:
-          repeat(5, 56px);
+          repeat(5, minmax(54px,1fr));
+
+        align-content:stretch;
+
+        flex:1 1 auto;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-row {
+        grid-template-columns:
+          92px
+          minmax(0,1fr)
+          18px;
+
+        column-gap:16px;
+
+        min-height:54px;
+
+        padding:
+          0 10px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-row:first-child {
+        padding-left:16px;
+
+        padding-right:12px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-row:first-child::before {
+        width:4px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-time,
+      #${ROOT_ID}.layout-landscape
+      .tc-next-task {
+        font-size:
+          clamp(
+            23px,
+            2vw,
+            30px
+          );
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-next-arrow {
+        font-size:22px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card {
+        padding:
+          18px
+          20px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card
+      .tc-card-title {
+        font-size:15px;
+
+        margin-bottom:11px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-content {
+        grid-template-columns:
+          minmax(0,1fr)
+          44px;
+
+        align-items:start;
+
+        gap:18px;
+
+        padding-top:2px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-task {
+        font-size:23px;
+
+        margin-bottom:14px;
+      }
+
+      /*
+        On tablets, present PREVIOUS metrics horizontally.
+      */
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-data {
+        display:grid;
+
+        grid-template-columns:
+          repeat(3,minmax(0,1fr));
+
+        grid-template-areas:
+          "task task task"
+          "start finish elapsed";
+
+        gap:
+          0
+          18px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-task {
+        grid-area:task;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-data
+      .tc-prev-metric:nth-of-type(1) {
+        grid-area:start;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-data
+      .tc-prev-metric:nth-of-type(2) {
+        grid-area:finish;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-data
+      .tc-prev-metric:nth-of-type(3) {
+        grid-area:elapsed;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-metric {
+        display:flex;
+
+        flex-direction:column;
+
+        align-items:flex-start;
+
+        gap:7px;
+
+        min-height:auto;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-label {
+        font-size:11px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-value {
+        font-size:20px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-check {
+        width:42px;
+        height:42px;
+
+        font-size:23px;
+      }
+    }
+
+
+    /* =====================================================
+       TABLET PORTRAIT
+       iPad mini-class portrait layout
+    ===================================================== */
+
+    @media
+      (orientation: portrait)
+      and (min-width: 600px)
+      and (min-height: 800px) {
+
+      #${ROOT_ID}.layout-portrait {
+        padding:
+          max(10px,env(safe-area-inset-top))
+          max(14px,env(safe-area-inset-right))
+          max(10px,env(safe-area-inset-bottom))
+          max(14px,env(safe-area-inset-left));
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-layout {
+        grid-template-rows:
+          105px
+          72px
+          minmax(0,1fr);
+
+        gap:10px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-header {
+        grid-template-columns:
+          minmax(120px,1fr)
+          auto;
+
+        grid-template-areas:
+          "brand clock"
+          "leave leave";
+
+        column-gap:18px;
+        row-gap:9px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-brand {
+        font-size:22px;
+
+        padding-right:0;
+
+        border-right:0;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-clock {
+        gap:15px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-date {
+        font-size:18px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-clock-time {
+        font-size:52px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-leave {
+        gap:28px;
+
+        font-size:24px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-leave-row:first-child {
+        padding-right:28px;
+
+        border-right:
+          1px solid
+          rgba(255,255,255,.22);
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-work-timeline {
+        height:72px;
+
+        min-height:0;
+
+        margin:0 8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-track {
+        top:27px;
+
+        height:6px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-timeline-label {
+        top:3px;
+
+        font-size:13px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-regular-marker {
+        top:-6px;
+
+        height:19px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-current {
+        top:39px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-current::before {
+        font-size:12px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-work-timeline::before,
+      #${ROOT_ID}.layout-portrait
+      #tc-work-timeline::after {
+        top:19px;
+
+        height:26px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-caption-start,
+      #${ROOT_ID}.layout-portrait
+      #tc-timeline-caption-end {
+        top:42px;
+
+        font-size:9px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-main {
+        grid-template-columns:1fr;
+
+        grid-template-rows:
+          455px
+          minmax(0,1fr);
+
+        gap:12px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-now {
+        padding:
+          18px
+          26px
+          18px
+          32px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-now::before {
+        width:6px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-current-topline {
+        min-height:34px;
+
+        gap:14px;
+
+        margin-bottom:7px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-now-badge {
+        font-size:12px;
+
+        padding:
+          8px
+          14px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-current-attributes {
+        gap:12px;
+
+        font-size:11px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-current-attr {
+        max-width:170px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-current-attr-icon {
+        width:14px;
+        height:14px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-task {
+        margin:
+          13px
+          0
+          11px;
+
+        font-size:
+          clamp(
+            42px,
+            6.6vw,
+            54px
+          );
+
+        line-height:1;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-current-section-panel {
+        margin-bottom:11px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-current-section-panel.is-visible {
+        gap:4px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-section-primary {
+        gap:7px;
+
+        font-size:13px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-section-stats {
+        gap:16px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-section-stat {
+        gap:5px;
+
+        font-size:11px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-section-icon {
+        width:14px;
+        height:14px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-progress {
+        grid-template-rows:
+          repeat(5, 53px);
 
         align-content:start;
 
         flex:0 0 auto;
       }
 
-      #${ROOT_ID}.layout-landscape
-      .tc-next-row {
-        min-height:56px;
+      #${ROOT_ID}.layout-portrait
+      .tc-now-metric {
+        grid-template-columns:
+          27px
+          145px
+          minmax(0,1fr);
+
+        column-gap:12px;
+
+        min-height:53px;
+
+        padding:
+          6px
+          0;
       }
 
-      /*
-        PREVIOUS:
-        keep content grouped near the top.
-      */
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-content {
-        align-items:start;
-
-        padding-top:8px;
+      #${ROOT_ID}.layout-portrait
+      .tc-metric-icon {
+        width:22px;
+        height:22px;
       }
 
-      /*
-        Slightly reduce the amount of vertical space
-        assigned to NEXT/PREVIOUS cards as a whole,
-        while keeping their widths unchanged.
-      */
-      #${ROOT_ID}.layout-landscape
+      #${ROOT_ID}.layout-portrait
+      .tc-now-label {
+        font-size:13px;
+
+        letter-spacing:.17em;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-now-value {
+        font-size:
+          clamp(
+            25px,
+            4.1vw,
+            32px
+          );
+      }
+
+      #${ROOT_ID}.layout-portrait
       #tc-side {
-        grid-template-rows:
-          minmax(318px, auto)
-          minmax(150px, auto);
+        display:grid;
 
-        align-content:start;
+        grid-template-rows:
+          minmax(300px,1.35fr)
+          minmax(175px,.65fr);
+
+        gap:12px;
       }
 
-      #${ROOT_ID}.layout-landscape
-      #tc-next-card,
-      #${ROOT_ID}.layout-landscape
+      #${ROOT_ID}.layout-portrait
+      #tc-next-card {
+        padding:
+          16px
+          18px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-next-card
+      .tc-card-title {
+        font-size:15px;
+
+        margin-bottom:8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-next-list {
+        grid-template-rows:
+          repeat(5, minmax(48px,1fr));
+
+        align-content:stretch;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-next-row {
+        grid-template-columns:
+          84px
+          minmax(0,1fr)
+          16px;
+
+        column-gap:14px;
+
+        min-height:48px;
+
+        padding:
+          0 8px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-next-row:first-child {
+        padding-left:14px;
+
+        padding-right:10px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-next-time,
+      #${ROOT_ID}.layout-portrait
+      .tc-next-task {
+        font-size:
+          clamp(
+            20px,
+            3.25vw,
+            25px
+          );
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-next-arrow {
+        font-size:19px;
+      }
+
+      #${ROOT_ID}.layout-portrait
       #tc-prev-card {
-        height:auto;
+        padding:
+          16px
+          18px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-card
+      .tc-card-title {
+        font-size:14px;
+
+        margin-bottom:9px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-content {
+        grid-template-columns:
+          minmax(0,1fr)
+          40px;
+
+        gap:14px;
+
+        align-items:start;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-task {
+        font-size:21px;
+
+        margin-bottom:12px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-data {
+        display:grid;
+
+        grid-template-columns:
+          repeat(3,minmax(0,1fr));
+
+        grid-template-areas:
+          "task task task"
+          "start finish elapsed";
+
+        column-gap:16px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-task {
+        grid-area:task;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-data
+      .tc-prev-metric:nth-of-type(1) {
+        grid-area:start;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-data
+      .tc-prev-metric:nth-of-type(2) {
+        grid-area:finish;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-data
+      .tc-prev-metric:nth-of-type(3) {
+        grid-area:elapsed;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-prev-metric {
+        display:flex;
+
+        flex-direction:column;
+
+        align-items:flex-start;
+
+        gap:6px;
+
+        min-height:auto;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-prev-label {
+        font-size:10px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      .tc-prev-value {
+        font-size:18px;
+      }
+
+      #${ROOT_ID}.layout-portrait
+      #tc-prev-check {
+        width:38px;
+        height:38px;
+
+        font-size:21px;
       }
     }
 
@@ -4979,10 +5807,14 @@
                 id="tc-section-count-wrap"
                 class="tc-section-stat">
 
-                <span class="tc-section-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <circle cx="12" cy="13" r="7"/>
-                    <path d="M9 3h6M12 6v2M12 13V9"/>
+                <span class="tc-section-icon tc-section-count-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M4.5 15a7.5 7.5 0 0 1 15 0"/>
+                    <path d="M12 15l4-4"/>
+                    <path d="M5.5 11.5h2.2"/>
+                    <path d="M16.3 11.5h2.2"/>
+                    <path d="M11 7.7V5.5"/>
+                    <circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/>
                   </svg>
                 </span>
 
