@@ -13,7 +13,7 @@
      GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.3.0';
+  const VERSION = '4.3.1';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -26,19 +26,27 @@
      ENVIRONMENT
   ========================================================= */
 
-  const UA =
-    navigator.userAgent || '';
+const UA =
+  navigator.userAgent || '';
 
-  const IS_IOS =
-    /iPhone|iPad|iPod/i.test(UA);
+const IS_IOS =
+  /iPhone|iPad|iPod/i.test(UA);
 
-  const IS_ANDROID =
-    /Android/i.test(UA);
+const IS_FIREFOX =
+  /Firefox|FxiOS/i.test(UA);
 
-  const IS_FIREFOX =
-    /Firefox|FxiOS/i.test(UA);
-
-
+const IS_ANDROID =
+  /Android/i.test(UA) ||
+  (
+    IS_FIREFOX &&
+    !IS_IOS &&
+    navigator.maxTouchPoints > 0 &&
+    /Linux/i.test(
+      navigator.platform ||
+      UA
+    )
+  );
+  
   /* =========================================================
      UTIL
   ========================================================= */
