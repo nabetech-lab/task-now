@@ -10,7 +10,7 @@
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.4';
+  const VERSION = '4.5.5';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -372,23 +372,72 @@
   }
 
 
-  function parseSectionName(value) {
-    const v = clean(value);
+function parseSectionName(value) {
 
-    if (
-      !isSectionName(v)
-    ) {
-      return null;
-    }
+  const v =
+    clean(value);
 
-    const stripped =
-      v.replace(
-        /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}\s*/,
-        ''
-      );
 
-    return clean(stripped) || null;
+  if (
+    !isSectionName(v)
+  ) {
+
+    return null;
   }
+
+
+  /*
+    先頭の時間帯を削除
+    例:
+    18:00-23:30 夜 5 / 18 4h -3h45m1s
+    ↓
+    夜 5 / 18 4h -3h45m1s
+  */
+  let stripped =
+    v.replace(
+      /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}\s*/,
+      ''
+    );
+
+
+  /*
+    末尾の差分を削除
+    例: -3h45m1s
+  */
+  stripped =
+    stripped.replace(
+      /\s*[+\-−]\s*(?:\d+\s*h)?(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?\s*$/,
+      ''
+    );
+
+
+  /*
+    末尾のセクション時間を削除
+    例: 4h / 4h30m / 30m
+  */
+  stripped =
+    stripped.replace(
+      /\s*(?:\d+\s*h(?:\s*\d+\s*m)?(?:\s*\d+\s*s)?|\d+\s*m(?:\s*\d+\s*s)?|\d+\s*s)\s*$/,
+      ''
+    );
+
+
+  /*
+    末尾のタスク件数を削除
+    例: 5 / 18
+  */
+  stripped =
+    stripped.replace(
+      /\s*\d{1,3}\s*\/\s*\d{1,3}\s*$/,
+      ''
+    );
+
+
+  return (
+    clean(stripped) ||
+    null
+  );
+}
 
   function normalizeOptionalAttribute(
     value,
