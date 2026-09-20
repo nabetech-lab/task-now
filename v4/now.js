@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.6
+     v4.5.7
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.6';
+  const VERSION = '4.5.7';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -388,10 +388,10 @@ function parseSectionName(value) {
 
   /*
     先頭の時間帯を削除
-    例:
-    18:00-23:30 夜 5 / 18 4h -3h53m12s
+
+    18:00-23:30 夜5 / 18 4h -3h53m12s
     ↓
-    夜 5 / 18 4h -3h53m12s
+    夜5 / 18 4h -3h53m12s
   */
   let stripped =
     v.replace(
@@ -401,30 +401,84 @@ function parseSectionName(value) {
 
 
   /*
-    件数表示が始まったところから後ろを全部削除。
+    件数の "/" を探す。
 
-    5 / 18
-    5/
-    5 ／ 18
+    夜5 /
+    夜 5 /
+    夜5／
+    夜 5 ／
 
-    のようにDOM側で途中分割されても対応する。
+    すべて対応。
   */
-  stripped =
-    stripped.replace(
-      /\s+\d{1,3}\s*[\/／].*$/,
-      ''
+  const slashIndex =
+    stripped.search(
+      /[\/／⁄]/
     );
 
 
-  /*
-    件数が取れないDOM構造だった場合の保険。
-    時間・差分が直接続いていたらそこから削除。
-  */
-  stripped =
-    stripped.replace(
-      /\s+[+\-−]?\d+\s*h.*$/,
-      ''
-    );
+  if (
+    slashIndex >= 0
+  ) {
+
+    let cut =
+      slashIndex;
+
+
+    /*
+      "/" の直前の空白を戻る
+    */
+    while (
+      cut > 0 &&
+      /\s/.test(
+        stripped[
+          cut - 1
+        ]
+      )
+    ) {
+
+      cut--;
+    }
+
+
+    /*
+      "/" の直前の件数数字を戻る
+      例: 5 / の「5」
+    */
+    while (
+      cut > 0 &&
+      /\d/.test(
+        stripped[
+          cut - 1
+        ]
+      )
+    ) {
+
+      cut--;
+    }
+
+
+    /*
+      数字の前に空白があれば削除
+    */
+    while (
+      cut > 0 &&
+      /\s/.test(
+        stripped[
+          cut - 1
+        ]
+      )
+    ) {
+
+      cut--;
+    }
+
+
+    stripped =
+      stripped.slice(
+        0,
+        cut
+      );
+  }
 
 
   return (
