@@ -4,7 +4,7 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.4.1
+     v4.5.0
 
      iOS Safari
      Android Firefox / Violentmonkey
@@ -13,7 +13,7 @@
      GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.4.1';
+  const VERSION = '4.5.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -521,6 +521,18 @@
       [],
 
     leaveTime:
+      null,
+
+    currentProject:
+      null,
+
+    currentMode:
+      null,
+
+    currentSection:
+      null,
+
+    currentSectionCount:
       null
   };
 
@@ -659,6 +671,201 @@
   }
 
 
+  function normalizeOptionalAttribute(
+    value,
+    placeholder
+  ) {
+
+    const v =
+      clean(value);
+
+
+    if (
+      !v ||
+      v === placeholder ||
+      v === '未設定' ||
+      v === '-'
+    ) {
+
+      return null;
+    }
+
+
+    return v;
+  }
+
+
+  function getProjectModeFromLeaves(
+    leaves
+  ) {
+
+    /*
+      TaskChute Cloudの現行行構造では、
+      0: task
+      1: start
+      2: finish
+      3: project
+      4: mode
+      5: elapsed
+      6: planned
+      の順で取得できる。
+
+      DOM構造が異なる場合は無理に表示せず null にする。
+    */
+
+    const project =
+      normalizeOptionalAttribute(
+        leaves?.[3]?.value,
+        'プロジェクト'
+      );
+
+
+    const mode =
+      normalizeOptionalAttribute(
+        leaves?.[4]?.value,
+        'モード'
+      );
+
+
+    return {
+      project,
+      mode
+    };
+  }
+
+
+  function parseSectionName(
+    value
+  ) {
+
+    const v =
+      clean(value);
+
+
+    if (
+      !isSectionName(
+        v
+      )
+    ) {
+
+      return null;
+    }
+
+
+    const stripped =
+      v.replace(
+        /^\d{1,2}:\d{2}\s*[-–—−ー~〜～－]\s*\d{1,2}:\d{2}\s*/,
+        ''
+      );
+
+
+    return (
+      clean(stripped) ||
+      null
+    );
+  }
+
+
+  function findSectionCountNear(
+    sectionEl
+  ) {
+
+    if (!sectionEl) {
+      return null;
+    }
+
+
+    let node =
+      sectionEl;
+
+
+    for (
+      let depth = 0;
+      depth < 5 && node;
+      depth++
+    ) {
+
+      const value =
+        clean(
+          node.textContent
+        );
+
+
+      const m =
+        value.match(
+          /(?:^|\s)(\d{1,3})\s*\/\s*(\d{1,3})(?:\s|$)/
+        );
+
+
+      if (m) {
+
+        return (
+          m[1] +
+          ' / ' +
+          m[2]
+        );
+      }
+
+
+      node =
+        node.parentElement;
+    }
+
+
+    return null;
+  }
+
+
+  function getSectionMarkers() {
+
+    return getTaskRowElements()
+      .map(el => {
+
+        const raw =
+          clean(
+            el.textContent
+          );
+
+
+        if (
+          !isSectionName(
+            raw
+          )
+        ) {
+
+          return null;
+        }
+
+
+        const rect =
+          el.getBoundingClientRect();
+
+
+        return {
+
+          top:
+            rect.top,
+
+          name:
+            parseSectionName(
+              raw
+            ),
+
+          count:
+            findSectionCountNear(
+              el
+            )
+        };
+      })
+      .filter(Boolean)
+      .sort(
+        (a, b) =>
+          a.top -
+          b.top
+      );
+  }
+
+
   /* =========================================================
      SCHEDULE LIST
   ========================================================= */
@@ -667,6 +874,9 @@
 
     const rows =
       [];
+
+    const sectionMarkers =
+      getSectionMarkers();
 
 
     for (
@@ -734,6 +944,12 @@
       const leaves =
         getRowLeafValues(
           row
+        );
+
+
+      const attributes =
+        getProjectModeFromLeaves(
+          leaves
         );
 
 
@@ -852,6 +1068,18 @@
 
         scheduleTime,
 
+        project:
+          attributes.project,
+
+        mode:
+          attributes.mode,
+
+        section:
+          null,
+
+        sectionCount:
+          null,
+
         top:
           rect.top,
 
@@ -868,6 +1096,45 @@
         a.top -
         b.top
     );
+
+
+    let markerIndex =
+      -1;
+
+
+    for (
+      const row
+      of rows
+    ) {
+
+      while (
+        markerIndex + 1 <
+          sectionMarkers.length &&
+        sectionMarkers[
+          markerIndex + 1
+        ].top <
+          row.top
+      ) {
+
+        markerIndex++;
+      }
+
+
+      if (
+        markerIndex >= 0
+      ) {
+
+        row.section =
+          sectionMarkers[
+            markerIndex
+          ].name;
+
+        row.sectionCount =
+          sectionMarkers[
+            markerIndex
+          ].count;
+      }
+    }
 
 
     const unique =
@@ -1430,6 +1697,18 @@
 
     state.elapsedCapturedAt =
       null;
+
+    state.currentProject =
+      null;
+
+    state.currentMode =
+      null;
+
+    state.currentSection =
+      null;
+
+    state.currentSectionCount =
+      null;
   }
 
 
@@ -1478,6 +1757,23 @@
 
       state.currentTask =
         player.task;
+
+
+      state.currentProject =
+        player.row?.project ||
+        null;
+
+      state.currentMode =
+        player.row?.mode ||
+        null;
+
+      state.currentSection =
+        player.row?.section ||
+        null;
+
+      state.currentSectionCount =
+        player.row?.sectionCount ||
+        null;
 
 
       state.currentStart =
@@ -2131,7 +2427,7 @@
 
 
     /*
-      v4.4.1
+      v4.5.0
       現在位置マーカーはバーの下に置く。
       文字は表示せず、白い上向き三角形だけ表示。
     */
@@ -4067,6 +4363,748 @@
        VERY NARROW ANDROID PORTRAIT
     ===================================================== */
 
+
+    /* =====================================================
+       v4.5.0 REFINED DASHBOARD
+    ===================================================== */
+
+    #tc-brand {
+      position:relative;
+      padding-right:clamp(16px,2vw,30px);
+      border-right:1px solid rgba(255,255,255,.24);
+    }
+
+
+    #tc-leave {
+      column-gap:clamp(18px,2.4vw,36px);
+    }
+
+
+    #tc-leave .tc-leave-row:first-child {
+      padding-right:clamp(18px,2.4vw,36px);
+      border-right:1px solid rgba(255,255,255,.24);
+    }
+
+
+    #tc-work-timeline::before,
+    #tc-work-timeline::after {
+
+      content:"";
+
+      position:absolute;
+
+      top:
+        calc(
+          clamp(
+            18px,
+            3.6vh,
+            35px
+          ) - 7px
+        );
+
+      width:1px;
+
+      height:
+        calc(
+          clamp(
+            5px,
+            .8vh,
+            9px
+          ) + 20px
+        );
+
+      background:
+        rgba(255,255,255,.85);
+
+      z-index:3;
+    }
+
+
+    #tc-work-timeline::before {
+      left:0;
+    }
+
+
+    #tc-work-timeline::after {
+      right:0;
+    }
+
+
+    #tc-timeline-caption-start,
+    #tc-timeline-caption-end {
+
+      position:absolute;
+
+      top:
+        calc(
+          clamp(
+            18px,
+            3.6vh,
+            35px
+          ) +
+          clamp(
+            5px,
+            .8vh,
+            9px
+          ) +
+          12px
+        );
+
+      color:#f4f5f7;
+
+      font-size:
+        clamp(
+          9px,
+          1.1vw,
+          14px
+        );
+
+      font-weight:700;
+
+      letter-spacing:.18em;
+
+      white-space:nowrap;
+    }
+
+
+    #tc-timeline-caption-start {
+      left:12px;
+    }
+
+
+    #tc-timeline-caption-end {
+      right:12px;
+    }
+
+
+    #tc-now,
+    .tc-card {
+
+      box-shadow:none;
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+    }
+
+
+    #tc-now::before {
+
+      background:#fff;
+    }
+
+
+    #tc-current-topline {
+
+      display:flex;
+
+      align-items:center;
+
+      gap:
+        clamp(
+          12px,
+          1.5vw,
+          20px
+        );
+
+      min-width:0;
+
+      margin-bottom:
+        clamp(
+          9px,
+          1.7vh,
+          18px
+        );
+    }
+
+
+    #tc-now-badge {
+
+      margin:0;
+
+      flex:0 0 auto;
+
+      border-radius:
+        var(--card-radius);
+    }
+
+
+    #tc-current-attributes {
+
+      display:flex;
+
+      align-items:center;
+
+      gap:
+        clamp(
+          12px,
+          1.5vw,
+          20px
+        );
+
+      min-width:0;
+
+      flex:1 1 auto;
+
+      color:#d8dbe2;
+
+      font-size:
+        clamp(
+          11px,
+          1.35vw,
+          17px
+        );
+
+      font-weight:600;
+    }
+
+
+    .tc-current-attr {
+
+      display:none;
+
+      align-items:center;
+
+      gap:7px;
+
+      min-width:0;
+
+      white-space:nowrap;
+    }
+
+
+    .tc-current-attr.is-visible {
+      display:flex;
+    }
+
+
+    .tc-current-attr-icon {
+
+      width:
+        clamp(
+          14px,
+          1.35vw,
+          18px
+        );
+
+      height:
+        clamp(
+          14px,
+          1.35vw,
+          18px
+        );
+
+      flex:0 0 auto;
+
+      opacity:.9;
+    }
+
+
+    .tc-current-attr-text {
+
+      min-width:0;
+
+      overflow:hidden;
+
+      text-overflow:ellipsis;
+    }
+
+
+    #tc-section-count {
+
+      display:none;
+
+      margin-left:auto;
+
+      color:#c6cad2;
+
+      font-size:
+        clamp(
+          10px,
+          1.25vw,
+          16px
+        );
+
+      font-weight:700;
+
+      white-space:nowrap;
+
+      letter-spacing:.08em;
+    }
+
+
+    #tc-section-count.is-visible {
+      display:block;
+    }
+
+
+    #tc-task {
+
+      margin:
+        clamp(
+          5px,
+          1vh,
+          10px
+        )
+        0
+        clamp(
+          5px,
+          1vh,
+          10px
+        );
+    }
+
+
+    #tc-current-section {
+
+      display:none;
+
+      color:#d0d3da;
+
+      font-size:
+        clamp(
+          12px,
+          1.55vw,
+          20px
+        );
+
+      font-weight:650;
+
+      line-height:1.25;
+
+      white-space:nowrap;
+
+      overflow:hidden;
+
+      text-overflow:ellipsis;
+
+      margin-bottom:
+        clamp(
+          7px,
+          1.4vh,
+          14px
+        );
+    }
+
+
+    #tc-current-section.is-visible {
+      display:block;
+    }
+
+
+    .tc-now-metric {
+
+      grid-template-columns:
+        clamp(
+          28px,
+          2.6vw,
+          38px
+        )
+        clamp(
+          130px,
+          12vw,
+          185px
+        )
+        minmax(0,1fr);
+
+      border-top:
+        1px solid
+        rgba(255,255,255,.09);
+
+      padding:
+        clamp(
+          5px,
+          .75vh,
+          9px
+        )
+        0;
+    }
+
+
+    .tc-metric-icon {
+
+      width:
+        clamp(
+          20px,
+          2vw,
+          28px
+        );
+
+      height:
+        clamp(
+          20px,
+          2vw,
+          28px
+        );
+
+      color:#dfe2e8;
+
+      opacity:.9;
+
+      align-self:center;
+    }
+
+
+    .tc-metric-icon svg {
+
+      width:100%;
+      height:100%;
+
+      display:block;
+    }
+
+
+    #tc-status-row {
+      margin-top:0;
+    }
+
+
+    .tc-card-title,
+    #tc-prev-task,
+    .tc-prev-value,
+    .tc-prev-label,
+    .tc-next-time,
+    .tc-next-task {
+
+      color:#f4f5f7;
+    }
+
+
+    #tc-next-list {
+
+      gap:0;
+    }
+
+
+    .tc-next-row {
+
+      position:relative;
+
+      grid-template-columns:
+        max-content
+        minmax(0,1fr)
+        18px;
+
+      gap:
+        clamp(
+          12px,
+          1.35vw,
+          20px
+        );
+
+      align-items:center;
+
+      min-height:
+        clamp(
+          42px,
+          6.7vh,
+          66px
+        );
+
+      padding:
+        0
+        clamp(
+          4px,
+          .5vw,
+          8px
+        );
+
+      border-top:
+        1px solid
+        rgba(255,255,255,.10);
+    }
+
+
+    .tc-next-row:first-child {
+
+      border-top:0;
+
+      background:
+        rgba(255,255,255,.055);
+
+      border-radius:
+        calc(
+          var(--card-radius) - 2px
+        );
+
+      padding-left:
+        clamp(
+          10px,
+          1vw,
+          15px
+        );
+
+      padding-right:
+        clamp(
+          10px,
+          1vw,
+          15px
+        );
+    }
+
+
+    .tc-next-row:first-child::before {
+
+      content:"";
+
+      position:absolute;
+
+      left:0;
+
+      top:0;
+      bottom:0;
+
+      width:4px;
+
+      border-radius:
+        calc(
+          var(--card-radius) - 2px
+        )
+        0
+        0
+        calc(
+          var(--card-radius) - 2px
+        );
+
+      background:#fff;
+    }
+
+
+    #${ROOT_ID}.is-overtime
+    .tc-next-row:first-child::before {
+
+      background:
+        var(--timeline-overtime);
+    }
+
+
+    #${ROOT_ID}.is-overtime
+    #tc-next-card {
+
+      border-color:
+        rgba(217,154,62,.48);
+    }
+
+
+    #${ROOT_ID}.is-overtime
+    #tc-prev-card {
+
+      border-color:
+        rgba(217,154,62,.32);
+    }
+
+
+    #${ROOT_ID}.is-overtime
+    #tc-now {
+
+      border-color:
+        rgba(217,154,62,.32);
+    }
+
+
+    .tc-next-arrow {
+
+      color:#dfe2e8;
+
+      font-size:
+        clamp(
+          18px,
+          2vw,
+          26px
+        );
+
+      line-height:1;
+
+      text-align:right;
+    }
+
+
+    #tc-prev-header {
+
+      display:flex;
+
+      align-items:center;
+
+      justify-content:space-between;
+
+      gap:12px;
+    }
+
+
+    #tc-prev-check {
+
+      display:flex;
+
+      align-items:center;
+
+      justify-content:center;
+
+      width:
+        clamp(
+          26px,
+          2.4vw,
+          34px
+        );
+
+      height:
+        clamp(
+          26px,
+          2.4vw,
+          34px
+        );
+
+      border:
+        1px solid
+        rgba(255,255,255,.45);
+
+      border-radius:50%;
+
+      color:#f4f5f7;
+
+      font-size:
+        clamp(
+          15px,
+          1.4vw,
+          20px
+        );
+
+      flex:0 0 auto;
+    }
+
+
+    #tc-prev-content {
+
+      display:grid;
+
+      grid-template-columns:
+        minmax(0,1fr)
+        auto;
+
+      gap:
+        clamp(
+          12px,
+          1.5vw,
+          20px
+        );
+
+      align-items:center;
+
+      min-height:0;
+    }
+
+
+    #tc-prev-data {
+      min-width:0;
+    }
+
+
+    #tc-timeline-caption-start,
+    #tc-timeline-caption-end {
+      color:#fff;
+    }
+
+
+    #tc-next-card .tc-card-title,
+    #tc-prev-card .tc-card-title {
+      color:#fff;
+    }
+
+
+    #tc-timeline-current::before {
+      color:#fff;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-current-topline {
+
+      gap:8px;
+
+      margin-bottom:4px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-current-attributes {
+
+      gap:8px;
+
+      font-size:
+        clamp(
+          8px,
+          2.4vw,
+          10px
+        );
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-section-count {
+
+      font-size:
+        clamp(
+          8px,
+          2.1vw,
+          9px
+        );
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    #tc-current-section {
+
+      font-size:
+        clamp(
+          10px,
+          3vw,
+          13px
+        );
+
+      margin-bottom:3px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    .tc-now-metric {
+
+      grid-template-columns:
+        24px
+        96px
+        minmax(0,1fr);
+
+      padding:2px 0;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    .tc-metric-icon {
+
+      width:17px;
+      height:17px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    .tc-next-row {
+
+      grid-template-columns:
+        58px
+        minmax(0,1fr)
+        12px;
+
+      min-height:0;
+
+      padding:1px 4px;
+    }
+
+
+    #${ROOT_ID}.layout-portrait
+    .tc-next-arrow {
+
+      font-size:13px;
+    }
+
+
     @media
       (max-width:520px) {
 
@@ -4255,6 +5293,16 @@
           <div id="tc-timeline-current-text"></div>
         </div>
 
+
+        <div id="tc-timeline-caption-start">
+          REGULAR HOURS
+        </div>
+
+
+        <div id="tc-timeline-caption-end">
+          OVERTIME
+        </div>
+
       </section>
 
 
@@ -4262,16 +5310,79 @@
 
         <section id="tc-now">
 
-          <div id="tc-now-badge">
-            CURRENT TASK
+          <div id="tc-current-topline">
+
+            <div id="tc-now-badge">
+              CURRENT TASK
+            </div>
+
+
+            <div id="tc-current-attributes">
+
+              <div
+                id="tc-current-project"
+                class="tc-current-attr">
+
+                <span class="tc-current-attr-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M3 6.5h6l2 2H21v9.5H3z"/>
+                  </svg>
+                </span>
+
+                <span
+                  id="tc-current-project-text"
+                  class="tc-current-attr-text"></span>
+
+              </div>
+
+
+              <div
+                id="tc-current-mode"
+                class="tc-current-attr">
+
+                <span class="tc-current-attr-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="12" r="8"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </span>
+
+                <span
+                  id="tc-current-mode-text"
+                  class="tc-current-attr-text"></span>
+
+              </div>
+
+            </div>
+
+
+            <div id="tc-section-count"></div>
+
           </div>
 
 
-          <div class="tc-now-metric">
+          <div id="tc-task">
+            タスクを取得できません
+          </div>
 
-            <span class="tc-now-label">
-              START
-            </span>
+
+          <div id="tc-current-section"></div>
+
+
+          <div id="tc-progress">
+
+            <div class="tc-now-metric">
+
+              <span class="tc-metric-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="12" cy="12" r="8"/>
+                  <path d="M12 7v5l3 2"/>
+                </svg>
+              </span>
+
+              <span class="tc-now-label">
+                START
+              </span>
 
             <span
               id="tc-start"
@@ -4282,14 +5393,15 @@
           </div>
 
 
-          <div id="tc-task">
-            タスクを取得できません
-          </div>
-
-
-          <div id="tc-progress">
 
             <div class="tc-now-metric">
+
+              <span class="tc-metric-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <rect x="4" y="5" width="16" height="15" rx="1"/>
+                  <path d="M8 3v4M16 3v4M4 9h16"/>
+                </svg>
+              </span>
 
               <span class="tc-now-label">
                 PLANNED
@@ -4306,6 +5418,13 @@
 
             <div class="tc-now-metric">
 
+              <span class="tc-metric-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M6 21V4"/>
+                  <path d="M6 5h11l-2.5 3L17 11H6"/>
+                </svg>
+              </span>
+
               <span class="tc-now-label">
                 PLANNED END
               </span>
@@ -4320,6 +5439,13 @@
 
 
             <div class="tc-now-metric">
+
+              <span class="tc-metric-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="12" cy="13" r="7"/>
+                  <path d="M9 3h6M12 6v2M12 13l3-2"/>
+                </svg>
+              </span>
 
               <span class="tc-now-label">
                 ELAPSED
@@ -4337,6 +5463,12 @@
             <div
               id="tc-status-row"
               class="tc-now-metric">
+
+              <span class="tc-metric-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M7 3h10M7 21h10M8 3c0 4 1.5 5.5 4 7-2.5 1.5-4 3-4 7M16 3c0 4-1.5 5.5-4 7 2.5 1.5 4 3 4 7"/>
+                </svg>
+              </span>
 
               <span
                 id="tc-status-label"
@@ -4363,17 +5495,25 @@
             id="tc-prev-card"
             class="tc-card">
 
-            <div class="tc-card-title">
-              PREVIOUS
+            <div id="tc-prev-header">
+
+              <div class="tc-card-title">
+                PREVIOUS
+              </div>
+
             </div>
 
 
-            <div id="tc-prev-task">
-              —
-            </div>
+            <div id="tc-prev-content">
+
+              <div id="tc-prev-data">
+
+                <div id="tc-prev-task">
+                  —
+                </div>
 
 
-            <div class="tc-prev-metric">
+                <div class="tc-prev-metric">
 
               <span class="tc-prev-label">
                 START
@@ -4403,17 +5543,26 @@
             </div>
 
 
-            <div class="tc-prev-metric">
+                <div class="tc-prev-metric">
 
-              <span class="tc-prev-label">
-                ELAPSED
-              </span>
+                  <span class="tc-prev-label">
+                    ELAPSED
+                  </span>
 
-              <span
-                id="tc-prev-elapsed"
-                class="tc-prev-value">
-                —
-              </span>
+                  <span
+                    id="tc-prev-elapsed"
+                    class="tc-prev-value">
+                    —
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <div id="tc-prev-check">
+                ✓
+              </div>
 
             </div>
 
@@ -4438,6 +5587,8 @@
                 <span
                   id="tc-next-task-0"
                   class="tc-next-task">—</span>
+
+                <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
@@ -4447,6 +5598,8 @@
                 <span
                   id="tc-next-task-1"
                   class="tc-next-task">—</span>
+
+                <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
@@ -4456,6 +5609,8 @@
                 <span
                   id="tc-next-task-2"
                   class="tc-next-task">—</span>
+
+                <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
@@ -4465,6 +5620,8 @@
                 <span
                   id="tc-next-task-3"
                   class="tc-next-task">—</span>
+
+                <span class="tc-next-arrow">›</span>
               </div>
 
               <div class="tc-next-row">
@@ -4474,6 +5631,8 @@
                 <span
                   id="tc-next-task-4"
                   class="tc-next-task">—</span>
+
+                <span class="tc-next-arrow">›</span>
               </div>
 
             </div>
@@ -4968,6 +6127,14 @@
         currentMinutes >
           regular
       );
+
+
+    root.classList
+      .toggle(
+        'is-overtime',
+        currentMinutes >
+          regular
+      );
   }
 
 
@@ -5021,6 +6188,75 @@
       .textContent =
         state.currentTask ||
         'タスクを取得できません';
+
+
+    const projectEl =
+      $('tc-current-project');
+
+    const modeEl =
+      $('tc-current-mode');
+
+    const sectionEl =
+      $('tc-current-section');
+
+    const sectionCountEl =
+      $('tc-section-count');
+
+
+    $('tc-current-project-text')
+      .textContent =
+        state.currentProject ||
+        '';
+
+
+    $('tc-current-mode-text')
+      .textContent =
+        state.currentMode ||
+        '';
+
+
+    projectEl
+      .classList
+      .toggle(
+        'is-visible',
+        !!state.currentProject
+      );
+
+
+    modeEl
+      .classList
+      .toggle(
+        'is-visible',
+        !!state.currentMode
+      );
+
+
+    sectionEl
+      .textContent =
+        state.currentSection ||
+        '';
+
+
+    sectionEl
+      .classList
+      .toggle(
+        'is-visible',
+        !!state.currentSection
+      );
+
+
+    sectionCountEl
+      .textContent =
+        state.currentSectionCount ||
+        '';
+
+
+    sectionCountEl
+      .classList
+      .toggle(
+        'is-visible',
+        !!state.currentSectionCount
+      );
 
 
     $('tc-start')
