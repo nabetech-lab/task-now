@@ -4,7 +4,7 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.1
+     v4.5.2
 
      iOS Safari
      Android Firefox / Violentmonkey
@@ -13,7 +13,7 @@
      GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.5.1';
+  const VERSION = '4.5.2';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -2427,7 +2427,7 @@
 
 
     /*
-      v4.5.1
+      v4.5.2
       現在位置マーカーはバーの下に置く。
       文字は表示せず、白い上向き三角形だけ表示。
     */
@@ -4365,7 +4365,7 @@
 
 
     /* =====================================================
-       v4.5.1 REFINED DASHBOARD
+       v4.5.2 REFINED DASHBOARD
     ===================================================== */
 
     #tc-brand {
@@ -5148,7 +5148,7 @@
     }
 
     /* =====================================================
-       v4.5.1
+       v4.5.2
        COMPACT LANDSCAPE FOR PHONE
        iPhone 16e actual landscape height baseline
 
@@ -6186,6 +6186,62 @@
         height:23px;
 
         font-size:13px;
+      }
+    }
+
+
+    /* =====================================================
+       v4.5.2
+       CURRENT TASK refinements
+    ===================================================== */
+
+    #tc-current-section,
+    #tc-section-count {
+      display:none !important;
+    }
+
+
+    /*
+      CURRENT TASK metrics:
+      make START / PLANNED / PLANNED END / ELAPSED / REMAINING
+      easier to read without increasing the numeric values.
+    */
+    #tc-now .tc-now-label {
+      font-size:
+        clamp(
+          13px,
+          1.8vw,
+          22px
+        );
+    }
+
+
+    @media
+      (orientation:landscape)
+      and (max-height:720px) {
+
+      #${ROOT_ID}.layout-landscape
+      #tc-now
+      .tc-now-label {
+
+        font-size:11px;
+
+        letter-spacing:.16em;
+      }
+    }
+
+
+    @media
+      (orientation:landscape)
+      and (max-height:430px) {
+
+      #${ROOT_ID}.layout-landscape
+      #tc-now
+      .tc-now-label {
+
+        font-size:10px;
+
+        letter-spacing:.15em;
       }
     }
 
@@ -7282,23 +7338,20 @@
 
     sectionEl
       .classList
-      .toggle(
-        'is-visible',
-        !!state.currentSection
+      .remove(
+        'is-visible'
       );
 
 
     sectionCountEl
       .textContent =
-        state.currentSectionCount ||
         '';
 
 
     sectionCountEl
       .classList
-      .toggle(
-        'is-visible',
-        !!state.currentSectionCount
+      .remove(
+        'is-visible'
       );
 
 
