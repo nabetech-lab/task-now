@@ -4,7 +4,7 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.2.0
+     v4.3.0
 
      iOS Safari
      Android Firefox / Violentmonkey
@@ -13,7 +13,7 @@
      GitHub Pages /v4/now.js
   ========================================================= */
 
-  const VERSION = '4.2.0';
+  const VERSION = '4.3.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -308,16 +308,6 @@
     );
 
 
-    /*
-      基準時刻より未来に見える時刻は
-      前日とみなす。
-
-      例:
-      現在 00:20
-      FINISH 23:50
-      → 前日23:50
-    */
-
     if (
       result.getTime() >
       reference.getTime()
@@ -424,15 +414,6 @@
     return true;
   }
 
-
-  /*
-    TaskChuteのセクション行を除外する。
-
-    例:
-    10:00-15:00 昼
-    15:00-18:00 夕方
-    18:00-23:30 夜
-  */
 
   function isSectionName(
     value
@@ -650,14 +631,6 @@
         continue;
       }
 
-
-      /*
-        セクションはタスク候補に含めない。
-
-        これにより、
-        CURRENT / NEXT / PREVIOUS
-        の全候補から除外される。
-      */
 
       if (
         isSectionName(
@@ -1019,15 +992,6 @@
       new Date();
 
 
-    /*
-      CURRENTの正判定は一覧側。
-
-      START実績あり
-      FINISH実績なし
-
-      の行だけを実行中候補にする。
-    */
-
     const activeRows =
       rows
         .filter(
@@ -1061,13 +1025,6 @@
     }
 
 
-    /*
-      万一複数行が
-      STARTあり / FINISHなし
-      になっている場合は、
-      最も直近に開始したものをCURRENTとする。
-    */
-
     activeRows.sort(
       (a, b) => {
 
@@ -1099,16 +1056,6 @@
     const currentRow =
       active.row;
 
-
-    /*
-      下部プレイヤーは
-      CURRENT判定には使用しない。
-
-      ELAPSED取得の補助としてのみ使う。
-
-      Firefoxに古いプレイヤーDOMが残っていても、
-      一覧側CURRENTとタスク名が一致しなければ無視する。
-    */
 
     const elapsedElements =
       [
@@ -1229,13 +1176,6 @@
     }
 
 
-    /*
-      プレイヤーDOMがない、
-      またはFirefox側で古い場合のフォールバック。
-
-      一覧のSTART実績から経過時間を算出する。
-    */
-
     if (
       elapsedSeconds === null
     ) {
@@ -1285,11 +1225,6 @@
         : new Date();
 
 
-    /*
-      START実績・FINISH実績が
-      両方存在する完了タスクだけを対象にする。
-    */
-
     const completed =
       rows
         .filter(
@@ -1325,11 +1260,6 @@
     }
 
 
-    /*
-      FINISH日時が基準時刻に
-      最も近いタスクをPREVIOUSとする。
-    */
-
     completed.sort(
       (a, b) => {
 
@@ -1345,11 +1275,6 @@
           return byFinish;
         }
 
-
-        /*
-          FINISHが同一なら、
-          DOM上で後ろのタスクを優先。
-        */
 
         return (
           b.row.top -
@@ -1390,11 +1315,6 @@
       return [];
     }
 
-
-    /*
-      CURRENT以降の後続タスクを
-      最大5件。
-    */
 
     return rows.slice(
       index + 1,
@@ -1461,11 +1381,6 @@
 
   function sync() {
 
-    /*
-      v4.2.0では
-      一覧側を先に読み取る。
-    */
-
     const rows =
       getScheduleRows();
 
@@ -1506,13 +1421,6 @@
       state.currentTask =
         player.task;
 
-
-      /*
-        CURRENT固有値を毎回初期化。
-
-        PLANNED未設定タスクへ移った際に
-        前タスクの情報を残さない。
-      */
 
       state.currentStart =
         null;
@@ -1577,11 +1485,6 @@
       }
 
 
-      /*
-        PREVIOUSはCURRENTのSTART実績を
-        基準にする。
-      */
-
       state.previous =
         getPreviousTask(
           rows,
@@ -1597,19 +1500,8 @@
 
     } else {
 
-      /*
-        実行中タスクがない。
-
-        CURRENT関連を明示的に完全クリア。
-      */
-
       clearCurrentState();
 
-
-      /*
-        CURRENTなしの場合のPREVIOUSは
-        現在時刻基準。
-      */
 
       state.previous =
         getPreviousTask(
@@ -1617,11 +1509,6 @@
           new Date()
         );
 
-
-      /*
-        CURRENTが存在しない場合は
-        NEXTを空にする。
-      */
 
       state.next =
         [];
@@ -1705,12 +1592,6 @@
     );
   }
 
-
-  /*
-    以前のリサイズ監視を解除する。
-    GitHub JSを再読み込みしても
-    listenerが重複しないようにする。
-  */
 
   if (
     typeof window.tcNowViewportCleanup ===
@@ -1823,17 +1704,6 @@
 
   style.textContent = `
 
-    /*
-      v4.2.0
-
-      html / bodyには
-      NOW側の背景色を設定しない。
-
-      TASK退避時に
-      TaskChute本来のテーマを壊さないため。
-    */
-
-
     #${ROOT_ID},
     #${ROOT_ID} * {
 
@@ -1863,14 +1733,6 @@
 
       z-index:
         2147483647;
-
-      /*
-        実サイズはJS側から
-        現在のvisualViewport / innerWidthを
-        反映する。
-
-        初期値として100%を指定。
-      */
 
       width:
         100%;
@@ -2400,14 +2262,21 @@
       display:
         grid;
 
+      /*
+        v4.3.0
+
+        NEXTを広く、
+        PREVIOUSをコンパクトに。
+      */
+
       grid-template-rows:
         minmax(
           0,
-          1fr
+          1.45fr
         )
         minmax(
           0,
-          1fr
+          .55fr
         );
 
       gap:
@@ -2663,15 +2532,15 @@
 
 
     /*
-      横レイアウトでは3件。
+      v4.3.0
+      横・縦ともNEXTは最大5件表示。
     */
 
-    #${ROOT_ID}.layout-landscape
     #tc-next-list
-    .tc-next-row:nth-child(n+4) {
+    .tc-next-row {
 
       display:
-        none;
+        grid;
     }
 
 
@@ -2716,6 +2585,126 @@
 
       text-overflow:
         ellipsis;
+    }
+
+
+    /* =====================================================
+       LANDSCAPE PREVIOUS COMPACT
+    ===================================================== */
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-card {
+
+      padding:
+        clamp(
+          8px,
+          1.5vh,
+          14px
+        )
+        clamp(
+          14px,
+          1.8vw,
+          24px
+        );
+    }
+
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-card
+    .tc-card-title {
+
+      font-size:
+        clamp(
+          9px,
+          1.1vw,
+          14px
+        );
+
+      margin-bottom:
+        clamp(
+          3px,
+          .5vh,
+          6px
+        );
+    }
+
+
+    #${ROOT_ID}.layout-landscape
+    #tc-prev-task {
+
+      font-size:
+        clamp(
+          14px,
+          1.65vw,
+          23px
+        );
+
+      line-height:
+        1.05;
+
+      margin:
+        0 0
+        clamp(
+          3px,
+          .5vh,
+          6px
+        );
+    }
+
+
+    #${ROOT_ID}.layout-landscape
+    .tc-prev-metric {
+
+      grid-template-columns:
+        clamp(
+          58px,
+          5.8vw,
+          85px
+        )
+        minmax(
+          0,
+          1fr
+        );
+
+      column-gap:
+        clamp(
+          6px,
+          .8vw,
+          10px
+        );
+
+      margin:
+        0;
+    }
+
+
+    #${ROOT_ID}.layout-landscape
+    .tc-prev-label {
+
+      font-size:
+        clamp(
+          8px,
+          .9vw,
+          12px
+        );
+
+      letter-spacing:
+        .13em;
+    }
+
+
+    #${ROOT_ID}.layout-landscape
+    .tc-prev-value {
+
+      font-size:
+        clamp(
+          13px,
+          1.45vw,
+          20px
+        );
+
+      line-height:
+        1.05;
     }
 
 
@@ -2795,11 +2784,6 @@
         block;
     }
 
-
-    /*
-      root外に存在するAndroid専用NOW復帰ボタン。
-      TaskChute本体には他のスタイルを一切適用しない。
-    */
 
     #tc-now-return-button {
 
@@ -2902,7 +2886,6 @@
 
     /* =====================================================
        PORTRAIT
-       JSが実表示領域で判定する
     ===================================================== */
 
     #${ROOT_ID}.layout-portrait {
@@ -3310,10 +3293,6 @@
     }
 
 
-    /*
-      縦ではNEXTを最大5件すべて表示。
-    */
-
     #${ROOT_ID}.layout-portrait
     #tc-next-list
     .tc-next-row {
@@ -3442,10 +3421,7 @@
 
 
     /* =====================================================
-       LANDSCAPE SMALL
-
-       orientation media queryではなく、
-       JS側layout-landscape + 高さだけを見る。
+       SMALL LANDSCAPE
     ===================================================== */
 
     @media
@@ -3681,99 +3657,32 @@
       #tc-side {
 
         gap:
-          1.8dvh;
+          1.3dvh;
       }
 
 
       #${ROOT_ID}.layout-landscape
-      .tc-card {
+      #tc-next-card {
 
         padding:
-          1.6dvh
+          1.3dvh
           1.4vw;
-
-        border-radius:
-          clamp(
-            11px,
-            4dvh,
-            21px
-          );
       }
 
 
       #${ROOT_ID}.layout-landscape
+      #tc-next-card
       .tc-card-title {
 
         font-size:
           clamp(
             9px,
-            3dvh,
-            15px
+            2.8dvh,
+            14px
           );
 
         margin-bottom:
-          .7dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      #tc-prev-task {
-
-        font-size:
-          clamp(
-            14px,
-            4.5dvh,
-            23px
-          );
-
-        line-height:
-          1.15;
-
-        margin-top:
-          .3dvh;
-
-        margin-bottom:
-          1dvh;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-metric {
-
-        grid-template-columns:
-          clamp(
-            65px,
-            6.5vw,
-            90px
-          )
-          1fr;
-
-        margin:
-          .2dvh 0;
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-label {
-
-        font-size:
-          clamp(
-            8px,
-            2.7dvh,
-            13px
-          );
-      }
-
-
-      #${ROOT_ID}.layout-landscape
-      .tc-prev-value {
-
-        font-size:
-          clamp(
-            13px,
-            4.1dvh,
-            21px
-          );
+          .4dvh;
       }
 
 
@@ -3784,9 +3693,9 @@
 
         font-size:
           clamp(
-            13px,
-            4.1dvh,
-            21px
+            12px,
+            3.6dvh,
+            19px
           );
       }
 
@@ -3795,7 +3704,87 @@
       #tc-next-list {
 
         gap:
-          .7dvh;
+          .35dvh;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card {
+
+        padding:
+          .8dvh
+          1.4vw;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-card
+      .tc-card-title {
+
+        font-size:
+          clamp(
+            8px,
+            2.4dvh,
+            12px
+          );
+
+        margin-bottom:
+          .2dvh;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-task {
+
+        font-size:
+          clamp(
+            12px,
+            3.3dvh,
+            18px
+          );
+
+        margin:
+          0 0 .2dvh;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-metric {
+
+        grid-template-columns:
+          clamp(
+            55px,
+            6vw,
+            78px
+          )
+          1fr;
+
+        margin:
+          0;
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-label {
+
+        font-size:
+          clamp(
+            7px,
+            2.2dvh,
+            11px
+          );
+      }
+
+
+      #${ROOT_ID}.layout-landscape
+      .tc-prev-value {
+
+        font-size:
+          clamp(
+            11px,
+            3dvh,
+            17px
+          );
       }
     }
 
@@ -3969,66 +3958,28 @@
       #tc-side {
 
         gap:
-          9px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-card {
-
-        padding:
-          14px
-          17px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-card-title {
-
-        font-size:
-          11px;
-
-        margin-bottom:
-          6px;
-      }
-
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      #tc-prev-task {
-
-        font-size:
-          19px;
-
-        margin-bottom:
           7px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-prev-metric {
+      #tc-next-card {
 
-        grid-template-columns:
-          72px
-          1fr;
-
-        column-gap:
-          8px;
+        padding:
+          11px
+          17px;
       }
 
 
       #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-prev-label {
+      #tc-next-card
+      .tc-card-title {
 
         font-size:
-          9px;
-      }
+          10px;
 
-
-      #${ROOT_ID}.browser-firefox.layout-landscape
-      .tc-prev-value {
-
-        font-size:
-          16px;
+        margin-bottom:
+          4px;
       }
 
 
@@ -4038,7 +3989,7 @@
       .tc-next-task {
 
         font-size:
-          17px;
+          15px;
       }
 
 
@@ -4046,7 +3997,67 @@
       #tc-next-list {
 
         gap:
-          4px;
+          3px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-prev-card {
+
+        padding:
+          7px
+          17px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-prev-card
+      .tc-card-title {
+
+        font-size:
+          9px;
+
+        margin-bottom:
+          2px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      #tc-prev-task {
+
+        font-size:
+          15px;
+
+        margin-bottom:
+          2px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      .tc-prev-metric {
+
+        grid-template-columns:
+          62px
+          1fr;
+
+        column-gap:
+          7px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      .tc-prev-label {
+
+        font-size:
+          8px;
+      }
+
+
+      #${ROOT_ID}.browser-firefox.layout-landscape
+      .tc-prev-value {
+
+        font-size:
+          13px;
       }
     }
 
@@ -4406,9 +4417,7 @@
 
 
           <div id="tc-task">
-
             タスクを取得できません
-
           </div>
 
 
@@ -4423,9 +4432,7 @@
               <span
                 id="tc-planned"
                 class="tc-now-value">
-
                 --:--
-
               </span>
 
             </div>
@@ -4440,9 +4447,7 @@
               <span
                 id="tc-planned-end"
                 class="tc-now-value">
-
                 --:--
-
               </span>
 
             </div>
@@ -4457,9 +4462,7 @@
               <span
                 id="tc-elapsed"
                 class="tc-now-value">
-
                 --:--:--
-
               </span>
 
             </div>
@@ -4472,17 +4475,13 @@
               <span
                 id="tc-status-label"
                 class="tc-now-label">
-
                 REMAINING
-
               </span>
 
               <span
                 id="tc-status-value"
                 class="tc-now-value">
-
                 --:--:--
-
               </span>
 
             </div>
@@ -4517,9 +4516,7 @@
               <span
                 id="tc-prev-start"
                 class="tc-prev-value">
-
                 —
-
               </span>
 
             </div>
@@ -4534,9 +4531,7 @@
               <span
                 id="tc-prev-finish"
                 class="tc-prev-value">
-
                 —
-
               </span>
 
             </div>
@@ -4551,9 +4546,7 @@
               <span
                 id="tc-prev-elapsed"
                 class="tc-prev-value">
-
                 —
-
               </span>
 
             </div>
@@ -4573,107 +4566,48 @@
             <div id="tc-next-list">
 
               <div class="tc-next-row">
-
                 <span
                   id="tc-next-time-0"
-                  class="tc-next-time">
-
-                  —
-
-                </span>
-
+                  class="tc-next-time">—</span>
                 <span
                   id="tc-next-task-0"
-                  class="tc-next-task">
-
-                  —
-
-                </span>
-
+                  class="tc-next-task">—</span>
               </div>
 
-
               <div class="tc-next-row">
-
                 <span
                   id="tc-next-time-1"
-                  class="tc-next-time">
-
-                  —
-
-                </span>
-
+                  class="tc-next-time">—</span>
                 <span
                   id="tc-next-task-1"
-                  class="tc-next-task">
-
-                  —
-
-                </span>
-
+                  class="tc-next-task">—</span>
               </div>
 
-
               <div class="tc-next-row">
-
                 <span
                   id="tc-next-time-2"
-                  class="tc-next-time">
-
-                  —
-
-                </span>
-
+                  class="tc-next-time">—</span>
                 <span
                   id="tc-next-task-2"
-                  class="tc-next-task">
-
-                  —
-
-                </span>
-
+                  class="tc-next-task">—</span>
               </div>
 
-
               <div class="tc-next-row">
-
                 <span
                   id="tc-next-time-3"
-                  class="tc-next-time">
-
-                  —
-
-                </span>
-
+                  class="tc-next-time">—</span>
                 <span
                   id="tc-next-task-3"
-                  class="tc-next-task">
-
-                  —
-
-                </span>
-
+                  class="tc-next-task">—</span>
               </div>
 
-
               <div class="tc-next-row">
-
                 <span
                   id="tc-next-time-4"
-                  class="tc-next-time">
-
-                  —
-
-                </span>
-
+                  class="tc-next-time">—</span>
                 <span
                   id="tc-next-task-4"
-                  class="tc-next-task">
-
-                  —
-
-                </span>
-
+                  class="tc-next-task">—</span>
               </div>
 
             </div>
@@ -4716,12 +4650,6 @@
       window.visualViewport;
 
 
-    /*
-      visualViewportを優先。
-      取得できない環境では
-      innerWidth / clientWidthへフォールバック。
-    */
-
     const width =
       Math.max(
         1,
@@ -4758,13 +4686,6 @@
     const size =
       getCurrentViewportSize();
 
-
-    /*
-      Android Firefoxの分割画面・
-      フローティングウインドウ等では
-      vw / dvhだけに任せず、
-      実表示サイズをrootへ直接反映。
-    */
 
     root.style.width =
       `${size.width}px`;
@@ -4814,11 +4735,6 @@
           applyViewportLayout();
 
 
-          /*
-            ウインドウリサイズ後に
-            レイアウト確定した状態で描画。
-          */
-
           render();
         }
       );
@@ -4862,11 +4778,6 @@
         }
       );
 
-
-    /*
-      Androidのマルチウインドウ移動時に
-      visualViewportの位置だけ変化するケースにも対応。
-    */
 
     window.visualViewport
       .addEventListener(
@@ -4972,14 +4883,6 @@
         'click',
         () => {
 
-          /*
-            NOW rootだけを非表示。
-
-            html / bodyには
-            NOW用CSSを適用していないため、
-            TaskChute本来の背景・テーマがそのまま表示される。
-          */
-
           root.style.display =
             'none';
 
@@ -4995,17 +4898,8 @@
         'click',
         () => {
 
-          /*
-            NOWへ戻る直前に、
-            現在のウインドウサイズを取り直す。
-          */
-
           applyViewportLayout();
 
-
-          /*
-            最新のTaskChute状態を即取得。
-          */
 
           sync();
 
@@ -5019,12 +4913,6 @@
           returnButton.style.display =
             'none';
 
-
-          /*
-            display復帰後、
-            Firefoxにレイアウト再計算させた後でも
-            もう一度同期・描画。
-          */
 
           requestAnimationFrame(
             () => {
@@ -5070,10 +4958,6 @@
         );
 
 
-    /*
-      CURRENT
-    */
-
     $('tc-task')
       .textContent =
         state.currentTask ||
@@ -5108,10 +4992,6 @@
           elapsed
         );
 
-
-    /*
-      REMAINING / OVER
-    */
 
     const statusLabel =
       $('tc-status-label');
@@ -5217,9 +5097,7 @@
     }
 
 
-    /* =====================================================
-       PREVIOUS
-    ===================================================== */
+    /* PREVIOUS */
 
     const prev =
       state.previous;
@@ -5288,9 +5166,7 @@
         prevElapsed;
 
 
-    /* =====================================================
-       NEXT
-    ===================================================== */
+    /* NEXT */
 
     for (
       let i = 0;
@@ -5319,9 +5195,7 @@
     }
 
 
-    /* =====================================================
-       LEAVE
-    ===================================================== */
+    /* LEAVE */
 
     $('tc-leave-time')
       .textContent =
