@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.5.11
+     v4.6.0
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.5.11';
+  const VERSION = '4.6.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -484,7 +484,10 @@
 
     previous: null,
     next: [],
-    leaveTime: null
+    leaveTime: null,
+
+    todayCompletedCount: 0,
+    todayTaskCount: 0
   };
 
   /* =========================================================
@@ -1362,6 +1365,49 @@
     );
   }
 
+  function isSameLocalDate(a, b) {
+    return (
+      a instanceof Date &&
+      b instanceof Date &&
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
+
+  function getTodayCompletedCount(
+    rows,
+    referenceDate
+  ) {
+    const now =
+      referenceDate instanceof Date
+        ? referenceDate
+        : new Date();
+
+    return rows.filter(row => {
+      if (
+        !row.start ||
+        !row.finish
+      ) {
+        return false;
+      }
+
+      const finishDate =
+        resolveClockAtOrBefore(
+          row.finish,
+          now
+        );
+
+      return (
+        !!finishDate &&
+        isSameLocalDate(
+          finishDate,
+          now
+        )
+      );
+    }).length;
+  }
+
   function clearCurrentState() {
     state.currentTask = null;
     state.currentStart = null;
@@ -1385,6 +1431,18 @@
   function sync() {
     const rows =
       getScheduleRows();
+
+    const syncNow =
+      new Date();
+
+    state.todayTaskCount =
+      rows.length;
+
+    state.todayCompletedCount =
+      getTodayCompletedCount(
+        rows,
+        syncNow
+      );
 
     const player =
       findCurrentPlayer(rows);
@@ -3234,6 +3292,78 @@
       box-shadow:
         0 2px 10px
         rgba(0,0,0,.35);
+    }
+
+    /* =====================================================
+       DAILY TASK PROGRESS / TOGGLE POSITION
+    ===================================================== */
+
+    #tc-prev-header {
+      display:flex;
+      align-items:center;
+      gap:clamp(8px, .9vw, 12px);
+      min-width:0;
+      margin-bottom:clamp(3px, .4vh, 5px);
+    }
+
+    #tc-prev-header .tc-card-title {
+      margin-bottom:0 !important;
+      flex:0 0 auto;
+    }
+
+    #tc-daily-progress {
+      display:flex;
+      align-items:center;
+      gap:clamp(7px, .75vw, 10px);
+      min-width:0;
+      color:#fff;
+      white-space:nowrap;
+    }
+
+    #tc-daily-progress-count {
+      color:#fff;
+      font-size:clamp(8px, .9vw, 11px);
+      font-weight:900;
+      letter-spacing:.06em;
+      line-height:1;
+      font-variant-numeric:tabular-nums;
+    }
+
+    #tc-daily-progress-segments {
+      display:flex;
+      align-items:center;
+      gap:2px;
+      height:12px;
+    }
+
+    .tc-progress-segment {
+      display:block;
+      width:2px;
+      height:10px;
+      border-radius:1px;
+      background:rgba(255,255,255,.16);
+    }
+
+    .tc-progress-segment.is-filled {
+      background:rgba(255,255,255,.92);
+    }
+
+    #tc-prev-content {
+      grid-template-columns:minmax(0,1fr) !important;
+    }
+
+    #tc-prev-check {
+      display:none !important;
+    }
+
+    #tc-now-return-button {
+      left:max(10px, env(safe-area-inset-left));
+      right:auto;
+      bottom:max(7px, env(safe-area-inset-bottom));
+      color:#9da3af;
+      font-size:9px;
+      padding:6px 9px;
+      opacity:.88;
     }
 
     #tc-version {
@@ -6035,8 +6165,28 @@
             id="tc-prev-card"
             class="tc-card">
 
-            <div class="tc-card-title">
-              PREVIOUS
+            <div id="tc-prev-header">
+              <div class="tc-card-title">
+                PREVIOUS
+              </div>
+
+              <div id="tc-daily-progress" aria-label="Today task progress">
+                <span id="tc-daily-progress-count">✓ 0/0</span>
+                <span id="tc-daily-progress-segments" aria-hidden="true">
+                <span class="tc-progress-segment" data-index="0"></span>
+                <span class="tc-progress-segment" data-index="1"></span>
+                <span class="tc-progress-segment" data-index="2"></span>
+                <span class="tc-progress-segment" data-index="3"></span>
+                <span class="tc-progress-segment" data-index="4"></span>
+                <span class="tc-progress-segment" data-index="5"></span>
+                <span class="tc-progress-segment" data-index="6"></span>
+                <span class="tc-progress-segment" data-index="7"></span>
+                <span class="tc-progress-segment" data-index="8"></span>
+                <span class="tc-progress-segment" data-index="9"></span>
+                <span class="tc-progress-segment" data-index="10"></span>
+                <span class="tc-progress-segment" data-index="11"></span>
+                </span>
+              </div>
             </div>
 
             <div id="tc-prev-content">
@@ -6704,6 +6854,57 @@
           'tc-over'
         );
     }
+
+    /* DAILY TASK PROGRESS */
+
+    const dailyCompleted =
+      Math.max(
+        0,
+        state.todayCompletedCount || 0
+      );
+
+    const dailyTotal =
+      Math.max(
+        0,
+        state.todayTaskCount || 0
+      );
+
+    $('tc-daily-progress-count')
+      .textContent =
+        '✓ ' +
+        dailyCompleted +
+        '/' +
+        dailyTotal;
+
+    const segmentCount = 12;
+
+    const filledSegments =
+      dailyTotal > 0
+        ? clamp(
+            Math.round(
+              (
+                dailyCompleted /
+                dailyTotal
+              ) *
+              segmentCount
+            ),
+            0,
+            segmentCount
+          )
+        : 0;
+
+    document
+      .querySelectorAll(
+        '#tc-daily-progress-segments .tc-progress-segment'
+      )
+      .forEach(
+        (segment, index) => {
+          segment.classList.toggle(
+            'is-filled',
+            index < filledSegments
+          );
+        }
+      );
 
     /* PREVIOUS */
 
