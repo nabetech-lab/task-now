@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.6.2
+     v4.6.3
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.6.2';
+  const VERSION = '4.6.3';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -1897,6 +1897,17 @@
       white-space:nowrap;
 
       position:relative;
+
+      display:flex;
+      align-items:center;
+
+      gap:
+        clamp(
+          6px,
+          .75vw,
+          10px
+        );
+
       padding-right:
         clamp(
           12px,
@@ -2146,38 +2157,32 @@
             15px,
             2.8vh,
             22px
-          ) +
+          ) - 5px
+        );
+
+      width:1px;
+
+      height:
+        calc(
           clamp(
             4px,
             .7vh,
             6px
-          ) +
-          5px
+          ) + 16px
         );
+
+      background:#fff;
 
       transform:
         translateX(-50%);
 
-      z-index:3;
+      z-index:5;
 
-      line-height:1;
+      pointer-events:none;
     }
 
     #tc-timeline-current::before {
-      content:"▲";
-
-      display:block;
-
-      color:#fff;
-
-      font-size:
-        clamp(
-          9px,
-          1.1vw,
-          13px
-        );
-
-      line-height:1;
+      content:none;
     }
 
     #tc-timeline-current-text {
@@ -3290,19 +3295,7 @@
     #tc-task-toggle {
       display:none;
 
-      position:absolute;
-
-      left:
-        max(
-          10px,
-          env(safe-area-inset-left)
-        );
-
-      bottom:
-        max(
-          7px,
-          env(safe-area-inset-bottom)
-        );
+      position:relative;
 
       z-index:5;
 
@@ -3317,23 +3310,42 @@
 
       color:#9da3af;
 
-      font:inherit;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Helvetica Neue",
+        "Hiragino Sans",
+        "Yu Gothic",
+        sans-serif;
 
-      font-size:9px;
+      font-size:
+        clamp(
+          7px,
+          .75vw,
+          9px
+        );
+
       font-weight:900;
 
       letter-spacing:.12em;
 
       line-height:1;
 
-      padding:6px 9px;
+      padding:
+        4px
+        7px;
 
       opacity:.88;
+
+      flex:0 0 auto;
     }
 
     #${ROOT_ID}.platform-android
     #tc-task-toggle {
-      display:block;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
     }
 
     #tc-now-return-button {
@@ -3341,8 +3353,10 @@
 
       position:fixed;
 
-      right:10px;
-      bottom:10px;
+      left:10px;
+      top:10px;
+      right:auto;
+      bottom:auto;
 
       z-index:2147483647;
 
@@ -3355,7 +3369,7 @@
 
       background:#11151c;
 
-      color:#f5f5f7;
+      color:#9da3af;
 
       font-family:
         -apple-system,
@@ -3366,14 +3380,19 @@
         "Yu Gothic",
         sans-serif;
 
-      font-size:11px;
+      font-size:9px;
       font-weight:900;
 
       letter-spacing:.12em;
 
       line-height:1;
 
-      padding:9px 12px;
+      padding:4px 7px;
+
+      opacity:.88;
+
+      align-items:center;
+      justify-content:center;
 
       box-shadow:
         0 2px 10px
@@ -3449,12 +3468,11 @@
     }
 
     #tc-now-return-button {
-      left:max(10px, env(safe-area-inset-left));
       right:auto;
-      bottom:max(7px, env(safe-area-inset-bottom));
+      bottom:auto;
       color:#9da3af;
       font-size:9px;
-      padding:6px 9px;
+      padding:4px 7px;
       opacity:.88;
     }
 
@@ -3572,12 +3590,8 @@
 
     #${ROOT_ID}.layout-landscape
     #tc-timeline-current {
-      top:25px;
-    }
-
-    #${ROOT_ID}.layout-landscape
-    #tc-timeline-current::before {
-      font-size:9px;
+      top:10px;
+      height:20px;
     }
 
     #${ROOT_ID}.layout-landscape
@@ -4270,12 +4284,8 @@
 
       #${ROOT_ID}.layout-landscape
       #tc-timeline-current {
-        top:21px;
-      }
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current::before {
-        font-size:8px;
+        top:8px;
+        height:18px;
       }
 
       #${ROOT_ID}.layout-landscape
@@ -4621,12 +4631,8 @@
 
       #${ROOT_ID}.layout-portrait
       #tc-timeline-current {
-        top:21px;
-      }
-
-      #${ROOT_ID}.layout-portrait
-      #tc-timeline-current::before {
-        font-size:8px;
+        top:8px;
+        height:18px;
       }
 
       #${ROOT_ID}.layout-portrait
@@ -4977,12 +4983,8 @@
 
       #${ROOT_ID}.layout-landscape
       #tc-timeline-current {
-        top:37px;
-      }
-
-      #${ROOT_ID}.layout-landscape
-      #tc-timeline-current::before {
-        font-size:13px;
+        top:17px;
+        height:29px;
       }
 
       #${ROOT_ID}.layout-landscape
@@ -5486,12 +5488,8 @@
 
       #${ROOT_ID}.layout-portrait
       #tc-timeline-current {
-        top:39px;
-      }
-
-      #${ROOT_ID}.layout-portrait
-      #tc-timeline-current::before {
-        font-size:12px;
+        top:19px;
+        height:26px;
       }
 
       #${ROOT_ID}.layout-portrait
@@ -5892,7 +5890,13 @@
       <header id="tc-header">
 
         <div id="tc-brand">
-          NOW
+          <span>NOW</span>
+
+          <button
+            id="tc-task-toggle"
+            type="button">
+            TASK
+          </button>
         </div>
 
         <div id="tc-leave">
@@ -6307,12 +6311,6 @@
 
     </div>
 
-    <button
-      id="tc-task-toggle"
-      type="button">
-      TASK
-    </button>
-
     <div id="tc-version">
       v${VERSION}
     </div>
@@ -6542,15 +6540,39 @@
       returnButton
     );
 
+    function positionReturnButton() {
+      if (!taskToggle) {
+        return;
+      }
+
+      const rect =
+        taskToggle
+          .getBoundingClientRect();
+
+      returnButton.style.left =
+        `${Math.round(rect.left)}px`;
+
+      returnButton.style.top =
+        `${Math.round(rect.top)}px`;
+
+      returnButton.style.width =
+        `${Math.round(rect.width)}px`;
+
+      returnButton.style.height =
+        `${Math.round(rect.height)}px`;
+    }
+
     taskToggle
       ?.addEventListener(
         'click',
         () => {
+          positionReturnButton();
+
           root.style.display =
             'none';
 
           returnButton.style.display =
-            'block';
+            'inline-flex';
         }
       );
 
