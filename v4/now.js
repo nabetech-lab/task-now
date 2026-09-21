@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.6.1
+     v4.6.2
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.6.1';
+  const VERSION = '4.6.2';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -494,31 +494,40 @@
      TASK ROWS
   ========================================================= */
 
-  function getTaskRowElements() {
-    return [
-      ...document.querySelectorAll(
+  function getTaskRowEntries() {
+    const entries = [];
+
+    for (
+      const el
+      of document.querySelectorAll(
         'div.MuiBox-root.my-0'
       )
-    ]
-      .filter(el => {
-        if (
-          isInsideNow(el)
-        ) {
-          return false;
-        }
+    ) {
+      if (
+        isInsideNow(el)
+      ) {
+        continue;
+      }
 
-        const r =
-          el.getBoundingClientRect();
+      const rect =
+        el.getBoundingClientRect();
 
-        return (
-          r.left >= -20 &&
-          r.left <= 150 &&
-          r.width >= 250 &&
-          r.width <= 1800 &&
-          r.height >= 22 &&
-          r.height <= 52
-        );
-      });
+      if (
+        rect.left >= -20 &&
+        rect.left <= 150 &&
+        rect.width >= 250 &&
+        rect.width <= 1800 &&
+        rect.height >= 22 &&
+        rect.height <= 52
+      ) {
+        entries.push({
+          el,
+          rect
+        });
+      }
+    }
+
+    return entries;
   }
 
   function getRowLeafValues(row) {
@@ -726,13 +735,18 @@
   }
 
 
-  function getSectionMarkers() {
+  function getSectionMarkers(
+    taskRowEntries
+  ) {
     const markers = [];
 
     for (
-      const el
-      of getTaskRowElements()
+      const entry
+      of taskRowEntries
     ) {
+      const el =
+        entry.el;
+
       const raw =
         clean(el.textContent);
 
@@ -742,9 +756,6 @@
         continue;
       }
 
-      const rect =
-        el.getBoundingClientRect();
-
       const stats =
         getSectionStats(
           el
@@ -752,7 +763,7 @@
 
       markers.push({
         top:
-          rect.top,
+          entry.rect.top,
 
         range:
           parseSectionRange(
@@ -788,16 +799,23 @@
      SCHEDULE LIST
   ========================================================= */
 
-  function getScheduleRows() {
+  function getScheduleRows(
+    taskRowEntries
+  ) {
     const rows = [];
 
     const sectionMarkers =
-      getSectionMarkers();
+      getSectionMarkers(
+        taskRowEntries
+      );
 
     for (
-      const taskEl
-      of getTaskRowElements()
+      const entry
+      of taskRowEntries
     ) {
+      const taskEl =
+        entry.el;
+
       const task =
         clean(taskEl.textContent);
 
@@ -825,9 +843,6 @@
       ) {
         continue;
       }
-
-      const rect =
-        taskEl.getBoundingClientRect();
 
       const leaves =
         getRowLeafValues(row);
@@ -916,9 +931,10 @@
         sectionDuration: null,
         sectionBalance: null,
 
-        top: rect.top,
+        top: entry.rect.top,
         taskEl,
-        rowEl: row
+        rowEl: row,
+        leaves
       });
     }
 
@@ -1015,6 +1031,7 @@
     }
 
     const leaves =
+      currentRow?.leaves ||
       getRowLeafValues(row);
 
     let start = null;
@@ -1424,13 +1441,77 @@
     state.currentSectionBalance = null;
   }
 
+  function getStateRenderSignature() {
+    const prev =
+      state.previous;
+
+    return JSON.stringify({
+      currentTask:
+        state.currentTask,
+      currentStart:
+        state.currentStart,
+      plannedSeconds:
+        state.plannedSeconds,
+      currentProject:
+        state.currentProject,
+      currentMode:
+        state.currentMode,
+      currentSection:
+        state.currentSection,
+      currentSectionRange:
+        state.currentSectionRange,
+      currentSectionCount:
+        state.currentSectionCount,
+      currentSectionDuration:
+        state.currentSectionDuration,
+      currentSectionBalance:
+        state.currentSectionBalance,
+      previous:
+        prev
+          ? {
+              task:
+                prev.task,
+              start:
+                prev.start,
+              finish:
+                prev.finish,
+              actualDuration:
+                prev.actualDuration
+            }
+          : null,
+      next:
+        state.next.map(
+          row => ({
+            task:
+              row?.task || null,
+            scheduleTime:
+              row?.scheduleTime || null
+          })
+        ),
+      leaveTime:
+        state.leaveTime,
+      todayCompletedCount:
+        state.todayCompletedCount,
+      todayTaskCount:
+        state.todayTaskCount
+    });
+  }
+
   /* =========================================================
      SYNC
   ========================================================= */
 
   function sync() {
+    const beforeSignature =
+      getStateRenderSignature();
+
+    const taskRowEntries =
+      getTaskRowEntries();
+
     const rows =
-      getScheduleRows();
+      getScheduleRows(
+        taskRowEntries
+      );
 
     const syncNow =
       new Date();
@@ -1563,6 +1644,11 @@
     state.leaveTime =
       getLeaveTime(rows) ||
       null;
+
+    return (
+      beforeSignature !==
+      getStateRenderSignature()
+    );
   }
 
   /* =========================================================
@@ -6269,25 +6355,65 @@
     };
   }
 
-  function applyViewportLayout() {
+  let lastViewportWidth = null;
+  let lastViewportHeight = null;
+
+  function applyViewportLayout(
+    force = false
+  ) {
     const size =
       getCurrentViewportSize();
 
-    root.style.width =
+    if (
+      !force &&
+      size.width === lastViewportWidth &&
+      size.height === lastViewportHeight
+    ) {
+      return false;
+    }
+
+    lastViewportWidth =
+      size.width;
+
+    lastViewportHeight =
+      size.height;
+
+    const widthValue =
       `${size.width}px`;
 
-    root.style.height =
+    const heightValue =
       `${size.height}px`;
+
+    if (
+      root.style.width !==
+      widthValue
+    ) {
+      root.style.width =
+        widthValue;
+    }
+
+    if (
+      root.style.height !==
+      heightValue
+    ) {
+      root.style.height =
+        heightValue;
+    }
+
+    const isPortrait =
+      size.height > size.width;
 
     root.classList.toggle(
       'layout-portrait',
-      size.height > size.width
+      isPortrait
     );
 
     root.classList.toggle(
       'layout-landscape',
-      size.width >= size.height
+      !isPortrait
     );
+
+    return true;
   }
 
   let viewportRAF = null;
@@ -6296,9 +6422,7 @@
     if (
       viewportRAF !== null
     ) {
-      cancelAnimationFrame(
-        viewportRAF
-      );
+      return;
     }
 
     viewportRAF =
@@ -6307,13 +6431,11 @@
           viewportRAF = null;
 
           applyViewportLayout();
-
-          render();
         }
       );
   }
 
-  applyViewportLayout();
+  applyViewportLayout(true);
 
   window.addEventListener(
     'resize',
@@ -6436,11 +6558,14 @@
       .addEventListener(
         'click',
         () => {
-          applyViewportLayout();
+          applyViewportLayout(
+            true
+          );
 
           sync();
 
-          render();
+          renderState();
+          renderLive();
 
           root.style.display =
             'block';
@@ -6450,11 +6575,18 @@
 
           requestAnimationFrame(
             () => {
-              applyViewportLayout();
+              applyViewportLayout(
+                true
+              );
 
-              sync();
+              const changed =
+                sync();
 
-              render();
+              if (changed) {
+                renderState();
+              }
+
+              renderLive();
             }
           );
         }
@@ -6478,6 +6610,67 @@
     'Fri',
     'Sat'
   ];
+
+  function setText(
+    el,
+    value
+  ) {
+    if (!el) {
+      return;
+    }
+
+    const nextValue =
+      String(
+        value ?? ''
+      );
+
+    if (
+      el.textContent !==
+      nextValue
+    ) {
+      el.textContent =
+        nextValue;
+    }
+  }
+
+  function setClassFlag(
+    el,
+    className,
+    enabled
+  ) {
+    if (!el) {
+      return;
+    }
+
+    if (
+      el.classList.contains(
+        className
+      ) !== !!enabled
+    ) {
+      el.classList.toggle(
+        className,
+        !!enabled
+      );
+    }
+  }
+
+  function setStyleValue(
+    el,
+    property,
+    value
+  ) {
+    if (!el) {
+      return;
+    }
+
+    if (
+      el.style[property] !==
+      value
+    ) {
+      el.style[property] =
+        value;
+    }
+  }
 
   function renderTimeline(now) {
     const start =
@@ -6548,43 +6741,59 @@
         100
       );
 
-    $('tc-timeline-normal')
-      .style.width =
-        `${regularPercent}%`;
+    setStyleValue(
+      $('tc-timeline-normal'),
+      'width',
+      `${regularPercent}%`
+    );
 
-    $('tc-timeline-overtime')
-      .style.left =
-        `${regularPercent}%`;
+    setStyleValue(
+      $('tc-timeline-overtime'),
+      'left',
+      `${regularPercent}%`
+    );
 
-    $('tc-timeline-overtime')
-      .style.width =
-        `${overtimePercent}%`;
+    setStyleValue(
+      $('tc-timeline-overtime'),
+      'width',
+      `${overtimePercent}%`
+    );
 
-    $('tc-timeline-regular-marker')
-      .style.left =
-        `${regularPercent}%`;
+    setStyleValue(
+      $('tc-timeline-regular-marker'),
+      'left',
+      `${regularPercent}%`
+    );
 
-    $('tc-timeline-regular-label')
-      .style.left =
-        `${regularPercent}%`;
+    setStyleValue(
+      $('tc-timeline-regular-label'),
+      'left',
+      `${regularPercent}%`
+    );
 
-    $('tc-timeline-end-label')
-      .textContent =
-        end > regular
-          ? state.leaveTime
-          : REGULAR_END;
+    setText(
+      $('tc-timeline-end-label'),
+      end > regular
+        ? state.leaveTime
+        : REGULAR_END
+    );
 
-    $('tc-timeline-end-label')
-      .style.display =
-        end > regular
-          ? 'block'
-          : 'none';
+    setStyleValue(
+      $('tc-timeline-end-label'),
+      'display',
+      end > regular
+        ? 'block'
+        : 'none'
+    );
 
-    $('tc-timeline-current')
-      .style.left =
-        `${currentPercent}%`;
+    setStyleValue(
+      $('tc-timeline-current'),
+      'left',
+      `${currentPercent}%`
+    );
 
-    root.classList.toggle(
+    setClassFlag(
+      root,
       'is-overtime',
       currentMinutes >
         regular
@@ -6592,37 +6801,152 @@
   }
 
   /* =========================================================
-     RENDER
+     STATE RENDER
   ========================================================= */
 
-  function render() {
-    const now = new Date();
+  function renderDailyProgress() {
+    const dailyCompleted =
+      Math.max(
+        0,
+        state.todayCompletedCount || 0
+      );
 
-    $('tc-date')
-      .textContent =
-        now.getFullYear() +
+    const dailyTotal =
+      Math.max(
+        0,
+        state.todayTaskCount || 0
+      );
+
+    setText(
+      $('tc-daily-progress-count'),
+      '✓ ' +
+        dailyCompleted +
         '/' +
-        pad(now.getMonth() + 1) +
-        '/' +
-        pad(now.getDate()) +
-        ' (' +
-        WEEKDAYS[now.getDay()] +
-        ')';
+        dailyTotal
+    );
 
-    $('tc-clock-time')
-      .textContent =
-        pad(now.getHours()) +
-        ':' +
-        pad(now.getMinutes());
+    const progressSegments =
+      $('tc-daily-progress-segments');
 
-    renderTimeline(now);
+    if (!progressSegments) {
+      return;
+    }
 
+    const segmentCount =
+      dailyTotal;
+
+    const filledSegments =
+      clamp(
+        dailyCompleted,
+        0,
+        segmentCount
+      );
+
+    let segmentWidth = 2;
+    let segmentGap = 2;
+
+    if (segmentCount > 40) {
+      segmentGap = 1;
+    }
+
+    if (segmentCount > 70) {
+      segmentWidth = 1;
+    }
+
+    const widthValue =
+      segmentWidth + 'px';
+
+    const gapValue =
+      segmentGap + 'px';
+
+    if (
+      progressSegments
+        .style
+        .getPropertyValue(
+          '--tc-progress-width'
+        ) !== widthValue
+    ) {
+      progressSegments
+        .style
+        .setProperty(
+          '--tc-progress-width',
+          widthValue
+        );
+    }
+
+    if (
+      progressSegments
+        .style
+        .getPropertyValue(
+          '--tc-progress-gap'
+        ) !== gapValue
+    ) {
+      progressSegments
+        .style
+        .setProperty(
+          '--tc-progress-gap',
+          gapValue
+        );
+    }
+
+    if (
+      progressSegments
+        .childElementCount !==
+      segmentCount
+    ) {
+      const fragment =
+        document.createDocumentFragment();
+
+      for (
+        let index = 0;
+        index < segmentCount;
+        index += 1
+      ) {
+        const segment =
+          document.createElement('span');
+
+        segment.className =
+          'tc-progress-segment';
+
+        segment.dataset.index =
+          String(index);
+
+        fragment.appendChild(
+          segment
+        );
+      }
+
+      progressSegments
+        .replaceChildren(
+          fragment
+        );
+    }
+
+    const segments =
+      progressSegments.children;
+
+    for (
+      let index = 0;
+      index < segments.length;
+      index += 1
+    ) {
+      setClassFlag(
+        segments[index],
+        'is-filled',
+        index < filledSegments
+      );
+    }
+  }
+
+
+  function renderState() {
     /* CURRENT */
 
-    $('tc-task')
-      .textContent =
-        state.currentTask ||
-        'タスクを取得できません';
+    setText(
+      $('tc-task'),
+      state.currentTask ||
+        'タスクを取得できません'
+    );
 
     const projectEl =
       $('tc-current-project');
@@ -6630,27 +6954,29 @@
     const modeEl =
       $('tc-current-mode');
 
-    $('tc-current-project-text')
-      .textContent =
-        state.currentProject ||
-        '';
+    setText(
+      $('tc-current-project-text'),
+      state.currentProject ||
+        ''
+    );
 
-    $('tc-current-mode-text')
-      .textContent =
-        state.currentMode ||
-        '';
+    setText(
+      $('tc-current-mode-text'),
+      state.currentMode ||
+        ''
+    );
 
-    projectEl
-      .classList.toggle(
-        'is-visible',
-        !!state.currentProject
-      );
+    setClassFlag(
+      projectEl,
+      'is-visible',
+      !!state.currentProject
+    );
 
-    modeEl
-      .classList.toggle(
-        'is-visible',
-        !!state.currentMode
-      );
+    setClassFlag(
+      modeEl,
+      'is-visible',
+      !!state.currentMode
+    );
 
     const sectionPanel =
       $('tc-current-section-panel');
@@ -6689,291 +7015,109 @@
         .filter(Boolean)
         .join(' ');
 
-    $('tc-current-section')
-      .textContent =
-        sectionPrimaryText;
+    setText(
+      $('tc-current-section'),
+      sectionPrimaryText
+    );
 
-    $('tc-section-count')
-      .textContent =
-        sectionCount;
+    setText(
+      $('tc-section-count'),
+      sectionCount
+    );
 
-    $('tc-section-duration')
-      .textContent =
-        sectionDuration;
+    setText(
+      $('tc-section-duration'),
+      sectionDuration
+    );
 
-    $('tc-section-balance')
-      .textContent =
-        sectionBalance;
+    setText(
+      $('tc-section-balance'),
+      sectionBalance
+    );
 
-    $('tc-section-count-wrap')
-      .classList.toggle(
-        'is-visible',
-        !!sectionCount
-      );
+    setClassFlag(
+      $('tc-section-count-wrap'),
+      'is-visible',
+      !!sectionCount
+    );
 
-    $('tc-section-duration-wrap')
-      .classList.toggle(
-        'is-visible',
-        !!sectionDuration
-      );
+    setClassFlag(
+      $('tc-section-duration-wrap'),
+      'is-visible',
+      !!sectionDuration
+    );
 
-    $('tc-section-balance-wrap')
-      .classList.toggle(
-        'is-visible',
-        !!sectionBalance
-      );
+    setClassFlag(
+      $('tc-section-balance-wrap'),
+      'is-visible',
+      !!sectionBalance
+    );
 
-    sectionPrimary
-      .classList.toggle(
-        'is-visible',
-        !!sectionPrimaryText
-      );
+    setClassFlag(
+      sectionPrimary,
+      'is-visible',
+      !!sectionPrimaryText
+    );
 
-    sectionStats
-      .classList.toggle(
-        'is-visible',
-        !!(
-          sectionCount ||
-          sectionDuration ||
-          sectionBalance
-        )
-      );
+    setClassFlag(
+      sectionStats,
+      'is-visible',
+      !!(
+        sectionCount ||
+        sectionDuration ||
+        sectionBalance
+      )
+    );
 
-    sectionPanel
-      .classList.toggle(
-        'is-visible',
-        !!(
-          sectionPrimaryText ||
-          sectionCount ||
-          sectionDuration ||
-          sectionBalance
-        )
-      );
+    setClassFlag(
+      sectionPanel,
+      'is-visible',
+      !!(
+        sectionPrimaryText ||
+        sectionCount ||
+        sectionDuration ||
+        sectionBalance
+      )
+    );
 
-    $('tc-start')
-      .textContent =
-        state.currentStart ||
-        '--:--';
+    setText(
+      $('tc-start'),
+      state.currentStart ||
+        '--:--'
+    );
 
-    $('tc-planned')
-      .textContent =
-        secondsToHM(
-          state.plannedSeconds
-        );
+    setText(
+      $('tc-planned'),
+      secondsToHM(
+        state.plannedSeconds
+      )
+    );
 
-    $('tc-planned-end')
-      .textContent =
-        getPlannedEnd();
-
-    const elapsed =
-      getElapsedSeconds();
-
-    $('tc-elapsed')
-      .textContent =
-        secondsToHMS(elapsed);
-
-    const statusLabel =
-      $('tc-status-label');
-
-    const statusValue =
-      $('tc-status-value');
-
-    if (
-      elapsed !== null &&
-      state.plannedSeconds !==
-        null
-    ) {
-      const diff =
-        state.plannedSeconds -
-        elapsed;
-
-      if (
-        diff >= 0
-      ) {
-        statusLabel
-          .textContent =
-            'REMAINING';
-
-        statusValue
-          .textContent =
-            secondsToHMS(diff);
-
-        statusLabel
-          .classList.remove(
-            'tc-over'
-          );
-
-        statusValue
-          .classList.remove(
-            'tc-over'
-          );
-      } else {
-        statusLabel
-          .textContent =
-            'OVER';
-
-        statusValue
-          .textContent =
-            secondsToHMS(
-              Math.abs(diff)
-            );
-
-        statusLabel
-          .classList.add(
-            'tc-over'
-          );
-
-        statusValue
-          .classList.add(
-            'tc-over'
-          );
-      }
-    } else {
-      statusLabel
-        .textContent =
-          'REMAINING';
-
-      statusValue
-        .textContent =
-          '--:--:--';
-
-      statusLabel
-        .classList.remove(
-          'tc-over'
-        );
-
-      statusValue
-        .classList.remove(
-          'tc-over'
-        );
-    }
+    setText(
+      $('tc-planned-end'),
+      getPlannedEnd()
+    );
 
     /* DAILY TASK PROGRESS */
 
-    const dailyCompleted =
-      Math.max(
-        0,
-        state.todayCompletedCount || 0
-      );
-
-    const dailyTotal =
-      Math.max(
-        0,
-        state.todayTaskCount || 0
-      );
-
-    $('tc-daily-progress-count')
-      .textContent =
-        '✓ ' +
-        dailyCompleted +
-        '/' +
-        dailyTotal;
-
-    const progressSegments =
-      $('tc-daily-progress-segments');
-
-    if (progressSegments) {
-      const segmentCount =
-        dailyTotal;
-
-      const filledSegments =
-        clamp(
-          dailyCompleted,
-          0,
-          segmentCount
-        );
-
-      /*
-        One segment per task.
-        Keep the row single-line. 2px/2px is the normal size;
-        denser days reduce the gap/width instead of wrapping.
-      */
-      let segmentWidth = 2;
-      let segmentGap = 2;
-
-      if (segmentCount > 40) {
-        segmentGap = 1;
-      }
-
-      if (segmentCount > 70) {
-        segmentWidth = 1;
-      }
-
-      progressSegments
-        .style
-        .setProperty(
-          '--tc-progress-width',
-          segmentWidth + 'px'
-        );
-
-      progressSegments
-        .style
-        .setProperty(
-          '--tc-progress-gap',
-          segmentGap + 'px'
-        );
-
-      if (
-        progressSegments
-          .childElementCount !==
-        segmentCount
-      ) {
-        const fragment =
-          document.createDocumentFragment();
-
-        for (
-          let index = 0;
-          index < segmentCount;
-          index += 1
-        ) {
-          const segment =
-            document.createElement('span');
-
-          segment.className =
-            'tc-progress-segment';
-
-          segment.dataset.index =
-            String(index);
-
-          fragment.appendChild(
-            segment
-          );
-        }
-
-        progressSegments
-          .replaceChildren(
-            fragment
-          );
-      }
-
-      progressSegments
-        .querySelectorAll(
-          '.tc-progress-segment'
-        )
-        .forEach(
-          (segment, index) => {
-            segment.classList.toggle(
-              'is-filled',
-              index < filledSegments
-            );
-          }
-        );
-    }
+    renderDailyProgress();
 
     /* PREVIOUS */
 
     const prev =
       state.previous;
 
-    $('tc-prev-task')
-      .textContent =
-        prev?.task ||
-        '—';
+    setText(
+      $('tc-prev-task'),
+      prev?.task ||
+        '—'
+    );
 
-    $('tc-prev-start')
-      .textContent =
-        prev?.start ||
-        '—';
+    setText(
+      $('tc-prev-start'),
+      prev?.start ||
+        '—'
+    );
 
     let prevFinish =
       prev?.finish ||
@@ -6986,9 +7130,10 @@
       prevFinish = '—';
     }
 
-    $('tc-prev-finish')
-      .textContent =
-        prevFinish;
+    setText(
+      $('tc-prev-finish'),
+      prevFinish
+    );
 
     let prevElapsed = '—';
 
@@ -7008,9 +7153,10 @@
       }
     }
 
-    $('tc-prev-elapsed')
-      .textContent =
-        prevElapsed;
+    setText(
+      $('tc-prev-elapsed'),
+      prevElapsed
+    );
 
     /* NEXT */
 
@@ -7022,36 +7168,168 @@
       const row =
         state.next[i];
 
-      $(
-        `tc-next-time-${i}`
-      ).textContent =
+      setText(
+        $(`tc-next-time-${i}`),
         row?.scheduleTime ||
-        '—';
+          '—'
+      );
 
-      $(
-        `tc-next-task-${i}`
-      ).textContent =
+      setText(
+        $(`tc-next-task-${i}`),
         row?.task ||
-        '—';
+          '—'
+      );
     }
 
-    /* LEAVE */
+    /* LEAVE STATIC */
 
-    $('tc-leave-time')
-      .textContent =
-        state.leaveTime ||
-        '--:--';
+    setText(
+      $('tc-leave-time'),
+      state.leaveTime ||
+        '--:--'
+    );
+  }
+
+
+  /* =========================================================
+     LIVE RENDER
+  ========================================================= */
+
+  function renderLive() {
+    const now =
+      new Date();
+
+    setText(
+      $('tc-date'),
+      now.getFullYear() +
+        '/' +
+        pad(now.getMonth() + 1) +
+        '/' +
+        pad(now.getDate()) +
+        ' (' +
+        WEEKDAYS[now.getDay()] +
+        ')'
+    );
+
+    setText(
+      $('tc-clock-time'),
+      pad(now.getHours()) +
+        ':' +
+        pad(now.getMinutes())
+    );
+
+    renderTimeline(now);
+
+    const elapsed =
+      getElapsedSeconds();
+
+    setText(
+      $('tc-elapsed'),
+      secondsToHMS(elapsed)
+    );
+
+    const statusLabel =
+      $('tc-status-label');
+
+    const statusValue =
+      $('tc-status-value');
+
+    if (
+      elapsed !== null &&
+      state.plannedSeconds !==
+        null
+    ) {
+      const diff =
+        state.plannedSeconds -
+        elapsed;
+
+      if (
+        diff >= 0
+      ) {
+        setText(
+          statusLabel,
+          'REMAINING'
+        );
+
+        setText(
+          statusValue,
+          secondsToHMS(diff)
+        );
+
+        setClassFlag(
+          statusLabel,
+          'tc-over',
+          false
+        );
+
+        setClassFlag(
+          statusValue,
+          'tc-over',
+          false
+        );
+      } else {
+        setText(
+          statusLabel,
+          'OVER'
+        );
+
+        setText(
+          statusValue,
+          secondsToHMS(
+            Math.abs(diff)
+          )
+        );
+
+        setClassFlag(
+          statusLabel,
+          'tc-over',
+          true
+        );
+
+        setClassFlag(
+          statusValue,
+          'tc-over',
+          true
+        );
+      }
+    } else {
+      setText(
+        statusLabel,
+        'REMAINING'
+      );
+
+      setText(
+        statusValue,
+        '--:--:--'
+      );
+
+      setClassFlag(
+        statusLabel,
+        'tc-over',
+        false
+      );
+
+      setClassFlag(
+        statusValue,
+        'tc-over',
+        false
+      );
+    }
+
+    /* LEAVE COUNTDOWN */
 
     if (
       !state.leaveTime
     ) {
-      $('tc-leave-label')
-        .textContent =
-          'あと';
+      setText(
+        $('tc-leave-label'),
+        'あと'
+      );
 
-      $('tc-leave-count')
-        .textContent =
-          '--:--';
+      setText(
+        $('tc-leave-count'),
+        '--:--'
+      );
 
       return;
     }
@@ -7089,37 +7367,41 @@
     if (
       diff >= 0
     ) {
-      $('tc-leave-label')
-        .textContent =
-          'あと';
+      setText(
+        $('tc-leave-label'),
+        'あと'
+      );
 
-      $('tc-leave-count')
-        .textContent =
-          pad(
-            Math.floor(
-              diff / 3600
-            )
-          ) +
-          ':' +
-          pad(
-            Math.floor(
-              (
-                diff % 3600
-              ) /
-              60
-            )
-          );
+      setText(
+        $('tc-leave-count'),
+        pad(
+          Math.floor(
+            diff / 3600
+          )
+        ) +
+        ':' +
+        pad(
+          Math.floor(
+            (
+              diff % 3600
+            ) /
+            60
+          )
+        )
+      );
     } else {
       diff =
         Math.abs(diff);
 
-      $('tc-leave-label')
-        .textContent =
-          '超過';
+      setText(
+        $('tc-leave-label'),
+        '超過'
+      );
 
-      $('tc-leave-count')
-        .textContent =
-          secondsToHMS(diff);
+      setText(
+        $('tc-leave-count'),
+        secondsToHMS(diff)
+      );
     }
   }
 
@@ -7129,19 +7411,26 @@
 
   sync();
 
-  render();
+  renderState();
+  renderLive();
 
   window.tcNowRenderTimer =
     setInterval(
-      render,
+      renderLive,
       RENDER_INTERVAL
     );
 
   window.tcNowSyncTimer =
     setInterval(
       () => {
-        sync();
-        render();
+        const changed =
+          sync();
+
+        if (changed) {
+          renderState();
+        }
+
+        renderLive();
       },
       SYNC_INTERVAL
     );
