@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.6.0
+     v4.6.1
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.6.0';
+  const VERSION = '4.6.1';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -3332,13 +3332,19 @@
     #tc-daily-progress-segments {
       display:flex;
       align-items:center;
-      gap:2px;
+      gap:var(--tc-progress-gap, 2px);
       height:12px;
+      min-width:0;
+      flex:0 1 auto;
+      overflow:hidden;
+      white-space:nowrap;
     }
 
     .tc-progress-segment {
       display:block;
-      width:2px;
+      flex:0 1 var(--tc-progress-width, 2px);
+      width:var(--tc-progress-width, 2px);
+      min-width:1px;
       height:10px;
       border-radius:1px;
       background:rgba(255,255,255,.16);
@@ -6172,20 +6178,7 @@
 
               <div id="tc-daily-progress" aria-label="Today task progress">
                 <span id="tc-daily-progress-count">✓ 0/0</span>
-                <span id="tc-daily-progress-segments" aria-hidden="true">
-                <span class="tc-progress-segment" data-index="0"></span>
-                <span class="tc-progress-segment" data-index="1"></span>
-                <span class="tc-progress-segment" data-index="2"></span>
-                <span class="tc-progress-segment" data-index="3"></span>
-                <span class="tc-progress-segment" data-index="4"></span>
-                <span class="tc-progress-segment" data-index="5"></span>
-                <span class="tc-progress-segment" data-index="6"></span>
-                <span class="tc-progress-segment" data-index="7"></span>
-                <span class="tc-progress-segment" data-index="8"></span>
-                <span class="tc-progress-segment" data-index="9"></span>
-                <span class="tc-progress-segment" data-index="10"></span>
-                <span class="tc-progress-segment" data-index="11"></span>
-                </span>
+                <span id="tc-daily-progress-segments" aria-hidden="true"></span>
               </div>
             </div>
 
@@ -6876,35 +6869,96 @@
         '/' +
         dailyTotal;
 
-    const segmentCount = 12;
+    const progressSegments =
+      $('tc-daily-progress-segments');
 
-    const filledSegments =
-      dailyTotal > 0
-        ? clamp(
-            Math.round(
-              (
-                dailyCompleted /
-                dailyTotal
-              ) *
-              segmentCount
-            ),
-            0,
-            segmentCount
-          )
-        : 0;
+    if (progressSegments) {
+      const segmentCount =
+        dailyTotal;
 
-    document
-      .querySelectorAll(
-        '#tc-daily-progress-segments .tc-progress-segment'
-      )
-      .forEach(
-        (segment, index) => {
-          segment.classList.toggle(
-            'is-filled',
-            index < filledSegments
+      const filledSegments =
+        clamp(
+          dailyCompleted,
+          0,
+          segmentCount
+        );
+
+      /*
+        One segment per task.
+        Keep the row single-line. 2px/2px is the normal size;
+        denser days reduce the gap/width instead of wrapping.
+      */
+      let segmentWidth = 2;
+      let segmentGap = 2;
+
+      if (segmentCount > 40) {
+        segmentGap = 1;
+      }
+
+      if (segmentCount > 70) {
+        segmentWidth = 1;
+      }
+
+      progressSegments
+        .style
+        .setProperty(
+          '--tc-progress-width',
+          segmentWidth + 'px'
+        );
+
+      progressSegments
+        .style
+        .setProperty(
+          '--tc-progress-gap',
+          segmentGap + 'px'
+        );
+
+      if (
+        progressSegments
+          .childElementCount !==
+        segmentCount
+      ) {
+        const fragment =
+          document.createDocumentFragment();
+
+        for (
+          let index = 0;
+          index < segmentCount;
+          index += 1
+        ) {
+          const segment =
+            document.createElement('span');
+
+          segment.className =
+            'tc-progress-segment';
+
+          segment.dataset.index =
+            String(index);
+
+          fragment.appendChild(
+            segment
           );
         }
-      );
+
+        progressSegments
+          .replaceChildren(
+            fragment
+          );
+      }
+
+      progressSegments
+        .querySelectorAll(
+          '.tc-progress-segment'
+        )
+        .forEach(
+          (segment, index) => {
+            segment.classList.toggle(
+              'is-filled',
+              index < filledSegments
+            );
+          }
+        );
+    }
 
     /* PREVIOUS */
 
