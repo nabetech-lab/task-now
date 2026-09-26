@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.6.3
+     v4.7.0
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.6.3';
+  const VERSION = '4.7.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -490,6 +490,189 @@
     todayTaskCount: 0
   };
 
+
+  /* =========================================================
+     SEMANTIC DOM READER
+     Prefer meaning-bearing DOM attributes over leaf position.
+  ========================================================= */
+
+  function getTaskRoot(el) {
+    return (
+      el?.closest?.(
+        '[id^="node_task_"], [id^="node_rtn_"]'
+      ) ||
+      null
+    );
+  }
+
+  function getTaskNameFromRoot(
+    taskRoot,
+    fallback
+  ) {
+    if (!taskRoot) {
+      return (
+        validTaskName(fallback)
+          ? clean(fallback)
+          : null
+      );
+    }
+
+    const input =
+      taskRoot.querySelector(
+        'input[placeholder^="タスク名"]'
+      );
+
+    const value =
+      clean(
+        input?.value ||
+        input?.getAttribute?.('value')
+      );
+
+    if (
+      validTaskName(value)
+    ) {
+      return value;
+    }
+
+    return (
+      validTaskName(fallback)
+        ? clean(fallback)
+        : null
+    );
+  }
+
+  function readLabeledTime(
+    taskRoot,
+    ariaLabel
+  ) {
+    if (
+      !taskRoot ||
+      !ariaLabel
+    ) {
+      return null;
+    }
+
+    const labeled =
+      taskRoot.querySelectorAll(
+        `[aria-label="${ariaLabel}"]`
+      );
+
+    for (
+      const el
+      of labeled
+    ) {
+      const candidates = [
+        clean(
+          el.parentElement
+            ?.textContent
+        ),
+        clean(
+          el.textContent
+        ),
+        clean(
+          el.getAttribute?.('value')
+        ),
+        clean(
+          el.value
+        )
+      ];
+
+      for (
+        const value
+        of candidates
+      ) {
+        if (
+          isHM(value) ||
+          isHMS(value)
+        ) {
+          return value;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function getTaskSummaryCounts() {
+    const labelCandidates =
+      document.querySelectorAll(
+        'div, p, span'
+      );
+
+    for (
+      const labelEl
+      of labelCandidates
+    ) {
+      if (
+        isInsideNow(labelEl) ||
+        clean(labelEl.textContent) !==
+          'タスク数'
+      ) {
+        continue;
+      }
+
+      let node =
+        labelEl;
+
+      for (
+        let depth = 0;
+        depth < 7 && node;
+        depth += 1
+      ) {
+        const leaves =
+          [
+            ...node.querySelectorAll('*')
+          ]
+            .filter(el =>
+              el.children.length === 0 &&
+              !isInsideNow(el)
+            )
+            .map(el =>
+              clean(el.textContent)
+            )
+            .filter(Boolean);
+
+        for (
+          const value
+          of leaves
+        ) {
+          const m =
+            value.match(
+              /^(\d{1,4})\s*\/\s*(\d{1,4})$/
+            );
+
+          if (!m) {
+            continue;
+          }
+
+          const completed =
+            Number(m[1]);
+
+          const total =
+            Number(m[2]);
+
+          if (
+            Number.isFinite(completed) &&
+            Number.isFinite(total) &&
+            completed >= 0 &&
+            total >= 0 &&
+            completed <= total
+          ) {
+            return {
+              completed,
+              total
+            };
+          }
+        }
+
+        node =
+          node.parentElement;
+      }
+    }
+
+    return null;
+  }
+
   /* =========================================================
      TASK ROWS
   ========================================================= */
@@ -816,10 +999,24 @@
       const taskEl =
         entry.el;
 
+      const taskRoot =
+        getTaskRoot(
+          taskEl
+        );
+
+      const rawTask =
+        clean(
+          taskEl.textContent
+        );
+
       const task =
-        clean(taskEl.textContent);
+        getTaskNameFromRoot(
+          taskRoot,
+          rawTask
+        );
 
       if (
+        !task ||
         !validTaskName(task) ||
         isSectionName(task)
       ) {
@@ -885,9 +1082,30 @@
           leaves[5].value;
       }
 
+      /*
+        PLANNED:
+        Prefer TaskChute's semantic label inside this task root.
+        Only fall back to the legacy leaf position when the label
+        is unavailable, preserving existing behavior.
+      */
+      planned =
+        readLabeledTime(
+          taskRoot,
+          '見積時間'
+        );
+
+      let plannedSource =
+        planned
+          ? 'label'
+          : 'columns';
+
       if (
+        !planned &&
         leaves[6] &&
-        isHM(leaves[6].value)
+        (
+          isHM(leaves[6].value) ||
+          isHMS(leaves[6].value)
+        )
       ) {
         planned =
           leaves[6].value;
@@ -917,6 +1135,7 @@
         finish,
         actualDuration,
         planned,
+        plannedSource,
         scheduleTime,
 
         project:
@@ -933,6 +1152,7 @@
 
         top: entry.rect.top,
         taskEl,
+        taskRoot,
         rowEl: row,
         leaves
       });
@@ -1058,12 +1278,21 @@
       }
     }
 
+    planned =
+      readLabeledTime(
+        currentRow?.taskRoot ||
+          getTaskRoot(
+            currentRow?.taskEl
+          ),
+        '見積時間'
+      );
+
     if (
-      leaves[6] &&
-      isHM(leaves[6].value)
+      !planned &&
+      currentRow?.planned
     ) {
       planned =
-        leaves[6].value;
+        currentRow.planned;
     }
 
     if (!planned) {
@@ -1072,7 +1301,10 @@
           .filter(
             x =>
               x.tag === 'BUTTON' &&
-              isHM(x.value)
+              (
+                isHM(x.value) ||
+                isHMS(x.value)
+              )
           )
           .map(x => x.value);
 
@@ -1382,48 +1614,7 @@
     );
   }
 
-  function isSameLocalDate(a, b) {
-    return (
-      a instanceof Date &&
-      b instanceof Date &&
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
 
-  function getTodayCompletedCount(
-    rows,
-    referenceDate
-  ) {
-    const now =
-      referenceDate instanceof Date
-        ? referenceDate
-        : new Date();
-
-    return rows.filter(row => {
-      if (
-        !row.start ||
-        !row.finish
-      ) {
-        return false;
-      }
-
-      const finishDate =
-        resolveClockAtOrBefore(
-          row.finish,
-          now
-        );
-
-      return (
-        !!finishDate &&
-        isSameLocalDate(
-          finishDate,
-          now
-        )
-      );
-    }).length;
-  }
 
   function clearCurrentState() {
     state.currentTask = null;
@@ -1513,17 +1704,16 @@
         taskRowEntries
       );
 
-    const syncNow =
-      new Date();
+    const taskSummary =
+      getTaskSummaryCounts();
 
-    state.todayTaskCount =
-      rows.length;
+    if (taskSummary) {
+      state.todayCompletedCount =
+        taskSummary.completed;
 
-    state.todayCompletedCount =
-      getTodayCompletedCount(
-        rows,
-        syncNow
-      );
+      state.todayTaskCount =
+        taskSummary.total;
+    }
 
     const player =
       findCurrentPlayer(rows);
