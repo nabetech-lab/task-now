@@ -4,13 +4,13 @@
   /* =========================================================
      NOW
      Unified Mobile Edition
-     v4.7.0
+     v4.8.0
 
      iOS Safari
      Android Firefox / Violentmonkey
   ========================================================= */
 
-  const VERSION = '4.7.0';
+  const VERSION = '4.8.0';
 
   const ROOT_ID = 'tc-now-root';
   const STYLE_ID = 'tc-now-style';
@@ -6037,6 +6037,439 @@
       }
     }
 
+
+    /* =====================================================
+       v4.8.0 DISPLAY LAYER
+       PC4.37-inspired compact information hierarchy.
+       Acquisition / state logic is unchanged.
+    ===================================================== */
+
+    #tc-progress {
+      position:relative;
+      display:grid !important;
+      grid-template-columns:
+        minmax(0,1fr)
+        minmax(0,1fr) !important;
+      grid-template-rows:
+        repeat(4,minmax(0,1fr)) !important;
+      column-gap:
+        clamp(10px,1.2vw,18px);
+      row-gap:0;
+      align-content:stretch;
+      flex:1 1 auto;
+      min-height:0;
+      border-top:
+        1px solid
+        rgba(255,255,255,.09);
+    }
+
+    #tc-progress::after {
+      content:"";
+      position:absolute;
+      top:
+        clamp(6px,.8vh,10px);
+      bottom:
+        clamp(6px,.8vh,10px);
+      left:50%;
+      width:1px;
+      background:
+        rgba(255,255,255,.14);
+      pointer-events:none;
+    }
+
+    #tc-progress .tc-now-metric {
+      min-height:0 !important;
+      height:auto !important;
+      border-top:0 !important;
+      padding:
+        clamp(2px,.35vh,5px)
+        clamp(5px,.55vw,9px) !important;
+    }
+
+    #tc-progress .tc-now-metric:nth-of-type(1) {
+      grid-column:1;
+      grid-row:1;
+    }
+
+    #tc-progress .tc-now-metric:nth-of-type(2) {
+      grid-column:1;
+      grid-row:2;
+    }
+
+    #tc-progress .tc-now-metric:nth-of-type(3) {
+      grid-column:1;
+      grid-row:3;
+    }
+
+    #tc-progress .tc-now-metric:nth-of-type(4) {
+      grid-column:2;
+      grid-row:1;
+    }
+
+    #tc-progress .tc-now-metric:nth-of-type(5) {
+      grid-column:2;
+      grid-row:2;
+    }
+
+    #tc-progress .tc-now-metric:nth-of-type(4),
+    #tc-progress .tc-now-metric:nth-of-type(5) {
+      padding-left:
+        clamp(10px,1.1vw,16px) !important;
+    }
+
+    .tc-time-left {
+      grid-column:2;
+      grid-row:3;
+      display:flex;
+      align-items:end;
+      justify-content:space-between;
+      gap:8px;
+      min-width:0;
+      padding:
+        0
+        clamp(5px,.55vw,9px)
+        0
+        clamp(10px,1.1vw,16px);
+      color:#aeb4c0;
+      font-size:
+        clamp(8px,1vw,12px);
+      font-weight:800;
+      letter-spacing:.10em;
+      line-height:1;
+      font-variant-numeric:
+        tabular-nums;
+      white-space:nowrap;
+    }
+
+    .tc-time-left[hidden],
+    .tc-fixed-progress[hidden] {
+      display:none !important;
+    }
+
+    .tc-fixed-progress {
+      grid-column:2;
+      grid-row:4;
+      display:grid;
+      grid-template-columns:
+        repeat(40,minmax(0,1fr));
+      gap:2px;
+      width:auto;
+      height:
+        clamp(5px,.8vh,8px);
+      margin:
+        2px
+        clamp(5px,.55vw,9px)
+        0
+        clamp(10px,1.1vw,16px);
+      min-width:0;
+      overflow:hidden;
+      align-self:start;
+    }
+
+    #tc-prev-card {
+      display:flex !important;
+      flex-direction:column;
+      min-height:0;
+    }
+
+    #tc-prev-header {
+      display:grid !important;
+      grid-template-columns:
+        minmax(0,1fr)
+        auto
+        auto;
+      grid-template-rows:
+        auto
+        clamp(5px,.7vh,7px);
+      column-gap:
+        clamp(7px,.8vw,11px);
+      row-gap:
+        clamp(4px,.55vh,7px);
+      align-items:center;
+      flex:0 0 auto;
+      margin:0 !important;
+      padding:0 0
+        clamp(6px,.9vh,10px);
+      border-bottom:
+        1px solid
+        rgba(255,255,255,.14);
+    }
+
+    #tc-prev-header .tc-card-title {
+      grid-column:1;
+      grid-row:1;
+      margin:0 !important;
+      white-space:nowrap;
+    }
+
+    #tc-daily-progress {
+      display:contents !important;
+    }
+
+    #tc-daily-progress-percent {
+      grid-column:2;
+      grid-row:1;
+      color:#fff;
+      font-size:
+        clamp(8px,.95vw,11px);
+      font-weight:900;
+      font-variant-numeric:
+        tabular-nums;
+      white-space:nowrap;
+    }
+
+    #tc-daily-progress-count {
+      grid-column:3;
+      grid-row:1;
+      color:#fff;
+      font-size:
+        clamp(8px,.95vw,11px);
+      font-weight:900;
+      letter-spacing:.02em;
+      font-variant-numeric:
+        tabular-nums;
+      white-space:nowrap;
+    }
+
+    #tc-daily-progress-segments {
+      grid-column:1/-1;
+      grid-row:2;
+      display:grid !important;
+      grid-template-columns:
+        repeat(40,minmax(0,1fr));
+      gap:2px !important;
+      width:100%;
+      height:100% !important;
+      min-width:0;
+      overflow:hidden;
+      white-space:normal;
+    }
+
+    .tc-progress-segment {
+      display:block;
+      width:auto !important;
+      min-width:0 !important;
+      height:100% !important;
+      flex:none !important;
+      border-radius:1px;
+      background:
+        linear-gradient(
+          to right,
+          rgba(255,255,255,.92) var(--fill,0%),
+          rgba(255,255,255,.16) var(--fill,0%)
+        ) !important;
+    }
+
+    .tc-progress-segment.is-filled {
+      background:
+        rgba(255,255,255,.92) !important;
+    }
+
+    .tc-progress-segment.tc-edge-wave {
+      animation:
+        tc-edge-wave 1.5s linear infinite;
+      animation-delay:
+        var(--wave-delay,0s);
+    }
+
+    @keyframes tc-edge-wave {
+      0%,45%,100% { opacity:1; }
+      15% { opacity:.35; }
+    }
+
+    @media
+      (prefers-reduced-motion:reduce) {
+      .tc-progress-segment.tc-edge-wave {
+        animation:none;
+      }
+    }
+
+    .tc-previous-heading {
+      margin:
+        clamp(6px,.9vh,10px)
+        0
+        clamp(4px,.6vh,7px) !important;
+      flex:0 0 auto;
+    }
+
+    #tc-prev-content {
+      flex:1 1 auto;
+      min-height:0;
+      grid-template-columns:
+        minmax(0,1fr) !important;
+    }
+
+    #tc-prev-check {
+      display:none !important;
+    }
+
+    /* Landscape: keep NEXT above PREVIOUS in the right column. */
+    #${ROOT_ID}.layout-landscape
+    #tc-side {
+      display:grid !important;
+      grid-template-rows:
+        minmax(0,1.48fr)
+        minmax(0,.78fr) !important;
+      gap:
+        clamp(5px,.8vh,10px);
+      min-height:0;
+      height:100%;
+    }
+
+    /* Tablet landscape keeps the same hierarchy, not three columns. */
+    @media
+      (orientation:landscape)
+      and (min-width:900px)
+      and (min-height:600px) {
+
+      #${ROOT_ID}.layout-landscape
+      #tc-main {
+        grid-template-columns:
+          minmax(0,1.22fr)
+          minmax(0,1fr) !important;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-side {
+        grid-template-rows:
+          minmax(0,1.48fr)
+          minmax(0,.78fr) !important;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-progress {
+        grid-template-rows:
+          repeat(4,56px) !important;
+        flex:0 0 auto;
+      }
+    }
+
+    /* Portrait: CURRENT -> NEXT -> DAY COMPLETED/PREVIOUS. */
+    #${ROOT_ID}.layout-portrait
+    #tc-side {
+      display:flex !important;
+      flex-direction:column;
+      gap:
+        clamp(5px,.7vh,9px);
+      min-height:0;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-next-card {
+      flex:1.28 1 0;
+      min-height:0;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-prev-card {
+      flex:.72 1 0;
+      min-height:0;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-progress {
+      grid-template-columns:
+        minmax(0,1fr)
+        minmax(0,1fr) !important;
+      column-gap:
+        clamp(7px,2.2vw,12px);
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-progress .tc-now-metric {
+      grid-template-columns:
+        clamp(13px,3.6vw,18px)
+        minmax(52px,1fr)
+        auto !important;
+      column-gap:
+        clamp(3px,1vw,6px) !important;
+      padding:
+        1px
+        3px !important;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-progress .tc-now-metric:nth-of-type(4),
+    #${ROOT_ID}.layout-portrait
+    #tc-progress .tc-now-metric:nth-of-type(5) {
+      padding-left:
+        clamp(7px,2vw,10px) !important;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-progress .tc-now-label {
+      font-size:
+        clamp(7px,2.05vw,10px) !important;
+      letter-spacing:.08em !important;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    #tc-progress .tc-now-value {
+      font-size:
+        clamp(15px,4.6vw,22px) !important;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    .tc-time-left {
+      padding-left:
+        clamp(7px,2vw,10px);
+      padding-right:3px;
+      font-size:
+        clamp(7px,2vw,9px);
+      letter-spacing:.06em;
+    }
+
+    #${ROOT_ID}.layout-portrait
+    .tc-fixed-progress {
+      margin-left:
+        clamp(7px,2vw,10px);
+      margin-right:3px;
+    }
+
+    /* Compact landscape: preserve the 2-column metric logic at low height. */
+    @media
+      (orientation:landscape)
+      and (max-height:430px) {
+
+      #${ROOT_ID}.layout-landscape
+      #tc-progress {
+        grid-template-rows:
+          repeat(4,minmax(0,1fr)) !important;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-time-left {
+        font-size:6.5px;
+        padding-left:7px;
+        padding-right:2px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-fixed-progress {
+        height:4px;
+        gap:1px;
+        margin-left:7px;
+        margin-right:2px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-prev-header {
+        grid-template-rows:auto 4px;
+        row-gap:3px;
+        padding-bottom:4px;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      #tc-daily-progress-segments {
+        gap:1px !important;
+      }
+
+      #${ROOT_ID}.layout-landscape
+      .tc-previous-heading {
+        margin:4px 0 2px !important;
+      }
+    }
+
   `;
 
   document.head.appendChild(
@@ -6397,6 +6830,24 @@
 
             </div>
 
+            <div
+              id="tc-time-left"
+              class="tc-time-left"
+              hidden>
+              <span>TIME LEFT</span>
+              <span id="tc-time-left-percent">0%</span>
+            </div>
+
+            <div
+              id="tc-remaining-progress"
+              class="tc-fixed-progress"
+              hidden
+              role="progressbar"
+              aria-label="現在タスクの残り時間"
+              aria-valuemin="0"
+              aria-valuemax="100">
+            </div>
+
           </div>
 
         </section>
@@ -6453,13 +6904,18 @@
 
             <div id="tc-prev-header">
               <div class="tc-card-title">
-                PREVIOUS
+                DAY COMPLETED
               </div>
 
               <div id="tc-daily-progress" aria-label="Today task progress">
+                <span id="tc-daily-progress-percent">0%</span>
                 <span id="tc-daily-progress-count">✓ 0/0</span>
                 <span id="tc-daily-progress-segments" aria-hidden="true"></span>
               </div>
+            </div>
+
+            <div class="tc-card-title tc-previous-heading">
+              PREVIOUS
             </div>
 
             <div id="tc-prev-content">
@@ -7016,6 +7472,157 @@
      STATE RENDER
   ========================================================= */
 
+  const FIXED_BAR_SEGMENTS = 40;
+
+  function ensureFixedBar(
+    container
+  ) {
+    if (!container) {
+      return [];
+    }
+
+    if (
+      container.childElementCount !==
+      FIXED_BAR_SEGMENTS
+    ) {
+      const fragment =
+        document.createDocumentFragment();
+
+      for (
+        let index = 0;
+        index < FIXED_BAR_SEGMENTS;
+        index += 1
+      ) {
+        const segment =
+          document.createElement('span');
+
+        segment.className =
+          'tc-progress-segment';
+
+        fragment.appendChild(
+          segment
+        );
+      }
+
+      container.replaceChildren(
+        fragment
+      );
+    }
+
+    return [
+      ...container.children
+    ];
+  }
+
+
+  function fillFixedBar(
+    container,
+    fraction,
+    direction = 'right'
+  ) {
+    const segments =
+      ensureFixedBar(
+        container
+      );
+
+    const normalized =
+      clamp(
+        Number.isFinite(fraction)
+          ? fraction
+          : 0,
+        0,
+        1
+      );
+
+    const filled =
+      normalized *
+      FIXED_BAR_SEGMENTS;
+
+    const boundary =
+      Math.ceil(filled) - 1;
+
+    const active =
+      filled > 0 &&
+      filled <
+        FIXED_BAR_SEGMENTS;
+
+    for (
+      let index = 0;
+      index < segments.length;
+      index += 1
+    ) {
+      const segment =
+        segments[index];
+
+      const amount =
+        clamp(
+          (filled - index),
+          0,
+          1
+        ) * 100;
+
+      const fillValue =
+        amount + '%';
+
+      if (
+        segment.style
+          .getPropertyValue(
+            '--fill'
+          ) !== fillValue
+      ) {
+        segment.style
+          .setProperty(
+            '--fill',
+            fillValue
+          );
+      }
+
+      const edgeStart =
+        Math.max(
+          0,
+          boundary - 2
+        );
+
+      const moving =
+        active &&
+        index >= edgeStart &&
+        index <= boundary;
+
+      setClassFlag(
+        segment,
+        'tc-edge-wave',
+        moving
+      );
+
+      if (moving) {
+        const rank =
+          direction === 'left'
+            ? boundary - index
+            : index - edgeStart;
+
+        const delay =
+          (
+            -1.5 +
+            rank * .22
+          ) + 's';
+
+        if (
+          segment.style
+            .getPropertyValue(
+              '--wave-delay'
+            ) !== delay
+        ) {
+          segment.style
+            .setProperty(
+              '--wave-delay',
+              delay
+            );
+        }
+      }
+    }
+  }
+
+
   function renderDailyProgress() {
     const dailyCompleted =
       Math.max(
@@ -7029,6 +7636,23 @@
         state.todayTaskCount || 0
       );
 
+    const fraction =
+      dailyTotal > 0
+        ? clamp(
+            dailyCompleted /
+              dailyTotal,
+            0,
+            1
+          )
+        : 0;
+
+    setText(
+      $('tc-daily-progress-percent'),
+      Math.round(
+        fraction * 100
+      ) + '%'
+    );
+
     setText(
       $('tc-daily-progress-count'),
       '✓ ' +
@@ -7037,117 +7661,11 @@
         dailyTotal
     );
 
-    const progressSegments =
-      $('tc-daily-progress-segments');
-
-    if (!progressSegments) {
-      return;
-    }
-
-    const segmentCount =
-      dailyTotal;
-
-    const filledSegments =
-      clamp(
-        dailyCompleted,
-        0,
-        segmentCount
-      );
-
-    let segmentWidth = 2;
-    let segmentGap = 2;
-
-    if (segmentCount > 40) {
-      segmentGap = 1;
-    }
-
-    if (segmentCount > 70) {
-      segmentWidth = 1;
-    }
-
-    const widthValue =
-      segmentWidth + 'px';
-
-    const gapValue =
-      segmentGap + 'px';
-
-    if (
-      progressSegments
-        .style
-        .getPropertyValue(
-          '--tc-progress-width'
-        ) !== widthValue
-    ) {
-      progressSegments
-        .style
-        .setProperty(
-          '--tc-progress-width',
-          widthValue
-        );
-    }
-
-    if (
-      progressSegments
-        .style
-        .getPropertyValue(
-          '--tc-progress-gap'
-        ) !== gapValue
-    ) {
-      progressSegments
-        .style
-        .setProperty(
-          '--tc-progress-gap',
-          gapValue
-        );
-    }
-
-    if (
-      progressSegments
-        .childElementCount !==
-      segmentCount
-    ) {
-      const fragment =
-        document.createDocumentFragment();
-
-      for (
-        let index = 0;
-        index < segmentCount;
-        index += 1
-      ) {
-        const segment =
-          document.createElement('span');
-
-        segment.className =
-          'tc-progress-segment';
-
-        segment.dataset.index =
-          String(index);
-
-        fragment.appendChild(
-          segment
-        );
-      }
-
-      progressSegments
-        .replaceChildren(
-          fragment
-        );
-    }
-
-    const segments =
-      progressSegments.children;
-
-    for (
-      let index = 0;
-      index < segments.length;
-      index += 1
-    ) {
-      setClassFlag(
-        segments[index],
-        'is-filled',
-        index < filledSegments
-      );
-    }
+    fillFixedBar(
+      $('tc-daily-progress-segments'),
+      fraction,
+      'right'
+    );
   }
 
 
@@ -7526,6 +8044,81 @@
         'tc-over',
         false
       );
+    }
+
+    /* CURRENT TIME LEFT */
+
+    const timeLeft =
+      $('tc-time-left');
+
+    const remainingProgress =
+      $('tc-remaining-progress');
+
+    const hasPlan =
+      elapsed !== null &&
+      state.plannedSeconds !== null &&
+      state.plannedSeconds > 0;
+
+    if (
+      timeLeft &&
+      remainingProgress
+    ) {
+      timeLeft.hidden =
+        !hasPlan;
+
+      remainingProgress.hidden =
+        !hasPlan;
+
+      if (hasPlan) {
+        const remainingSeconds =
+          Math.max(
+            0,
+            state.plannedSeconds -
+              elapsed
+          );
+
+        const fraction =
+          clamp(
+            remainingSeconds /
+              state.plannedSeconds,
+            0,
+            1
+          );
+
+        setText(
+          $('tc-time-left-percent'),
+          Math.round(
+            fraction * 100
+          ) + '%'
+        );
+
+        fillFixedBar(
+          remainingProgress,
+          fraction,
+          'left'
+        );
+
+        remainingProgress
+          .setAttribute(
+            'aria-valuenow',
+            String(
+              Math.round(
+                fraction * 100
+              )
+            )
+          );
+      } else {
+        setText(
+          $('tc-time-left-percent'),
+          '0%'
+        );
+
+        fillFixedBar(
+          remainingProgress,
+          0,
+          'left'
+        );
+      }
     }
 
     /* LEAVE COUNTDOWN */
